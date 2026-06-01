@@ -46,6 +46,10 @@ app.post("/leads", async (request, response) => {
   };
 
   const persistence = await persist("leads", lead);
+  await sendLeadToTelegram(lead, persistence.id).catch((error: unknown) => {
+    // Telegram logging is optional and must not break lead intake.
+    console.error("Telegram lead logging failed", error);
+  });
   response.status(201).json({ id: persistence.id, persistence: persistence.mode, lead });
 });
 
@@ -180,6 +184,44 @@ function isValidTelegramWebhook(request: express.Request) {
   }
 
   return request.header("x-telegram-bot-api-secret-token") === expectedSecret;
+}
+
+async function sendLeadToTelegram(lead: Record<string, unknown>, leadId: string) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_LOG_CHAT_ID;
+
+  if (!botToken || !chatId) {
+    return;
+  }
+
+  const message = [
+    "🚘 Нова заявка",
+    `ID: ${leadId}`,
+    `Ім'я: ${String(lead.name ?? "-")}`,
+    `Телефон: ${String(lead.phone ?? "-")}`,
+    `Місто: ${String(lead.city ?? "-")}`,
+    `Категорія: ${String(lead.category ?? "-")}`,
+    `Філія: ${String(lead.branchId ?? "-")}`,
+    `Джерело: ${String(lead.source ?? "-")}`,
+    `Коментар: ${String(lead.message ?? "-")}`,
+    `Створено: ${String(lead.createdAt ?? "-")}`
+  ].join("\n");
+
+  const endpoint = `https://api.telegram.org/bot${botToken}/sendMessage`;
+  const result = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: message,
+      disable_web_page_preview: true
+    })
+  });
+
+  if (!result.ok) {
+    const body = await result.text();
+    throw new Error(`Telegram sendMessage failed with ${result.status}: ${body}`);
+  }
 }
 
 export const api = onRequest(

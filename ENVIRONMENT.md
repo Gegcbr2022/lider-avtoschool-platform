@@ -148,6 +148,25 @@ POSTHOG_KEY=phc_xxxxxxxxxxxxxxxxx
 TELEGRAM_BOT_TOKEN=replace_with_telegram_bot_token
 ```
 
+## TELEGRAM_LOG_CHAT_ID
+
+Что это: ID Telegram чата/группы, куда API будет отправлять уведомления о новых заявках (`POST /leads`).
+
+Обязательна: нет. Если не указана, заявки не отправляются в Telegram и продолжают сохраняться в Firebase.
+
+Как получить:
+
+1. Добавить бота в группу.
+2. Отправить сообщение в группу.
+3. Открыть `https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getUpdates`.
+4. В ответе взять `message.chat.id` (для групп обычно отрицательный ID).
+
+Пример:
+
+```env
+TELEGRAM_LOG_CHAT_ID=-1001234567890
+```
+
 ## TELEGRAM_WEBHOOK_SECRET
 
 Что это: secret token для проверки Telegram webhook header `x-telegram-bot-api-secret-token`.
