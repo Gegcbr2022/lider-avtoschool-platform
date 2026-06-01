@@ -30,3 +30,5 @@ Copy `.env.example` to `.env.local` for local web/admin development and to platf
 
 - GitHub setup: `docs/GITHUB_PUBLISH.md`
 - Mobile store release: `docs/STORE_RELEASE.md`
+- Full audit: `PROJECT_AUDIT.md`
+- Release status: `FINAL_RELEASE_REPORT.md`

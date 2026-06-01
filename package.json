@@ -15,7 +15,7 @@
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
+    "test": "node scripts/smoke-test.mjs && npm run test --workspaces --if-present",
     "format": "prettier --write ."
   },
   "devDependencies": {

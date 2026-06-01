@@ -1,6 +1,8 @@
 import { z } from "zod";
 import type { BookingSlot, Branch, Lead, LessonProgress, Payment, ServiceCard } from "@lider/types";
 
+export * from "./i18n";
+
 export const siteBrand = {
   name: "Автошкола «Лідер»",
   shortName: "Лідер",
