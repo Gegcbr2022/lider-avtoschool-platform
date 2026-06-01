@@ -3,7 +3,7 @@ import express from "express";
 import { getApps, initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { onRequest } from "firebase-functions/v2/https";
-import { bookingRequestSchema, leadFormSchema, paymentIntentSchema } from "@lider/shared";
+import { bookingRequestSchema, leadFormSchema, paymentIntentSchema } from "../../../packages/shared/src/index";
 import { aiConsultationSchema, answerStudentQuestion } from "./ai-providers";
 import { paymentProviders } from "./payment-providers";
 

@@ -1,4 +1,4 @@
-import { aiProviderSchema } from "@lider/shared";
+import { aiProviderSchema } from "../../../packages/shared/src/index";
 import { z } from "zod";
 
 export const aiConsultationSchema = z.object({
