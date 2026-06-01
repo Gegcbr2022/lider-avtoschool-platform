@@ -1,22 +1,22 @@
-# Google Play Ready
+# Google Play
 
-## Что нужно подготовить
+## Что нужно
 
 - Google Play Developer Account.
-- APK или AAB файл.
-- Иконка приложения.
-- Скриншоты.
-- Описание приложения.
-- Политика конфиденциальности.
+- Android package: `ua.lider.avtoschool`.
+- AAB production build.
+- Privacy Policy.
 - Data Safety форма.
+- Скриншоты, описание, иконка и контактные данные.
 
-## Команда сборки
+## Команды
 
 ```powershell
 cd "C:\Users\Nice Try)\Downloads\Avtoschool_APP\apps\mobile"
+npx eas login
 npx eas build --profile production --platform android
 ```
 
-## Текущий статус
+## Статус
 
 Android проект подготовлен, но APK/AAB файл ещё не создан.

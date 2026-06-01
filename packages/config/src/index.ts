@@ -11,7 +11,7 @@ export function getPublicRuntimeConfig(env: NodeJS.ProcessEnv = process.env): Pu
   return {
     siteUrl,
     appDomain,
-    apiUrl: env.API_URL ?? "http://localhost:5001/lider-avtoschool/europe-west1/api"
+    apiUrl: env.API_URL ?? "http://localhost:5001/lider-avtoschool-dev/europe-west1/api"
   };
 }
 

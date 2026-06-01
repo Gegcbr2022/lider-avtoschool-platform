@@ -1,13 +1,14 @@
-# iOS Publish Guide
+# Публикация iOS
 
-## Что нужно
+## Требования
 
 - Apple Developer Account.
 - Expo account.
-- EAS CLI.
+- App Store Connect приложение.
 - Bundle ID: `ua.lider.avtoschool`.
+- Privacy Policy и App Privacy labels.
 
-## Команды
+## Сборка
 
 ```powershell
 cd "C:\Users\Nice Try)\Downloads\Avtoschool_APP\apps\mobile"
@@ -16,14 +17,15 @@ npx eas build:configure
 npx eas build --profile production --platform ios
 ```
 
-## Что нажимать
+## Публикация
 
 1. Войти в Apple Developer.
-2. Создать App ID.
+2. Проверить Bundle ID.
 3. Создать приложение в App Store Connect.
-4. Заполнить название, описание, privacy policy.
+4. Заполнить описание, скриншоты, privacy policy.
 5. Загрузить build через EAS Submit или Transporter.
+6. Отправить на review.
 
-## Текущий статус
+## Статус
 
 iOS проект подготовлен, но production build не создан.

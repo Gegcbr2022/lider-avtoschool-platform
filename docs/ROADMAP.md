@@ -1,21 +1,47 @@
-# Roadmap
+# Дорожная карта
 
-## Phase 1 - Foundation
+## Этап 1. Фундамент
 
-- Monorepo, design system, domain packages, public site, admin CRM shell, mobile student shell, API, Firebase rules, CI and docs.
+- Монорепозиторий.
+- Design tokens.
+- Web/admin/mobile/API.
+- Firebase rules.
+- CI.
+- Русскоязычная документация.
 
-## Phase 2 - Real Data
+## Этап 2. Реальные данные
 
-- Firebase Auth, Firestore repositories, Storage uploads, staff roles, audit logs and CRM mutations.
+- Firebase Auth.
+- Firestore repositories.
+- Storage uploads.
+- Staff roles.
+- Audit logs.
+- CRM mutations.
 
-## Phase 3 - Business Flows
+## Этап 3. Бизнес-процессы
 
-- Online application, practice booking, payment providers, document review, Telegram bot and push notifications.
+- Онлайн-заявка.
+- Запись на практику.
+- Платёжные провайдеры.
+- Проверка документов.
+- Telegram bot.
+- Push notifications.
 
-## Phase 4 - Learning
+## Этап 4. Обучение
 
-- LMS content model, PDD trainer, exams, progress analytics, homework, achievements and referral system.
+- LMS content model.
+- ПДР-тренажер.
+- Экзаменационный режим.
+- Домашние задания.
+- Аналитика прогресса.
 
-## Phase 5 - Production
+## Этап 5. Production
 
-- Monitoring, Sentry, PostHog, E2E tests, store builds, deployment automation, backups and incident runbooks.
+- Monitoring.
+- Sentry.
+- PostHog.
+- E2E tests.
+- Store builds.
+- Автоматизация деплоя.
+- Backups.
+- Incident runbooks.

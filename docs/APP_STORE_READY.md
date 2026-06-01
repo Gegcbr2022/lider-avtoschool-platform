@@ -1,22 +1,23 @@
-# App Store Ready
+# App Store
 
-## Что нужно подготовить
+## Что нужно
 
 - Apple Developer Account.
 - App Store Connect приложение.
-- iOS build.
-- Скриншоты.
-- Описание.
+- Bundle ID: `ua.lider.avtoschool`.
+- Production iOS build через EAS.
 - Privacy Policy.
 - App Privacy labels.
+- Скриншоты и описание приложения.
 
-## Команда сборки
+## Команды
 
 ```powershell
 cd "C:\Users\Nice Try)\Downloads\Avtoschool_APP\apps\mobile"
+npx eas login
 npx eas build --profile production --platform ios
 ```
 
-## Текущий статус
+## Статус
 
-Проект готов к подготовке iOS build, но публикация невозможна без Apple Developer Account.
+iOS проект подготовлен, но production build не создан и публикация невозможна без Apple Developer доступа.

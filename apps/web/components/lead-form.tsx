@@ -1,13 +1,15 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { branches, leadFormSchema, services } from "@lider/shared";
+import { branches, leadFormSchema } from "@lider/shared";
 import { Button } from "@lider/ui";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
 
 type LeadFormValues = z.infer<typeof leadFormSchema>;
+
+const categoryOptions: LeadFormValues["category"][] = ["A", "A1", "B", "C", "CE"];
 
 export function LeadForm() {
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -26,13 +28,19 @@ export function LeadForm() {
 
   async function onSubmit(values: LeadFormValues) {
     setStatus("saving");
-    const response = await fetch("/api/leads", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(values)
-    });
 
-    if (!response.ok) {
+    try {
+      const response = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values)
+      });
+
+      if (!response.ok) {
+        setStatus("error");
+        return;
+      }
+    } catch {
       setStatus("error");
       return;
     }
@@ -53,7 +61,7 @@ export function LeadForm() {
           placeholder="Марія"
           {...register("name")}
         />
-        {errors.name ? <p className="mt-1 text-xs text-red-600">{errors.name.message}</p> : null}
+        {errors.name ? <p className="mt-1 text-xs text-red-600">Вкажіть ім'я мінімум з 2 символів.</p> : null}
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <div>
@@ -66,7 +74,7 @@ export function LeadForm() {
             placeholder="050 000 00 00"
             {...register("phone")}
           />
-          {errors.phone ? <p className="mt-1 text-xs text-red-600">{errors.phone.message}</p> : null}
+          {errors.phone ? <p className="mt-1 text-xs text-red-600">Вкажіть коректний номер телефону.</p> : null}
         </div>
         <div>
           <label className="text-sm font-semibold text-lider-graphite" htmlFor="city">
@@ -78,7 +86,7 @@ export function LeadForm() {
             placeholder="Київ"
             {...register("city")}
           />
-          {errors.city ? <p className="mt-1 text-xs text-red-600">{errors.city.message}</p> : null}
+          {errors.city ? <p className="mt-1 text-xs text-red-600">Вкажіть місто або населений пункт.</p> : null}
         </div>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
@@ -91,9 +99,9 @@ export function LeadForm() {
             className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-green"
             {...register("category")}
           >
-            {services.map((service) => (
-              <option key={service.id} value={service.category}>
-                {service.title}
+            {categoryOptions.map((category) => (
+              <option key={category} value={category}>
+                Категорія {category}
               </option>
             ))}
           </select>

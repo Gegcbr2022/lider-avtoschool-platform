@@ -12,7 +12,13 @@ const db = getFirestore(firebaseApp);
 const app = express();
 const requestCounts = new Map<string, { count: number; resetAt: number }>();
 
-app.use(cors({ origin: true }));
+app.use(
+  cors({
+    origin(origin, callback) {
+      callback(null, isAllowedOrigin(origin));
+    }
+  })
+);
 app.use(express.json({ limit: "2mb" }));
 app.use(rateLimit);
 
@@ -69,19 +75,31 @@ app.post("/payments/create-intent", async (request, response) => {
     return;
   }
 
-  const provider = paymentProviders[parsed.data.provider];
-  const intent = await provider.createIntent(parsed.data);
-  const persistence = await persist("paymentIntents", {
-    ...parsed.data,
-    ...intent,
-    status: "pending",
-    createdAt: new Date().toISOString()
-  });
+  try {
+    const provider = paymentProviders[parsed.data.provider];
+    const intent = await provider.createIntent(parsed.data);
+    const persistence = await persist("paymentIntents", {
+      ...parsed.data,
+      ...intent,
+      status: "pending",
+      createdAt: new Date().toISOString()
+    });
 
-  response.status(201).json({ id: persistence.id, persistence: persistence.mode, intent });
+    response.status(201).json({ id: persistence.id, persistence: persistence.mode, intent });
+  } catch (error) {
+    response.status(501).json({
+      error: "Payment provider is not configured",
+      message: error instanceof Error ? error.message : "Unknown provider error"
+    });
+  }
 });
 
 app.post("/telegram/webhook", async (request, response) => {
+  if (!isValidTelegramWebhook(request)) {
+    response.status(401).json({ error: "Invalid Telegram webhook secret" });
+    return;
+  }
+
   const payload = {
     body: request.body,
     receivedAt: new Date().toISOString()
@@ -134,11 +152,40 @@ function rateLimit(request: express.Request, response: express.Response, next: e
   next();
 }
 
+function isAllowedOrigin(origin: string | undefined) {
+  if (!origin) {
+    return true;
+  }
+
+  const configuredOrigins = [
+    process.env.NEXT_PUBLIC_SITE_URL,
+    process.env.ADMIN_SITE_URL,
+    ...(process.env.ALLOWED_ORIGINS ?? "").split(",")
+  ]
+    .filter(Boolean)
+    .map((value) => value!.trim().replace(/\/$/, ""));
+
+  if (configuredOrigins.includes(origin.replace(/\/$/, ""))) {
+    return true;
+  }
+
+  return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+}
+
+function isValidTelegramWebhook(request: express.Request) {
+  const expectedSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+
+  if (!expectedSecret) {
+    return process.env.NODE_ENV !== "production";
+  }
+
+  return request.header("x-telegram-bot-api-secret-token") === expectedSecret;
+}
+
 export const api = onRequest(
   {
     region: "europe-west1",
-    maxInstances: 10,
-    cors: true
+    maxInstances: 10
   },
   app
 );

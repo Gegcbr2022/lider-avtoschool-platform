@@ -1,20 +1,27 @@
-# Mobile Build
+# Мобильная сборка
 
-The mobile app lives in `apps/mobile` and uses Expo Router.
+Мобильное приложение находится в `apps/mobile` и использует Expo Router.
 
-## Local Development
+## Локальная разработка
 
 ```bash
 npm install
 npm run dev:mobile
 ```
 
-## EAS Builds
+## EAS builds
 
 ```bash
 cd apps/mobile
-eas build --profile preview --platform android
-eas build --profile production --platform ios
+npx eas build --profile preview --platform android
+npx eas build --profile production --platform ios
+npx eas build --profile production --platform all
 ```
 
-Before store submission, configure production icons, splash assets, privacy labels, push notification credentials, Apple signing and Google Play service account access.
+## Перед публикацией
+
+- Подключить production `API_URL`.
+- Проверить иконку, splash assets и название.
+- Настроить push notification credentials.
+- Заполнить privacy labels и Data Safety.
+- Проверить login, документы, практику, платежи и уведомления на реальных устройствах.

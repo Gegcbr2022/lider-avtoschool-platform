@@ -4,6 +4,7 @@ import { branches, sampleLeads, samplePayments, sampleSlots } from "@lider/share
 import { StatusPill } from "@lider/ui";
 import type { LeadStatus } from "@lider/types";
 import { Bell, CalendarDays, CheckCircle2, CircleDollarSign, Gauge, Search, UsersRound, type LucideIcon } from "lucide-react";
+import Image from "next/image";
 import { useMemo, useState } from "react";
 
 const stages: LeadStatus[] = ["new", "contacted", "consultation", "contract", "paid", "learning", "completed"];
@@ -34,9 +35,7 @@ export function CrmWorkspace() {
     <div className="min-h-screen bg-[#eef6f3]">
       <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-[#dce7e3] bg-[#00362d] px-4 py-5 text-white lg:block">
         <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-[#ffd600] font-black text-[#00362d]">
-            Л
-          </span>
+          <Image src="/logo.png" alt="Автошкола Лідер" width={82} height={35} className="shrink-0" />
           <div>
             <p className="font-semibold">CRM Лідер</p>
             <p className="text-xs text-white/60">production workspace</p>

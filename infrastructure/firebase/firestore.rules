@@ -14,6 +14,18 @@ service cloud.firestore {
       return hasRole("admin") || hasRole("manager");
     }
 
+    function ownsResource() {
+      return signedIn() && resource.data.studentId == request.auth.uid;
+    }
+
+    function createsOwnResource() {
+      return signedIn() && request.resource.data.studentId == request.auth.uid;
+    }
+
+    function keepsOwnResource() {
+      return ownsResource() && request.resource.data.studentId == request.auth.uid;
+    }
+
     match /leads/{leadId} {
       allow create: if true;
       allow read, update, delete: if staff();
@@ -25,13 +37,14 @@ service cloud.firestore {
     }
 
     match /bookings/{bookingId} {
-      allow read, update: if staff() || signedIn();
-      allow create: if signedIn() || staff();
+      allow read: if staff() || ownsResource();
+      allow update: if staff() || keepsOwnResource();
+      allow create: if staff() || createsOwnResource();
       allow delete: if staff();
     }
 
     match /payments/{paymentId} {
-      allow read: if staff() || signedIn();
+      allow read: if staff() || ownsResource();
       allow write: if staff();
     }
 

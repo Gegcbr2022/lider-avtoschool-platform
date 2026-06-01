@@ -20,6 +20,10 @@ type ProviderAdapter = {
 function buildDemoIntent(provider: PaymentProvider): ProviderAdapter {
   return {
     async createIntent(input) {
+      if (process.env.NODE_ENV === "production") {
+        throw new Error(`${provider} payment adapter is not configured`);
+      }
+
       return {
         provider,
         externalId: `${provider}_${Date.now()}`,

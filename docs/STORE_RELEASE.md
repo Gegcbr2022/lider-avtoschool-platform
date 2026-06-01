@@ -1,15 +1,15 @@
-# Store Release
+# Релиз в сторах
 
-The mobile app is an Expo Router app that can produce both Android and iOS builds through EAS.
+Мобильное приложение — Expo Router app, сборки выполняются через EAS.
 
-## Accounts Needed
+## Доступы
 
 - Expo account.
-- Apple Developer Program membership for iOS.
-- Google Play Console account for Android.
-- Firebase project for Auth, Firestore, Storage, Cloud Functions and push notification credentials.
+- Apple Developer Program для iOS.
+- Google Play Console для Android.
+- Firebase project для Auth, Firestore, Storage, Functions и push credentials.
 
-## Build Commands
+## Команды сборки
 
 ```bash
 cd apps/mobile
@@ -20,11 +20,11 @@ npx eas build --profile preview --platform ios
 npx eas build --profile production --platform all
 ```
 
-## Before Submission
+## Перед отправкой
 
-- Replace placeholder icon/splash assets with final brand assets.
-- Configure privacy labels for App Store.
-- Add Google Play data safety declarations.
-- Configure push notification credentials.
-- Set production `API_URL`.
-- Test login, documents, booking, payments and notifications on real devices.
+- Проверить финальную иконку и splash assets.
+- Настроить privacy labels для App Store.
+- Заполнить Google Play Data Safety.
+- Настроить push credentials.
+- Установить production `API_URL`.
+- Проверить login, документы, практику, платежи и уведомления на реальных устройствах.

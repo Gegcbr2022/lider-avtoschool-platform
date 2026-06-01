@@ -14,6 +14,13 @@ const navItems = [
   ["Контакти", "#lead"]
 ] as const;
 
+const trustFacts = [
+  ["10+ років", "команда навчає водіїв і супроводжує документи"],
+  ["15000+", "учнів уже отримали права за підтримки автошколи"],
+  ["5 філій", "Київ, Слов'янськ, Краматорськ, Дніпро, Добропілля"],
+  ["Онлайн-теорія", "Zoom-лекції, тести МВС, відеоуроки і контроль прогресу"]
+] as const;
+
 const platformItems = [
   {
     icon: GraduationCap,
@@ -74,9 +81,7 @@ export default function Home() {
       <header className="sticky top-0 z-40 border-b border-white/60 bg-lider-background/85 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 lg:px-8">
           <Link href="/" className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-lider-green text-lg font-black text-lider-yellow">
-              Л
-            </span>
+            <Image src="/logo.png" alt={siteBrand.name} width={96} height={41} priority className="shrink-0" />
             <span className="text-base font-semibold text-lider-graphite">{siteBrand.name}</span>
           </Link>
           <nav className="hidden items-center gap-6 text-sm font-medium text-lider-muted lg:flex">
@@ -98,10 +103,10 @@ export default function Home() {
       <section className="relative mx-auto grid min-h-[calc(100vh-73px)] max-w-7xl items-center gap-12 px-5 py-14 lg:grid-cols-[0.9fr_1.1fr] lg:px-8 lg:py-20">
         <div className="max-w-2xl">
           <h1 className="text-5xl font-semibold tracking-[-0.04em] text-lider-graphite md:text-7xl">
-            Навчання водінню без хаосу в документах, графіку та оплатах
+            Автошкола «Лідер»: навчання водінню без хаосу
           </h1>
           <p className="mt-6 text-lg leading-8 text-lider-muted md:text-xl">
-            Автошкола «Лідер» поєднує сайт, CRM, особистий кабінет, мобільний застосунок, LMS, платежі та запис на практику в одну цифрову систему.
+            Теорія онлайн, підготовка до іспиту, супровід документів, практичні заняття, CRM, кабінет учня і мобільний застосунок в одній цифровій системі.
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <Link
@@ -141,9 +146,20 @@ export default function Home() {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3 lg:col-start-1 lg:row-start-2">
-          <MetricCard label="Філії" value="4" detail="Київ, Дніпро, Донеччина" />
+          <MetricCard label="Філії" value="5" detail="Київ, Дніпро, Донеччина" />
           <MetricCard label="Категорії" value="A-CE" detail="Плюс перепідготовка" />
-          <MetricCard label="Кабінет" value="24/7" detail="Прогрес, оплати, практика" />
+          <MetricCard label="Досвід" value="10+" detail="років навчання водіїв" />
+        </div>
+      </section>
+
+      <section className="border-y border-lider-line bg-white px-5 py-10 lg:px-8">
+        <div className="mx-auto grid max-w-7xl gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {trustFacts.map(([value, detail]) => (
+            <article key={value} className="rounded-[14px] border border-lider-line p-5">
+              <strong className="text-2xl font-semibold text-lider-green">{value}</strong>
+              <p className="mt-2 text-sm leading-6 text-lider-muted">{detail}</p>
+            </article>
+          ))}
         </div>
       </section>
 
@@ -151,7 +167,7 @@ export default function Home() {
         <div className="mx-auto max-w-7xl">
           <SectionHeader
             title="Категорії навчання"
-            description="Для кожної категорії є окрема картка послуги, прозора ціна від, опис результату та шлях до заявки."
+            description="Для кожної категорії є окрема картка послуги, прозора ціна теоретичної частини, опис результату та шлях до заявки. Практичні заняття оплачуються окремо за тарифом міста."
           />
           <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {services.map((service) => (
@@ -247,9 +263,12 @@ export default function Home() {
 
       <footer className="border-t border-lider-line bg-white px-5 py-10 lg:px-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p className="font-semibold text-lider-graphite">{siteBrand.name}</p>
-            <p className="mt-2 text-sm text-lider-muted">{siteBrand.email}</p>
+          <div className="flex items-center gap-3">
+            <Image src="/logo.png" alt={siteBrand.name} width={86} height={37} className="shrink-0" />
+            <div>
+              <p className="font-semibold text-lider-graphite">{siteBrand.name}</p>
+              <p className="mt-2 text-sm text-lider-muted">{siteBrand.email}</p>
+            </div>
           </div>
           <div className="flex flex-wrap gap-4 text-sm text-lider-muted">
             {contentPages.slice(0, 7).map((page) => (

@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
     formats: ["image/avif", "image/webp"]
   },
   env: {
-    NEXT_PUBLIC_API_URL: process.env.API_URL ?? "http://localhost:5001/lider-avtoschool/europe-west1/api"
+    NEXT_PUBLIC_API_URL: process.env.API_URL ?? "http://localhost:5001/lider-avtoschool-dev/europe-west1/api"
   }
 };
 

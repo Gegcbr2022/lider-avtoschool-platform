@@ -1,23 +1,27 @@
-# Security
+# Безопасность
 
-## Controls In Place
+## Что уже есть
 
 - TypeScript strict mode.
-- Zod validation for public API payloads.
-- Firestore and Storage rules with RBAC boundaries.
-- Basic API rate limiting.
-- Environment-based domain and API configuration.
-- Provider secrets kept out of source control.
+- Zod validation для публичных payload.
+- Firestore rules с RBAC.
+- Storage rules с ограничением owner/staff.
+- Базовый per-IP rate limit.
+- Ограниченный CORS.
+- Проверка Telegram webhook secret.
+- Demo payment adapter заблокирован в production.
+- Секреты вынесены из `.env.example`.
 
-## Production Checklist
+## Что обязательно перед production
 
-- Enable Firebase App Check for web and mobile clients.
-- Store secrets in Firebase, Vercel, Netlify or cloud secret manager.
-- Add audit log writes for staff mutations.
-- Add webhook signature verification for payment providers and Telegram.
-- Add Sentry and PostHog only after privacy review.
-- Run dependency scanning and security review before production release.
+- Перевыпустить скомпрометированные ключи.
+- Включить Firebase App Check.
+- Хранить секреты в Firebase/Vercel/Netlify secret store.
+- Добавить audit log writes для staff mutations.
+- Проверять подписи платёжных webhook.
+- Подключить Sentry/PostHog только после privacy review.
+- Добавить E2E и integration tests для критичных flows.
 
-## Current Dependency Audit
+## Dependency audit
 
-`npm audit fix` was run without force. It removed the high-severity Firebase CLI tar finding by upgrading `firebase-tools`. Remaining moderate findings are transitive advisories in Next/Expo/Firebase dependency trees where npm currently proposes breaking downgrades or provider-level fixes. Do not run `npm audit fix --force` without validating framework compatibility.
+`npm audit --omit=dev` показывает moderate advisories в транзитивных цепочках Next/Expo/Firebase. `npm audit fix --force` сейчас предлагает потенциально ломающие изменения, поэтому применять его нельзя без отдельного framework-upgrade плана и регрессионной проверки.

@@ -1,37 +1,45 @@
-# Production Deploy
+# Production deploy
 
-## Что нужно до деплоя
+Каноническая инструкция находится в `DEPLOYMENT.md`. Этот файл — короткая шпаргалка.
 
-- GitHub репозиторий с кодом.
-- Vercel или Netlify аккаунт.
-- Firebase проект.
-- Production переменные окружения.
+## Нужно заранее
 
-## Переменные
+- GitHub репозиторий с актуальным `main`.
+- Firebase project.
+- Hosting для `apps/web`.
+- Hosting для `apps/admin`.
+- Production переменные окружения из `ENVIRONMENT.md`.
 
-```text
-NEXT_PUBLIC_SITE_URL
-APP_DOMAIN
-API_URL
-FIREBASE_PROJECT_ID
-FIREBASE_STORAGE_BUCKET
+## Проверки
+
+```bash
+npm run lint
+npm run typecheck
+npm run test
+npm run build
 ```
 
-## Вариант Vercel
+## Firebase
 
-1. Откройте Vercel.
-2. Нажмите `Add New Project`.
-3. Выберите GitHub репозиторий.
-4. Укажите папку приложения: `apps/web`.
-5. Добавьте переменные окружения.
-6. Нажмите `Deploy`.
+```bash
+npx firebase login
+npx firebase use production
+npx firebase deploy
+```
 
-## Вариант Netlify
+## Web/Admin
 
-1. Откройте Netlify.
-2. Нажмите `Add new site`.
-3. Выберите GitHub репозиторий.
-4. Build command: `npm run build --workspace @lider/web`.
-5. Publish directory: `apps/web/.next`.
-6. Добавьте переменные окружения.
-7. Нажмите `Deploy`.
+Рекомендуемый вариант — два отдельных Vercel/Netlify проекта:
+
+- web root: `apps/web`;
+- admin root: `apps/admin`.
+
+После деплоя проверить:
+
+- главную страницу;
+- форму заявки;
+- `/sitemap.xml`;
+- `/robots.txt`;
+- API `/health`;
+- админку;
+- GitHub Actions.
