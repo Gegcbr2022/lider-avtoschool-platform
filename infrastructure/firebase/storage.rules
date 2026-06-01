@@ -1,0 +1,29 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function staff() {
+      return signedIn() && (request.auth.token.role == "admin" || request.auth.token.role == "manager");
+    }
+
+    match /student-documents/{studentId}/{fileName} {
+      allow read: if staff() || (signedIn() && request.auth.uid == studentId);
+      allow write: if signedIn()
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches("application/pdf|image/.*");
+    }
+
+    match /public/{fileName} {
+      allow read: if true;
+      allow write: if staff();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "name": "lider-avtoschool-platform",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "npm@10.9.2",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm --workspace @lider/web run dev",
+    "dev:admin": "npm --workspace @lider/admin run dev",
+    "dev:api": "npm --workspace @lider/api run dev",
+    "dev:mobile": "npm --workspace @lider/mobile run start",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@types/node": "^22.15.3",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.3"
+  }
+}

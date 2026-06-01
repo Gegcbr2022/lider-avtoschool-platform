@@ -1,0 +1,15 @@
+services:
+  firebase:
+    image: node:22-bookworm
+    working_dir: /workspace
+    volumes:
+      - ../..:/workspace
+    command: sh -lc "npm install && npm --workspace @lider/api run dev"
+    ports:
+      - "4000:4000"
+      - "5001:5001"
+      - "8080:8080"
+      - "9199:9199"
+    environment:
+      FIREBASE_PROJECT_ID: lider-avtoschool-dev
+      API_URL: http://localhost:5001/lider-avtoschool-dev/europe-west1/api

@@ -1,0 +1,19 @@
+name: Feature
+description: Request a production feature
+title: "[Feature]: "
+labels: ["feature"]
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Business outcome
+      description: What real user or operator problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Include app, API, data, analytics and release notes impact.
+    validations:
+      required: true

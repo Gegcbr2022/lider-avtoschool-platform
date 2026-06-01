@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "dev": "lider-avtoschool-dev",
+    "staging": "lider-avtoschool-staging",
+    "production": "lider-avtoschool"
+  }
+}

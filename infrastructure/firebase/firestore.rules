@@ -1,0 +1,52 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function hasRole(role) {
+      return signedIn() && request.auth.token.role == role;
+    }
+
+    function staff() {
+      return hasRole("admin") || hasRole("manager");
+    }
+
+    match /leads/{leadId} {
+      allow create: if true;
+      allow read, update, delete: if staff();
+    }
+
+    match /students/{studentId} {
+      allow read, update: if staff() || (signedIn() && request.auth.uid == studentId);
+      allow create, delete: if staff();
+    }
+
+    match /bookings/{bookingId} {
+      allow read, update: if staff() || signedIn();
+      allow create: if signedIn() || staff();
+      allow delete: if staff();
+    }
+
+    match /payments/{paymentId} {
+      allow read: if staff() || signedIn();
+      allow write: if staff();
+    }
+
+    match /courses/{courseId} {
+      allow read: if signedIn();
+      allow write: if staff();
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if hasRole("admin");
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
