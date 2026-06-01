@@ -16,7 +16,9 @@
   - `51babb5 Add project audit and release status reports`;
   - `7f93d59 Initial production platform scaffold`.
 - GitHub CLI установлен и авторизован.
-- GitHub Actions `CI` на последних двух push завершился успешно.
+- GitHub Actions `CI` завершился успешно, включая push commit `2b36b4c`.
+- Свежий CI run: `26785412701`, job `quality`, результат PASS.
+- В CI есть annotation GitHub о будущей миграции JavaScript actions с Node.js 20 на Node.js 24. Это предупреждение платформы, не ошибка проекта.
 
 ## 2. Что найдено в проекте
 
