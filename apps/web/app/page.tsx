@@ -118,6 +118,231 @@ const homeCopy: Record<
   }
 };
 
+const sectionCopy: Record<
+  Locale,
+  {
+    contactTitle: string;
+    contactDesc: string;
+    servicesEyebrow: string;
+    servicesTitle: string;
+    servicesDesc: string;
+    serviceCta: string;
+    telegramShort: string;
+    priceLabel: string;
+    documentsEyebrow: string;
+    documentsTitle: string;
+    documentsDesc: string;
+    admissionTitle: string;
+    afterTitle: string;
+    benefitsEyebrow: string;
+    benefitsTitle: string;
+    benefitsDesc: string;
+    benefitsCta: string;
+    storyEyebrow: string;
+    storyTitle: string;
+    storyDesc: string;
+    galleryEyebrow: string;
+    galleryTitle: string;
+    galleryDesc: string;
+    mobileEyebrow: string;
+    mobileTitle: string;
+    mobileDesc: string;
+    afterExamTitle: string;
+    afterExamDesc: string;
+    prideEyebrow: string;
+    prideTitle: string;
+    prideDesc: string;
+    prideNote: string;
+    prideGalleryLink: string;
+    graduatesEyebrow: string;
+    graduatesTitle: string;
+    graduatesDesc: string;
+    resultEyebrow: string;
+    resultTitle: string;
+    resultDesc: string;
+    branchesEyebrow: string;
+    branchesTitle: string;
+    branchesDesc: string;
+    faqEyebrow: string;
+    faqTitle: string;
+    faqDesc: string;
+    signupEyebrow: string;
+    signupTitle: string;
+    signupDesc: string;
+    callbackLabel: string;
+    footerDesc: string;
+    footerPrivacy: string;
+    footerTerms: string;
+    nearestBranch: string;
+  }
+> = {
+  uk: {
+    contactTitle: "Швидкий контакт там, де вам зручно",
+    contactDesc: "Поставте питання, забронюйте консультацію або одразу оберіть філіал. Всі кнопки великі й зручні для мобільного екрана.",
+    servicesEyebrow: "Категорії та ціни",
+    servicesTitle: "Оберіть програму під вашу ціль",
+    servicesDesc: "Для першого авто, роботи, мотоцикла або відкриття додаткової категорії. Заявка займає менше хвилини.",
+    serviceCta: "Заявка",
+    telegramShort: "Telegram",
+    priceLabel: "Вартість",
+    documentsEyebrow: "Документи",
+    documentsTitle: "Що потрібно для вступу",
+    documentsDesc: "Менеджер підкаже список і допоможе підготувати все без зайвих дзвінків.",
+    admissionTitle: "Документи для вступу",
+    afterTitle: "Важливо знати після навчання",
+    benefitsEyebrow: "Преміальний підхід без зайвої складності",
+    benefitsTitle: "Не просто уроки, а зрозумілий маршрут до прав",
+    benefitsDesc: "Ми прибрали зайвий шум: вам потрібні чітка ціна, нормальний графік, хороший інструктор і швидкий контакт з автошколою.",
+    benefitsCta: "Отримати консультацію",
+    storyEyebrow: "Як проходить навчання",
+    storyTitle: "Більше життя на сторінці: заняття, майданчик, випускники",
+    storyDesc: "Показуємо атмосферу навчання й реальні етапи, з яких складається шлях до водійського посвідчення.",
+    galleryEyebrow: "Візуально про шлях",
+    galleryTitle: "Кожен етап навчання видно, а не тільки описано",
+    galleryDesc: "Більше реальних сцен для довіри: салон авто, знаки, практичний майданчик, посвідчення, онлайн-формат і щасливий фінал.",
+    mobileEyebrow: "Мобільний формат",
+    mobileTitle: "Слідкуйте за навчанням прямо з телефона",
+    mobileDesc: "Розклад, нагадування, матеріали й корисні підказки мають бути поруч. Ми будуємо сервіс так, щоб учню було легко рухатися від заняття до заняття без зайвих дзвінків.",
+    afterExamTitle: "Додаток має залишатися корисним і після іспиту",
+    afterExamDesc: "Після отримання прав",
+    prideEyebrow: "Гордість Лідера",
+    prideTitle: "Реальні випускники з правами, а не красиві слова",
+    prideDesc: "Щороку сотні учнів проходять шлях від першого заняття до посвідчення водія. Ось їхні обличчя й категорії — живий доказ, що маршрут справді спрацьовує.",
+    prideNote: "Кожне посвідчення - це не «кейс», а чийсь новий рівень свободи: робота, родина, подорожі, перша самостійна дорога.",
+    prideGalleryLink: "Вся галерея",
+    graduatesEyebrow: "Відгуки",
+    graduatesTitle: "Учні довіряють не обіцянкам, а спокійному процесу",
+    graduatesDesc: "Що найчастіше цінують ті, хто пройшов навчання: зрозумілий план, підтримка менеджера, адекватний інструктор і жодного хаосу з документами.",
+    resultEyebrow: "Результат",
+    resultTitle: "Сильна школа відчувається в деталях",
+    resultDesc: "Нам важливо, щоб учень розумів маршрут, бачив прогрес і мав поруч людей, які відповідають швидко та по суті.",
+    branchesEyebrow: "Філіали",
+    branchesTitle: "Оберіть місто та зручний маршрут",
+    branchesDesc: "Активний філіал показує адресу, маршрут, графік і форму для швидкої заявки.",
+    faqEyebrow: "FAQ",
+    faqTitle: "Коротко про головне перед стартом",
+    faqDesc: "Зібрали питання, які найчастіше ставлять перед записом: документи, строки, оплата, іспит і вибір категорії.",
+    signupEyebrow: "Заявка",
+    signupTitle: "Залиште контакт, і ми підберемо найкращий старт",
+    signupDesc: "Менеджер уточнить категорію, місто, графік, ціну та найближчу групу. Можна попросити відповідь дзвінком, у Telegram або WhatsApp.",
+    callbackLabel: "Зворотний дзвінок",
+    footerDesc: "Курси водіння, практика, підготовка до іспиту та консультація щодо вибору категорії.",
+    footerPrivacy: "Конфіденційність",
+    footerTerms: "Умови",
+    nearestBranch: "Найближчий філіал"
+  },
+  ru: {
+    contactTitle: "Быстрый контакт там, где вам удобно",
+    contactDesc: "Задайте вопрос, забронируйте консультацию или сразу выберите филиал. Все кнопки крупные и удобные для мобильного экрана.",
+    servicesEyebrow: "Категории и цены",
+    servicesTitle: "Выберите программу под вашу цель",
+    servicesDesc: "Для первого авто, работы, мотоцикла или открытия дополнительной категории. Заявка занимает меньше минуты.",
+    serviceCta: "Заявка",
+    telegramShort: "Telegram",
+    priceLabel: "Стоимость",
+    documentsEyebrow: "Документы",
+    documentsTitle: "Что нужно для поступления",
+    documentsDesc: "Менеджер подскажет список и поможет подготовить всё без лишних звонков.",
+    admissionTitle: "Документы для поступления",
+    afterTitle: "Важно знать после обучения",
+    benefitsEyebrow: "Премиальный подход без лишней сложности",
+    benefitsTitle: "Не просто уроки, а понятный маршрут к правам",
+    benefitsDesc: "Мы убрали лишний шум: нужны чёткая цена, нормальный график, хороший инструктор и быстрый контакт с автошколой.",
+    benefitsCta: "Получить консультацию",
+    storyEyebrow: "Как проходит обучение",
+    storyTitle: "Больше жизни на странице: занятия, площадка, выпускники",
+    storyDesc: "Показываем атмосферу обучения и реальные этапы, из которых складывается путь к водительскому удостоверению.",
+    galleryEyebrow: "Визуально о пути",
+    galleryTitle: "Каждый этап обучения виден, а не только описан",
+    galleryDesc: "Больше реальных сцен для доверия: салон авто, знаки, учебная площадка, удостоверение, онлайн-формат и счастливый финал.",
+    mobileEyebrow: "Мобильный формат",
+    mobileTitle: "Следите за обучением прямо с телефона",
+    mobileDesc: "Расписание, напоминания, материалы и полезные подсказки должны быть рядом. Мы строим сервис так, чтобы ученику было легко двигаться от занятия к занятию без лишних звонков.",
+    afterExamTitle: "Приложение должно оставаться полезным и после экзамена",
+    afterExamDesc: "После получения прав",
+    prideEyebrow: "Гордость Лидера",
+    prideTitle: "Реальные выпускники с правами, а не красивые слова",
+    prideDesc: "Каждый год сотни учеников проходят путь от первого занятия до водительского удостоверения. Вот их лица и категории — живое доказательство, что маршрут действительно работает.",
+    prideNote: "Каждое удостоверение — это не «кейс», а чей-то новый уровень свободы: работа, семья, путешествия, первая самостоятельная дорога.",
+    prideGalleryLink: "Вся галерея",
+    graduatesEyebrow: "Отзывы",
+    graduatesTitle: "Ученики доверяют не обещаниям, а спокойному процессу",
+    graduatesDesc: "Что чаще всего ценят те, кто прошёл обучение: понятный план, поддержка менеджера, адекватный инструктор и никакого хаоса с документами.",
+    resultEyebrow: "Результат",
+    resultTitle: "Сильная школа чувствуется в деталях",
+    resultDesc: "Нам важно, чтобы ученик понимал маршрут, видел прогресс и имел рядом людей, которые отвечают быстро и по существу.",
+    branchesEyebrow: "Филиалы",
+    branchesTitle: "Выберите город и удобный маршрут",
+    branchesDesc: "Активный филиал показывает адрес, маршрут, график и форму для быстрой заявки.",
+    faqEyebrow: "FAQ",
+    faqTitle: "Коротко о главном перед стартом",
+    faqDesc: "Собрали вопросы, которые чаще всего задают перед записью: документы, сроки, оплата, экзамен и выбор категории.",
+    signupEyebrow: "Заявка",
+    signupTitle: "Оставьте контакт, и мы подберём лучший старт",
+    signupDesc: "Менеджер уточнит категорию, город, график, цену и ближайшую группу. Можно попросить ответ звонком, в Telegram или WhatsApp.",
+    callbackLabel: "Обратный звонок",
+    footerDesc: "Курсы вождения, практика, подготовка к экзамену и консультация по выбору категории.",
+    footerPrivacy: "Конфиденциальность",
+    footerTerms: "Условия",
+    nearestBranch: "Ближайший филиал"
+  },
+  en: {
+    contactTitle: "Quick contact wherever it's convenient",
+    contactDesc: "Ask a question, book a consultation or choose a branch right away. All buttons are large and mobile-friendly.",
+    servicesEyebrow: "Categories & prices",
+    servicesTitle: "Choose a programme for your goal",
+    servicesDesc: "For your first car, work, motorbike or an additional category. The request takes less than a minute.",
+    serviceCta: "Apply",
+    telegramShort: "Telegram",
+    priceLabel: "Cost",
+    documentsEyebrow: "Documents",
+    documentsTitle: "What you need to enrol",
+    documentsDesc: "A manager will guide you through the list and help prepare everything without unnecessary calls.",
+    admissionTitle: "Admission documents",
+    afterTitle: "Important to know after training",
+    benefitsEyebrow: "Premium approach without extra complexity",
+    benefitsTitle: "Not just lessons — a clear route to a licence",
+    benefitsDesc: "We removed the noise: you need a clear price, a normal schedule, a good instructor and quick contact with the school.",
+    benefitsCta: "Get a consultation",
+    storyEyebrow: "How training works",
+    storyTitle: "More life on the page: lessons, ground, graduates",
+    storyDesc: "We show the training atmosphere and the real stages that make up the journey to a driving licence.",
+    galleryEyebrow: "The journey in pictures",
+    galleryTitle: "Every stage of training is visible, not just described",
+    galleryDesc: "More real scenes for trust: the car interior, signs, the practice ground, the licence, online format and a happy finish.",
+    mobileEyebrow: "Mobile format",
+    mobileTitle: "Follow your training straight from your phone",
+    mobileDesc: "Schedule, reminders, materials and useful tips should always be at hand. We build the service so students can move from lesson to lesson without extra calls.",
+    afterExamTitle: "The app should stay useful after the exam too",
+    afterExamDesc: "After getting the licence",
+    prideEyebrow: "Leader Pride",
+    prideTitle: "Real graduates with licences, not just words",
+    prideDesc: "Every year hundreds of students complete the journey from their first lesson to a driving licence. These are their faces and categories — proof that the route really works.",
+    prideNote: "Each licence is not a 'case study' — it's someone's new level of freedom: work, family, travel, the first solo drive.",
+    prideGalleryLink: "Full gallery",
+    graduatesEyebrow: "Reviews",
+    graduatesTitle: "Students trust the calm process, not promises",
+    graduatesDesc: "What graduates appreciate most: a clear plan, manager support, a sensible instructor and no document chaos.",
+    resultEyebrow: "Result",
+    resultTitle: "A strong school is felt in the details",
+    resultDesc: "It matters to us that students understand the route, see progress and have people nearby who respond quickly and to the point.",
+    branchesEyebrow: "Branches",
+    branchesTitle: "Choose your city and a convenient route",
+    branchesDesc: "An active branch shows the address, route, schedule and a quick request form.",
+    faqEyebrow: "FAQ",
+    faqTitle: "Key facts before you start",
+    faqDesc: "Common questions asked before signing up: documents, duration, payment, exam and category choice.",
+    signupEyebrow: "Request",
+    signupTitle: "Leave your contact and we'll find the best start",
+    signupDesc: "A manager will clarify category, city, schedule, price and the nearest group. You can ask for a reply by call, Telegram or WhatsApp.",
+    callbackLabel: "Callback",
+    footerDesc: "Driving courses, practice, exam preparation and category consultation.",
+    footerPrivacy: "Privacy",
+    footerTerms: "Terms",
+    nearestBranch: "Nearest branch"
+  }
+};
+
 const premiumBenefits = [
   {
     title: "Пояснюємо простими словами",
@@ -263,6 +488,7 @@ export default async function HomePage({
   const params = searchParams ? await searchParams : {};
   const activeLocale = normalizeLocale(params.lang);
   const copy = homeCopy[activeLocale];
+  const sc = sectionCopy[activeLocale];
   const navItems = copy.navItems.map((item) => ({ ...item, href: withLocale(item.href, activeLocale) }));
   const heroHighlights = copy.heroHighlights;
   const telegram = socialLinks.find((item) => item.id === "telegram");
@@ -401,7 +627,7 @@ export default async function HomePage({
                   className="tap-target inline-flex items-center gap-2 rounded-full bg-lider-graphite px-4 py-3 text-sm font-black text-white"
                 >
                   <MapPinned className="h-4 w-4" aria-hidden />
-                  Найближчий філіал
+                  {sc.nearestBranch}
                 </a>
               </div>
             </div>
@@ -452,8 +678,8 @@ export default async function HomePage({
             <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
               <SectionHeader
                 eyebrow="Ми поруч"
-                title="Швидкий контакт там, де вам зручно"
-                description="Поставте питання, забронюйте консультацію або одразу оберіть філіал. Всі кнопки великі й зручні для мобільного екрана."
+                title={sc.contactTitle}
+                description={sc.contactDesc}
               />
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {socialLinks.map((social) => (
@@ -482,9 +708,9 @@ export default async function HomePage({
         <section id="services" className="motion-section bg-white py-12 sm:py-16 lg:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <SectionHeader
-              eyebrow="Категорії та ціни"
-              title="Оберіть програму під вашу ціль"
-              description="Для першого авто, роботи, мотоцикла або відкриття додаткової категорії. Заявка займає менше хвилини."
+              eyebrow={sc.servicesEyebrow}
+              title={sc.servicesTitle}
+              description={sc.servicesDesc}
             />
             <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {services.map((service) => (
@@ -530,7 +756,7 @@ export default async function HomePage({
                     <div className="flex items-end justify-between gap-3">
                       <div>
                         <p className="text-xs font-black uppercase tracking-[0.16em] text-lider-muted">
-                          Вартість
+                          {sc.priceLabel}
                         </p>
                         <p className="text-3xl font-black text-lider-graphite">
                           від {service.priceFrom.toLocaleString("uk-UA")} грн
@@ -543,7 +769,7 @@ export default async function HomePage({
                         href="#signup"
                         className="tap-target red-cta inline-flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-black"
                       >
-                        Заявка
+                        {sc.serviceCta}
                       </a>
                       <a
                         href={telegram?.href ?? "#signup"}
@@ -589,7 +815,7 @@ export default async function HomePage({
             </div>
             <div className="grid gap-4">
               <div className="rounded-[26px] border border-lider-line bg-white p-5 shadow-soft sm:p-6">
-                <h3 className="text-2xl font-black text-lider-graphite">Що потрібно для вступу</h3>
+                <h3 className="text-2xl font-black text-lider-graphite">{sc.admissionTitle}</h3>
                 <div className="mt-5 grid gap-3">
                   {admissionDocuments.map((item) => (
                     <div key={item} className="flex gap-3 rounded-2xl bg-lider-background p-4">
@@ -600,7 +826,7 @@ export default async function HomePage({
                 </div>
               </div>
               <div className="rounded-[26px] bg-lider-graphite p-5 text-white shadow-[0_24px_70px_rgba(26,26,26,0.18)] sm:p-6">
-                <h3 className="text-2xl font-black">Важливо знати після навчання</h3>
+                <h3 className="text-2xl font-black">{sc.afterTitle}</h3>
                 <div className="mt-5 grid gap-3">
                   {importantStudyNotes.map((item) => (
                     <div key={item} className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3">
@@ -617,19 +843,18 @@ export default async function HomePage({
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <div className="grid gap-8 lg:grid-cols-[0.75fr_1.25fr] lg:items-start">
               <div className="space-y-5">
-                <StatusPill tone="warning">Преміальний підхід без зайвої складності</StatusPill>
+                <StatusPill tone="warning">{sc.benefitsEyebrow}</StatusPill>
                 <h2 className="text-4xl font-black leading-tight sm:text-5xl">
-                  Не просто уроки, а зрозумілий маршрут до прав
+                  {sc.benefitsTitle}
                 </h2>
                 <p className="text-base font-semibold leading-7 text-white/68">
-                  Ми прибрали зайвий шум: вам потрібні чітка ціна, нормальний
-                  графік, хороший інструктор і швидкий контакт з автошколою.
+                  {sc.benefitsDesc}
                 </p>
                 <a
                   href="#signup"
                   className="tap-target inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-black text-lider-graphite"
                 >
-                  Отримати консультацію
+                  {sc.benefitsCta}
                   <ArrowRight className="h-4 w-4" aria-hidden />
                 </a>
               </div>
@@ -654,9 +879,9 @@ export default async function HomePage({
         <section className="motion-section bg-white py-12 sm:py-16 lg:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <SectionHeader
-              eyebrow="Як проходить навчання"
-              title="Більше життя на сторінці: заняття, майданчик, випускники"
-              description="Показуємо атмосферу навчання й реальні етапи, з яких складається шлях до водійського посвідчення."
+              eyebrow={sc.storyEyebrow}
+              title={sc.storyTitle}
+              description={sc.storyDesc}
             />
             <div className="mt-8 grid gap-4 lg:grid-cols-3">
               {storyPhotos.map((photo) => (
@@ -687,9 +912,9 @@ export default async function HomePage({
         <section className="motion-section bg-lider-background py-12 sm:py-16 lg:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <SectionHeader
-              eyebrow="Візуально про шлях"
-              title="Кожен етап навчання видно, а не тільки описано"
-              description="Більше реальних сцен для довіри: салон авто, знаки, практичний майданчик, посвідчення, онлайн-формат і щасливий фінал."
+              eyebrow={sc.galleryEyebrow}
+              title={sc.galleryTitle}
+              description={sc.galleryDesc}
             />
             <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {learningGallery.map((photo, index) => (
@@ -725,14 +950,12 @@ export default async function HomePage({
         <section className="motion-section bg-lider-background py-12 sm:py-16 lg:py-20">
           <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
             <div className="space-y-6">
-              <StatusPill tone="success">Мобільний формат</StatusPill>
+              <StatusPill tone="success">{sc.mobileEyebrow}</StatusPill>
               <h2 className="text-4xl font-black leading-tight text-lider-graphite sm:text-5xl">
-                Слідкуйте за навчанням прямо з телефона
+                {sc.mobileTitle}
               </h2>
               <p className="text-base font-semibold leading-7 text-lider-muted">
-                Розклад, нагадування, матеріали й корисні підказки мають бути
-                поруч. Ми будуємо сервіс так, щоб учню було легко рухатися від
-                заняття до заняття без зайвих дзвінків.
+                {sc.mobileDesc}
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
                 {mobileAppFeatures.slice(0, 4).map((feature) => (
@@ -746,10 +969,10 @@ export default async function HomePage({
               </div>
               <div className="rounded-[26px] border border-lider-line bg-white p-5 shadow-soft">
                 <p className="text-sm font-black uppercase tracking-[0.14em] text-lider-red">
-                  Після отримання прав
+                  {sc.afterExamDesc}
                 </p>
                 <h3 className="mt-2 text-2xl font-black text-lider-graphite">
-                  Додаток має залишатися корисним і після іспиту
+                  {sc.afterExamTitle}
                 </h3>
                 <div className="mt-4 grid gap-2 sm:grid-cols-2">
                   {retentionFeatures.slice(0, 4).map((feature) => (
@@ -819,21 +1042,20 @@ export default async function HomePage({
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <div className="grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
               <SectionHeader
-                eyebrow="Гордість Лідера"
-                title="Реальні випускники з правами, а не красиві слова"
-                description="Щороку сотні учнів проходять шлях від першого заняття до посвідчення водія. Ось їхні обличчя й категорії — живий доказ, що маршрут справді спрацьовує."
+                eyebrow={sc.prideEyebrow}
+                title={sc.prideTitle}
+                description={sc.prideDesc}
               />
               <div className="rounded-[24px] bg-lider-background p-5">
-                <p className="text-sm font-black uppercase tracking-[0.14em] text-lider-red">Наша гордість</p>
+                <p className="text-sm font-black uppercase tracking-[0.14em] text-lider-red">{sc.prideEyebrow}</p>
                 <p className="mt-2 text-sm font-semibold leading-6 text-lider-muted">
-                  Кожне посвідчення - це не «кейс», а чийсь новий рівень свободи: робота, родина, подорожі,
-                  перша самостійна дорога.
+                  {sc.prideNote}
                 </p>
                 <a
                   href={`/pride?lang=${activeLocale}`}
                   className="mt-4 inline-flex items-center gap-2 text-sm font-black text-lider-red"
                 >
-                  Вся галерея
+                  {sc.prideGalleryLink}
                   <ArrowRight className="h-4 w-4" aria-hidden />
                 </a>
               </div>
@@ -865,9 +1087,9 @@ export default async function HomePage({
         <section id="graduates" className="motion-section bg-lider-background py-12 sm:py-16 lg:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <SectionHeader
-              eyebrow="Соціальний доказ"
-              title="Випускники, відгуки та історії навчання"
-              description="Короткі історії людей, які вже пройшли теорію, практику й іспит разом з «Лідером»."
+              eyebrow="Відгуки"
+              title="Учні довіряють не обіцянкам, а спокійному процесу"
+              description="Що найчастіше цінують ті, хто пройшов навчання: зрозумілий план, підтримка менеджера, адекватний інструктор і жодного хаосу з документами."
             />
             <div className="mt-8 space-y-8">
               <GraduateShowcase />
@@ -889,13 +1111,12 @@ export default async function HomePage({
               />
             </div>
             <div className="space-y-5">
-              <StatusPill tone="warning">Результат</StatusPill>
+              <StatusPill tone="warning">{sc.resultEyebrow}</StatusPill>
               <h2 className="text-4xl font-black leading-tight sm:text-5xl">
-                Сильна школа відчувається в деталях
+                {sc.resultTitle}
               </h2>
               <p className="text-base font-semibold leading-7 text-white/68">
-                Нам важливо, щоб учень розумів маршрут, бачив прогрес і мав
-                поруч людей, які відповідають швидко та по суті.
+                {sc.resultDesc}
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
                 {[
@@ -917,9 +1138,9 @@ export default async function HomePage({
         <section id="branches" className="motion-section bg-white py-12 sm:py-16 lg:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <SectionHeader
-              eyebrow="Філіали"
-              title="Оберіть місто та зручний маршрут"
-              description="Активний філіал показує адресу, маршрут, графік і форму для швидкої заявки."
+              eyebrow={sc.branchesEyebrow}
+              title={sc.branchesTitle}
+              description={sc.branchesDesc}
             />
             <div className="mt-8">
               <BranchSelector />
@@ -930,9 +1151,9 @@ export default async function HomePage({
         <section id="faq" className="motion-section bg-lider-background py-12 sm:py-16 lg:py-20">
           <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.85fr_1.15fr]">
             <SectionHeader
-              eyebrow="FAQ"
-              title="Коротко про головне перед стартом"
-              description="Зібрали питання, які найчастіше ставлять перед записом: документи, строки, оплата, іспит і вибір категорії."
+              eyebrow={sc.faqEyebrow}
+              title={sc.faqTitle}
+              description={sc.faqDesc}
             />
             <FaqAccordion items={homeFaq} />
           </div>
@@ -941,13 +1162,12 @@ export default async function HomePage({
         <section id="signup" className="motion-section bg-white pb-28 pt-12 sm:py-16 lg:py-20">
           <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
             <div id="contacts" className="space-y-6">
-              <StatusPill tone="success">Заявка</StatusPill>
+              <StatusPill tone="success">{sc.signupEyebrow}</StatusPill>
               <h2 className="text-4xl font-black leading-tight text-lider-graphite sm:text-5xl">
-                Залиште контакт, і ми підберемо найкращий старт
+                {sc.signupTitle}
               </h2>
               <p className="text-base font-semibold leading-7 text-lider-muted">
-                Менеджер уточнить категорію, місто, графік, ціну та найближчу
-                групу. Можна попросити відповідь дзвінком, у Telegram або WhatsApp.
+                {sc.signupDesc}
               </p>
               <div className="grid gap-3 sm:grid-cols-3">
                 <a
@@ -955,7 +1175,7 @@ export default async function HomePage({
                   className="tap-target rounded-2xl bg-lider-graphite p-4 text-white"
                 >
                   <MessageCircle className="h-6 w-6" aria-hidden />
-                  <span className="mt-3 block text-sm font-black">Зворотний дзвінок</span>
+                  <span className="mt-3 block text-sm font-black">{sc.callbackLabel}</span>
                 </a>
                 {telegram ? (
                   <a href={telegram.href} className="tap-target rounded-2xl bg-[#229ED9] p-4 text-white">
@@ -981,21 +1201,20 @@ export default async function HomePage({
           <div>
             <p className="text-2xl font-black">{siteBrand.name}</p>
             <p className="mt-3 text-sm font-semibold leading-6 text-white/62">
-              Курси водіння, практика, підготовка до іспиту та консультація щодо
-              вибору категорії.
+              {sc.footerDesc}
             </p>
             <nav aria-label="Правова інформація" className="mt-5 flex flex-wrap gap-3">
               <a
                 href={withLocale("/privacy", activeLocale)}
                 className="text-xs font-semibold text-white/45 transition hover:text-white/80"
               >
-                Конфіденційність
+                {sc.footerPrivacy}
               </a>
               <a
                 href={withLocale("/terms", activeLocale)}
                 className="text-xs font-semibold text-white/45 transition hover:text-white/80"
               >
-                Умови
+                {sc.footerTerms}
               </a>
               <a
                 href={`mailto:${siteBrand.email}`}

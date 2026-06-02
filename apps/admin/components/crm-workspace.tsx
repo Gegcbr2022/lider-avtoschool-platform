@@ -11,33 +11,76 @@ import {
   sampleStudents
 } from "@lider/shared";
 import { StatusPill } from "@lider/ui";
-import type { LeadStatus } from "@lider/types";
+import type { Lead, LeadSource, LeadStatus } from "@lider/types";
 import {
   Bell,
   CalendarDays,
   CheckCircle2,
   CircleDollarSign,
+  Copy,
+  Download,
   Gauge,
   Search,
+  Send,
   UsersRound,
   type LucideIcon
 } from "lucide-react";
 import Image from "next/image";
 import { useMemo, useState } from "react";
 
+function exportLeadsCSV(leads: Lead[]) {
+  const header = ["ID", "Ім'я", "Телефон", "Місто", "Категорія", "Статус", "Джерело", "Менеджер", "Referral", "UTM Source", "Дата"];
+  const rows = leads.map((lead) => [
+    lead.id,
+    lead.name,
+    lead.phone,
+    lead.city,
+    lead.category,
+    lead.status,
+    lead.source,
+    lead.manager ?? "",
+    lead.referralCode ?? "",
+    lead.utmSource ?? "",
+    lead.createdAt ? new Date(lead.createdAt).toLocaleDateString("uk-UA") : ""
+  ]);
+  const csvContent = [header, ...rows]
+    .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+    .join("\n");
+  const blob = new Blob(["﻿" + csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `leads-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 const stages: LeadStatus[] = leadStatuses.filter((stage) => stage !== "spam");
+const allCities = Array.from(new Set(sampleLeads.map((l) => l.city))).sort();
+const allSources = Array.from(new Set(sampleLeads.map((l) => l.source))).sort();
 
 export function CrmWorkspace() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<LeadStatus | "all">("all");
+  const [cityFilter, setCityFilter] = useState<string>("all");
+  const [sourceFilter, setSourceFilter] = useState<LeadSource | "all">("all");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const filteredLeads = useMemo(() => {
     return sampleLeads.filter((lead) => {
       const matchesStatus = status === "all" || lead.status === status;
-      const text = `${lead.name} ${lead.phone} ${lead.city} ${lead.manager} ${lead.source} ${lead.referralCode ?? ""}`.toLowerCase();
-      return matchesStatus && text.includes(query.toLowerCase());
+      const matchesCity = cityFilter === "all" || lead.city === cityFilter;
+      const matchesSource = sourceFilter === "all" || lead.source === sourceFilter;
+      const text = `${lead.name} ${lead.phone} ${lead.city} ${lead.manager ?? ""} ${lead.source} ${lead.referralCode ?? ""}`.toLowerCase();
+      return matchesStatus && matchesCity && matchesSource && text.includes(query.toLowerCase());
     });
-  }, [query, status]);
+  }, [query, status, cityFilter, sourceFilter]);
+
+  function copyPhone(lead: Lead) {
+    void navigator.clipboard.writeText(lead.phone);
+    setCopiedId(lead.id);
+    setTimeout(() => setCopiedId(null), 1500);
+  }
 
   const activeStudents = sampleStudents.filter((student) => student.status === "active").length;
   const verifiedDocuments = sampleStudents.filter((student) => student.documentsStatus === "verified").length;
@@ -85,6 +128,29 @@ export function CrmWorkspace() {
                   className="w-full rounded-[12px] border border-[#dce7e3] bg-white py-2.5 pl-10 pr-4 text-sm outline-none focus:border-[#004d40] sm:w-80"
                 />
               </div>
+              <select
+                value={cityFilter}
+                onChange={(e) => setCityFilter(e.target.value)}
+                className="rounded-[12px] border border-[#dce7e3] bg-white py-2.5 pl-3 pr-8 text-sm outline-none focus:border-[#004d40]"
+              >
+                <option value="all">Всі міста</option>
+                {allCities.map((city) => <option key={city} value={city}>{city}</option>)}
+              </select>
+              <select
+                value={sourceFilter}
+                onChange={(e) => setSourceFilter(e.target.value as LeadSource | "all")}
+                className="rounded-[12px] border border-[#dce7e3] bg-white py-2.5 pl-3 pr-8 text-sm outline-none focus:border-[#004d40]"
+              >
+                <option value="all">Всі джерела</option>
+                {allSources.map((src) => <option key={src} value={src}>{src}</option>)}
+              </select>
+              <button
+                onClick={() => exportLeadsCSV(filteredLeads)}
+                className="inline-flex items-center gap-2 rounded-[12px] border border-[#dce7e3] bg-white px-4 py-2.5 text-sm font-semibold text-[#171b1a] transition hover:border-[#004d40]"
+              >
+                <Download className="h-4 w-4" aria-hidden />
+                CSV
+              </button>
               <button className="rounded-[12px] bg-[#ffd600] px-4 py-2.5 text-sm font-semibold text-[#171b1a]">
                 Створити заявку
               </button>
@@ -119,18 +185,27 @@ export function CrmWorkspace() {
                     <th className="py-3 pr-4">Місто</th>
                     <th className="py-3 pr-4">Категорія</th>
                     <th className="py-3 pr-4">Статус</th>
-                      <th className="py-3 pr-4">Джерело</th>
-                      <th className="py-3 pr-4">Referral / UTM</th>
-                      <th className="py-3 pr-4">Менеджер</th>
-                      <th className="py-3">Наступна дія</th>
+                    <th className="py-3 pr-4">Джерело</th>
+                    <th className="py-3 pr-4">Referral / UTM</th>
+                    <th className="py-3 pr-4">Менеджер</th>
+                    <th className="py-3 pr-4">Наступна дія</th>
+                    <th className="py-3">Дії</th>
                   </tr>
                 </thead>
                 <tbody>
+                  {filteredLeads.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="py-12 text-center text-sm text-[#5f6f6a]">
+                        За вибраними фільтрами лідів не знайдено.
+                      </td>
+                    </tr>
+                  ) : null}
                   {filteredLeads.map((lead) => (
                     <tr key={lead.id} className="border-b border-[#edf5f2] last:border-0">
                       <td className="py-4 pr-4">
                         <p className="font-semibold text-[#171b1a]">{lead.name}</p>
                         <p className="text-xs text-[#5f6f6a]">{lead.phone}</p>
+                        <p className="text-xs text-[#5f6f6a]">{lead.id}</p>
                       </td>
                       <td className="py-4 pr-4">{lead.city}</td>
                       <td className="py-4 pr-4 font-semibold">{lead.category}</td>
@@ -146,8 +221,37 @@ export function CrmWorkspace() {
                         <p className="font-semibold">{lead.referralCode ?? lead.utmSource ?? "-"}</p>
                         <p className="text-xs text-[#5f6f6a]">{lead.telegramStartParam ? `TG: ${lead.telegramStartParam}` : lead.page ?? "-"}</p>
                       </td>
-                      <td className="py-4 pr-4">{lead.manager}</td>
-                      <td className="py-4">{lead.nextAction}</td>
+                      <td className="py-4 pr-4">{lead.manager ?? "-"}</td>
+                      <td className="py-4 pr-4 text-xs text-[#5f6f6a]">{lead.nextAction ?? "-"}</td>
+                      <td className="py-4">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => copyPhone(lead)}
+                            title="Скопіювати номер"
+                            className="rounded-[8px] border border-[#dce7e3] p-2 transition hover:border-[#004d40]"
+                          >
+                            {copiedId === lead.id ? <CheckCircle2 className="h-4 w-4 text-[#004d40]" /> : <Copy className="h-4 w-4 text-[#5f6f6a]" />}
+                          </button>
+                          {lead.preferredContactMethod === "telegram" && (
+                            <a
+                              href={`https://t.me/${lead.phone.replace(/\D/g, "")}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              title="Написати в Telegram"
+                              className="rounded-[8px] border border-[#dce7e3] p-2 transition hover:border-[#229ED9]"
+                            >
+                              <Send className="h-4 w-4 text-[#229ED9]" />
+                            </a>
+                          )}
+                          <a
+                            href={`tel:${lead.phone.replace(/\s+/g, "")}`}
+                            title="Зателефонувати"
+                            className="rounded-[8px] border border-[#dce7e3] p-2 transition hover:border-[#004d40]"
+                          >
+                            <span className="text-xs font-black text-[#004d40]">☎</span>
+                          </a>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

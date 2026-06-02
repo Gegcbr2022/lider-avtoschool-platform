@@ -3,11 +3,17 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { branches, defaultLocale, leadFormSchema, type Locale } from "@lider/shared";
 import { Button, cn } from "@lider/ui";
-import { FileUp } from "lucide-react";
-import { useId, useState } from "react";
+import { CheckCircle2, FileUp, Loader2 } from "lucide-react";
+import { useId, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
 import { trackEvent } from "../lib/analytics";
+import {
+  isStorageConfigured,
+  uploadLeadDocuments,
+  validateFiles,
+  type UploadedDocument
+} from "../lib/storage-upload";
 
 type LeadFormValues = z.infer<typeof leadFormSchema>;
 type LeadFormProps = {
@@ -57,6 +63,7 @@ const formCopy: Record<
     cityPlaceholder: string;
     messagePlaceholder: string;
     saving: string;
+    uploading: string;
     saved: string;
     error: string;
     errors: {
@@ -86,6 +93,7 @@ const formCopy: Record<
     cityPlaceholder: "Київ",
     messagePlaceholder: "Наприклад: хочу записатися через Telegram, уточнити ціну або подати документи",
     saving: "Відправляємо...",
+    uploading: "Завантажуємо файли",
     saved: "Заявку прийнято. Менеджер зв'яжеться з вами.",
     error: "Не вдалося відправити заявку.",
     errors: {
@@ -114,6 +122,7 @@ const formCopy: Record<
     cityPlaceholder: "Киев",
     messagePlaceholder: "Например: хочу записаться через Telegram, уточнить цену или подать документы",
     saving: "Отправляем...",
+    uploading: "Загружаем файлы",
     saved: "Заявка принята. Менеджер свяжется с вами.",
     error: "Не удалось отправить заявку.",
     errors: {
@@ -142,6 +151,7 @@ const formCopy: Record<
     cityPlaceholder: "Kyiv",
     messagePlaceholder: "For example: I want to apply via Telegram, check the price or send documents",
     saving: "Sending...",
+    uploading: "Uploading files",
     saved: "Request received. A manager will contact you.",
     error: "Could not send the request.",
     errors: {
@@ -166,8 +176,10 @@ export function LeadForm({
 }: LeadFormProps) {
   const copy = formCopy[locale];
   const formId = useId();
-  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "saving" | "uploading" | "saved" | "error">("idle");
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const [documentFiles, setDocumentFiles] = useState<string[]>([]);
+  const rawFilesRef = useRef<File[]>([]);
   const {
     register,
     handleSubmit,
@@ -193,6 +205,16 @@ export function LeadForm({
   async function onSubmit(values: LeadFormValues) {
     setStatus("saving");
     const leadContext = getLeadContext(locale, analyticsSource);
+    const rawFiles = rawFilesRef.current;
+
+    if (rawFiles.length > 0) {
+      const validationError = validateFiles(rawFiles);
+      if (validationError) {
+        setStatus("error");
+        return;
+      }
+    }
+
     const payload = {
       ...values,
       ...leadContext,
@@ -203,6 +225,8 @@ export function LeadForm({
         .filter(Boolean)
         .join("\n")
     };
+
+    let leadId: string | null = null;
 
     try {
       const response = await fetch("/api/leads", {
@@ -215,9 +239,42 @@ export function LeadForm({
         setStatus("error");
         return;
       }
+
+      const data: unknown = await response.json();
+      if (data && typeof data === "object" && "id" in data && typeof (data as Record<string, unknown>).id === "string") {
+        leadId = (data as Record<string, unknown>).id as string;
+      }
     } catch {
       setStatus("error");
       return;
+    }
+
+    // Upload files to Firebase Storage if we have a leadId and files
+    if (leadId && rawFiles.length > 0 && isStorageConfigured()) {
+      setStatus("uploading");
+      setUploadProgress({ done: 0, total: rawFiles.length });
+
+      try {
+        const uploaded: UploadedDocument[] = await uploadLeadDocuments(
+          rawFiles,
+          leadId,
+          (done, total) => setUploadProgress({ done, total })
+        );
+
+        // Best-effort: update lead with real document metadata
+        await fetch("/api/leads/documents", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ leadId, documents: uploaded })
+        }).catch(() => {
+          // Non-critical: files are already in Storage, lead can be matched by path convention
+        });
+      } catch {
+        // Upload failed but lead is already created — don't block success
+        // Files can be requested via Telegram by manager
+      } finally {
+        setUploadProgress(null);
+      }
     }
 
     reset({
@@ -235,6 +292,7 @@ export function LeadForm({
       message: "",
       consentAccepted: false
     });
+    rawFilesRef.current = [];
     setDocumentFiles([]);
     window.localStorage.setItem("lider-lead-submitted", "true");
     window.dispatchEvent(new CustomEvent("lider-lead-created"));
@@ -250,10 +308,10 @@ export function LeadForm({
   const isPopup = variant === "popup";
 
   function onDocumentFilesChange(files: FileList | null) {
-    const names = Array.from(files ?? [])
-      .slice(0, 8)
-      .map((file) => file.name);
+    const list = Array.from(files ?? []).slice(0, 8);
+    const names = list.map((file) => file.name);
 
+    rawFilesRef.current = list;
     setDocumentFiles(names);
     setValue("documentFiles", names, { shouldDirty: true, shouldValidate: true });
   }
@@ -450,11 +508,24 @@ export function LeadForm({
         <span>{copy.consent}</span>
       </label>
       {errors.consentAccepted ? <p className="-mt-3 text-xs text-red-600">{copy.errors.consent}</p> : null}
-      <Button type="submit" disabled={status === "saving"} className="w-full">
-        {status === "saving" ? copy.saving : submitLabel}
+      <Button type="submit" disabled={status === "saving" || status === "uploading"} className="w-full">
+        {status === "saving" ? (
+          <span className="flex items-center justify-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            {copy.saving}
+          </span>
+        ) : status === "uploading" ? (
+          <span className="flex items-center justify-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            {copy.uploading} {uploadProgress ? `${uploadProgress.done}/${uploadProgress.total}` : ""}
+          </span>
+        ) : submitLabel}
       </Button>
       {status === "saved" ? (
-        <p className="text-sm font-medium text-[#14733d]">{copy.saved}</p>
+        <p className="flex items-center gap-2 text-sm font-medium text-[#14733d]">
+          <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />
+          {copy.saved}
+        </p>
       ) : null}
       {status === "error" ? <p className="text-sm font-medium text-red-600">{copy.error}</p> : null}
     </form>

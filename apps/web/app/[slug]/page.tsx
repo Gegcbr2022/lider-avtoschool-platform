@@ -369,35 +369,267 @@ function SpecializedPageSection({ slug, locale }: { slug: string; locale: Locale
     );
   }
 
-  if (slug === "privacy" || slug === "terms" || slug === "offer") {
-    return (
-      <section className="bg-white px-5 py-20 lg:px-8">
-        <div className="mx-auto max-w-4xl rounded-[22px] border border-lider-line bg-lider-background p-6">
-          <h2 className="text-3xl font-black text-lider-graphite">
-            {locale === "en" ? "Production legal draft" : locale === "ru" ? "Юридический draft для production" : "Юридичний draft для production"}
-          </h2>
-          <div className="mt-5 space-y-4 text-sm font-semibold leading-7 text-lider-muted">
-            <p>
-              {locale === "en"
-                ? "This page records the current data-processing, communication and platform-use rules. Final legal review is still required before treating it as a signed public policy."
-                : locale === "ru"
-                  ? "Эта страница фиксирует текущие правила обработки данных, связи и использования платформы. Перед финальным запуском нужен юридический review."
-                  : "Ця сторінка фіксує поточні правила обробки даних, зв'язку та використання платформи. Перед фінальним запуском потрібен юридичний review."}
-            </p>
-            <p>
-              {locale === "en"
-                ? "Forms store consent, page language, source and request metadata so the team can process each request transparently."
-                : locale === "ru"
-                  ? "Формы сохраняют согласие, язык страницы, источник и метаданные заявки, чтобы команда прозрачно обрабатывала обращения."
-                  : "Форми зберігають згоду, мову сторінки, джерело та метадані заявки, щоб команда прозоро обробляла звернення."}
-            </p>
-          </div>
-        </div>
-      </section>
-    );
+  if (slug === "privacy") {
+    return <LegalSection slug="privacy" locale={locale} />;
+  }
+
+  if (slug === "terms" || slug === "offer") {
+    return <LegalSection slug="terms" locale={locale} />;
   }
 
   return null;
+}
+
+const legalContent = {
+  privacy: {
+    uk: {
+      disclaimer:
+        "Цей текст є підготовчим чернетком і потребує юридичного підтвердження перед публікацією як остаточний документ.",
+      sections: [
+        {
+          title: "Хто відповідає за обробку даних",
+          body: "Автошкола «Лідер» — суб'єкт господарювання, що надає послуги підготовки водіїв. Контактна адреса: lideravtoshkola@gmail.com. Ми збираємо лише ті дані, які необхідні для запису на навчання та зворотного зв'язку."
+        },
+        {
+          title: "Які дані ми збираємо",
+          body: "Через форму заявки: ім'я, телефон, email (за бажанням), місто, обрана категорія, зручний спосіб зв'язку. Через Telegram-бота: Telegram-username та параметри старту. Через аналітику: сторінка переходу, джерело (utm), тип пристрою, мова браузера."
+        },
+        {
+          title: "Для чого використовуються дані",
+          body: "Ім'я і телефон — для зв'язку з менеджером і запису на навчання. Email — якщо вказаний, тільки для відповіді на заявку. Аналітичні дані — для розуміння ефективності каналів без ідентифікації особистості."
+        },
+        {
+          title: "Де зберігаються дані",
+          body: "Заявки зберігаються у Firebase Firestore (сервери Google, EU/USA). Файли документів — у Firebase Storage. Дані не передаються третім особам, крім технічних підрядників (Google, Telegram, OpenAI) на умовах їх власних угод."
+        },
+        {
+          title: "Скільки зберігаються дані",
+          body: "Заявки зберігаються протягом 2 років або до видалення за запитом. Навчальні документи — до завершення навчання і 6 місяців після."
+        },
+        {
+          title: "Ваші права",
+          body: "Ви маєте право запросити видалення ваших даних, виправлення або копію. Для цього напишіть на lideravtoshkola@gmail.com."
+        },
+        {
+          title: "Cookies та аналітика",
+          body: "Сайт може використовувати Google Analytics 4 та Meta Pixel для агрегованої статистики. Жодних персональних даних в аналітику не передається напряму."
+        }
+      ]
+    },
+    ru: {
+      disclaimer:
+        "Этот текст является подготовительным черновиком и требует юридического подтверждения перед публикацией как окончательный документ.",
+      sections: [
+        {
+          title: "Кто отвечает за обработку данных",
+          body: "Автошкола «Лидер» — субъект хозяйствования, предоставляющий услуги подготовки водителей. Контактный адрес: lideravtoshkola@gmail.com. Мы собираем только те данные, которые необходимы для записи на обучение и обратной связи."
+        },
+        {
+          title: "Какие данные мы собираем",
+          body: "Через форму заявки: имя, телефон, email (по желанию), город, выбранная категория, удобный способ связи. Через Telegram-бота: Telegram-username и параметры старта. Через аналитику: страница перехода, источник (utm), тип устройства, язык браузера."
+        },
+        {
+          title: "Для чего используются данные",
+          body: "Имя и телефон — для связи с менеджером и записи на обучение. Email — если указан, только для ответа на заявку. Аналитические данные — для понимания эффективности каналов без идентификации личности."
+        },
+        {
+          title: "Где хранятся данные",
+          body: "Заявки хранятся в Firebase Firestore (серверы Google, EU/USA). Файлы документов — в Firebase Storage. Данные не передаются третьим лицам, кроме технических подрядчиков (Google, Telegram, OpenAI) на условиях их соглашений."
+        },
+        {
+          title: "Сколько хранятся данные",
+          body: "Заявки хранятся в течение 2 лет или до удаления по запросу. Учебные документы — до завершения обучения и 6 месяцев после."
+        },
+        {
+          title: "Ваши права",
+          body: "Вы имеете право запросить удаление данных, их исправление или копию. Для этого напишите на lideravtoshkola@gmail.com."
+        },
+        {
+          title: "Cookies и аналитика",
+          body: "Сайт может использовать Google Analytics 4 и Meta Pixel для агрегированной статистики. Персональные данные в аналитику напрямую не передаются."
+        }
+      ]
+    },
+    en: {
+      disclaimer:
+        "This text is a preparatory draft and requires legal review before being published as a final document.",
+      sections: [
+        {
+          title: "Data controller",
+          body: "Leader Driving School — a business entity providing driver training services. Contact: lideravtoshkola@gmail.com. We collect only the data required for enrolment and communication."
+        },
+        {
+          title: "What data we collect",
+          body: "Through the request form: name, phone, email (optional), city, selected category, preferred contact method. Through the Telegram bot: Telegram username and start parameters. Through analytics: referral page, source (utm), device type, browser language."
+        },
+        {
+          title: "How data is used",
+          body: "Name and phone — to contact the manager and enrol you. Email — if provided, only to respond to your request. Analytics data — to understand channel effectiveness without identifying individuals."
+        },
+        {
+          title: "Where data is stored",
+          body: "Requests are stored in Firebase Firestore (Google servers, EU/USA). Document files in Firebase Storage. Data is not shared with third parties except technical subcontractors (Google, Telegram, OpenAI) under their own agreements."
+        },
+        {
+          title: "Retention period",
+          body: "Requests are retained for 2 years or until deleted on request. Training documents — until training completion and 6 months thereafter."
+        },
+        {
+          title: "Your rights",
+          body: "You have the right to request deletion, correction, or a copy of your data. Write to lideravtoshkola@gmail.com."
+        },
+        {
+          title: "Cookies and analytics",
+          body: "The site may use Google Analytics 4 and Meta Pixel for aggregate statistics. No personal data is passed directly to analytics."
+        }
+      ]
+    }
+  },
+  terms: {
+    uk: {
+      disclaimer:
+        "Цей текст є підготовчим чернетком і потребує юридичного підтвердження перед публікацією як остаточний документ.",
+      sections: [
+        {
+          title: "Предмет",
+          body: "Ці умови регулюють використання сайту lider.bdslab.net, форм заявок, майбутнього кабінету учня та мобільного застосунку автошколи «Лідер»."
+        },
+        {
+          title: "Форма заявки",
+          body: "Надсилаючи заявку, ви надаєте згоду на зв'язок щодо навчання. Заявка не є договором і не гарантує зарахування без підтвердження менеджера і підписання договору."
+        },
+        {
+          title: "Завантаження документів",
+          body: "Файли, надіслані через форму, зберігаються у Firebase Storage і доступні тільки менеджерам автошколи. Дозволені формати: JPG, PNG, PDF. Максимальний розмір файлу: 10 МБ."
+        },
+        {
+          title: "Telegram-бот",
+          body: "Telegram-бот надає довідкову інформацію та можливість записатися. Переписка в Telegram не є юридично значущим документом."
+        },
+        {
+          title: "Відповідальність сайту",
+          body: "Автошкола не несе відповідальності за технічні збої сторонніх сервісів (Google, Telegram, Vercel) або за дії третіх осіб. Ми зобов'язуємося усувати власні технічні проблеми в розумні строки."
+        },
+        {
+          title: "Актуальність цін",
+          body: "Ціни на сайті є орієнтовними. Точна вартість підтверджується менеджером перед підписанням договору і може відрізнятися залежно від міста, категорії та поточних умов."
+        },
+        {
+          title: "Зміни в умовах",
+          body: "Ми можемо оновлювати ці умови без попереднього повідомлення. Актуальна версія завжди доступна на цій сторінці."
+        }
+      ]
+    },
+    ru: {
+      disclaimer:
+        "Этот текст является подготовительным черновиком и требует юридического подтверждения перед публикацией как окончательный документ.",
+      sections: [
+        {
+          title: "Предмет",
+          body: "Эти условия регулируют использование сайта lider.bdslab.net, форм заявок, будущего кабинета ученика и мобильного приложения автошколы «Лидер»."
+        },
+        {
+          title: "Форма заявки",
+          body: "Отправляя заявку, вы соглашаетесь на связь по поводу обучения. Заявка не является договором и не гарантирует зачисление без подтверждения менеджером и подписания договора."
+        },
+        {
+          title: "Загрузка документов",
+          body: "Файлы, отправленные через форму, хранятся в Firebase Storage и доступны только менеджерам автошколы. Разрешённые форматы: JPG, PNG, PDF. Максимальный размер файла: 10 МБ."
+        },
+        {
+          title: "Telegram-бот",
+          body: "Telegram-бот предоставляет справочную информацию и возможность записаться. Переписка в Telegram не является юридически значимым документом."
+        },
+        {
+          title: "Ответственность сайта",
+          body: "Автошкола не несёт ответственности за технические сбои сторонних сервисов (Google, Telegram, Vercel) или действия третьих лиц. Мы обязуемся устранять собственные технические проблемы в разумные сроки."
+        },
+        {
+          title: "Актуальность цен",
+          body: "Цены на сайте являются ориентировочными. Точная стоимость подтверждается менеджером перед подписанием договора и может отличаться в зависимости от города, категории и условий."
+        },
+        {
+          title: "Изменения в условиях",
+          body: "Мы можем обновлять эти условия без предварительного уведомления. Актуальная версия всегда доступна на этой странице."
+        }
+      ]
+    },
+    en: {
+      disclaimer:
+        "This text is a preparatory draft and requires legal review before being published as a final document.",
+      sections: [
+        {
+          title: "Scope",
+          body: "These terms govern use of lider.bdslab.net, request forms, the future student cabinet and the mobile application of Leader Driving School."
+        },
+        {
+          title: "Request form",
+          body: "By submitting a request you consent to being contacted about training. A request is not a contract and does not guarantee enrolment without manager confirmation and a signed agreement."
+        },
+        {
+          title: "Document uploads",
+          body: "Files sent via the form are stored in Firebase Storage and accessible only to school managers. Permitted formats: JPG, PNG, PDF. Maximum file size: 10 MB."
+        },
+        {
+          title: "Telegram bot",
+          body: "The Telegram bot provides reference information and enrolment. Telegram correspondence does not constitute a legally significant document."
+        },
+        {
+          title: "Liability",
+          body: "The school is not liable for technical failures of third-party services (Google, Telegram, Vercel) or third-party actions. We commit to resolving our own technical issues within a reasonable timeframe."
+        },
+        {
+          title: "Pricing accuracy",
+          body: "Prices on the site are indicative. Exact cost is confirmed by a manager before signing a contract and may vary by city, category and current conditions."
+        },
+        {
+          title: "Updates to these terms",
+          body: "We may update these terms without prior notice. The current version is always available on this page."
+        }
+      ]
+    }
+  }
+} as const;
+
+type LegalSlug = "privacy" | "terms";
+
+function LegalSection({ slug, locale }: { slug: LegalSlug; locale: Locale }) {
+  const content = legalContent[slug][locale];
+
+  return (
+    <section className="bg-white px-5 py-16 lg:px-8">
+      <div className="mx-auto max-w-3xl">
+        <div className="mb-8 rounded-2xl border border-lider-red/20 bg-[#fff7f7] px-5 py-4 text-sm font-semibold leading-6 text-lider-muted">
+          ⚠ {content.disclaimer}
+        </div>
+        <div className="space-y-8">
+          {content.sections.map((section, index) => (
+            <article key={section.title}>
+              <h2 className="flex items-center gap-3 text-xl font-black text-lider-graphite">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-lider-red text-sm font-black text-white">
+                  {index + 1}
+                </span>
+                {section.title}
+              </h2>
+              <p className="mt-4 text-sm font-semibold leading-7 text-lider-muted">{section.body}</p>
+            </article>
+          ))}
+        </div>
+        <div className="mt-12 rounded-2xl bg-lider-background p-5">
+          <p className="text-sm font-semibold text-lider-muted">
+            {locale === "en"
+              ? "Questions about your data or these terms: "
+              : locale === "ru"
+                ? "Вопросы о данных или условиях: "
+                : "Питання про дані або умови: "}
+            <a href="mailto:lideravtoshkola@gmail.com" className="font-black text-lider-red">
+              lideravtoshkola@gmail.com
+            </a>
+          </p>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 function normalizeLocale(value: string | string[] | undefined): Locale {

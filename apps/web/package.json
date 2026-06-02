@@ -16,6 +16,7 @@
     "@lider/shared": "file:../../packages/shared",
     "@lider/types": "file:../../packages/types",
     "@lider/ui": "file:../../packages/ui",
+    "firebase": "^12.14.0",
     "framer-motion": "^12.7.4",
     "lucide-react": "^0.503.0",
     "next": "^15.3.1",
