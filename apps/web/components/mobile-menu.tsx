@@ -100,7 +100,7 @@ export function MobileMenu({ navItems, activeLocale }: { navItems: readonly NavI
                             key={item.href}
                             href={item.href}
                             onClick={close}
-                            className="tap-target rounded-[18px] border border-lider-line bg-white px-4 py-4 text-base font-black text-lider-graphite transition hover:border-lider-red hover:bg-[#fff1f1]"
+                            className="tap-target rounded-[18px] border border-lider-line bg-white px-4 py-4 text-base font-black text-lider-graphite transition hover:border-lider-red hover:bg-[#e6f4ef]"
                           >
                             {item.label}
                           </Link>

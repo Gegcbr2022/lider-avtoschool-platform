@@ -71,10 +71,10 @@ const homeCopy: Record<
       { href: "/contacts", label: "Контакти" }
     ],
     heroBadge: "Підготовка до прав A, A1, B, C, CE",
-    heroTitle: "Права без хаосу: чесний маршрут від заявки до посвідчення",
+    heroTitle: "Права без хаосу",
     heroText:
-      "Автошкола «Лідер» допомагає обрати категорію, подати документи, пройти теорію й підготуватися до іспиту без зайвого шуму. Менеджер поруч, Telegram-бот поруч, план навчання зрозумілий.",
-    heroHighlights: ["Заявка за 1 хвилину", "Документи можна подати онлайн", "Підтримка до ТСЦ"],
+      "Оберіть категорію й залиште телефон. Менеджер підкаже ціну, документи та найближчий старт.",
+    heroHighlights: ["1 хвилина", "Документи онлайн", "Підтримка до іспиту"],
     primaryCta: "Залишити заявку",
     telegramCta: "Запис через Telegram",
     headerCta: "Запис у Telegram"
@@ -89,10 +89,10 @@ const homeCopy: Record<
       { href: "/contacts", label: "Контакты" }
     ],
     heroBadge: "Подготовка к правам A, A1, B, C, CE",
-    heroTitle: "Права без хаоса: понятный путь от заявки до удостоверения",
+    heroTitle: "Права без хаоса",
     heroText:
-      "Автошкола «Лидер» помогает выбрать категорию, подать документы, пройти теорию и подготовиться к экзамену без лишней суеты. Менеджер рядом, Telegram-бот рядом, план обучения понятный.",
-    heroHighlights: ["Заявка за 1 минуту", "Документы можно подать онлайн", "Поддержка до сервисного центра"],
+      "Выберите категорию и оставьте телефон. Менеджер подскажет цену, документы и ближайший старт.",
+    heroHighlights: ["1 минута", "Документы онлайн", "Поддержка до экзамена"],
     primaryCta: "Оставить заявку",
     telegramCta: "Запись через Telegram",
     headerCta: "Запись в Telegram"
@@ -107,10 +107,10 @@ const homeCopy: Record<
       { href: "/contacts", label: "Contacts" }
     ],
     heroBadge: "Driving licence training A, A1, B, C, CE",
-    heroTitle: "A clear route from request to driving licence",
+    heroTitle: "Driving licence without chaos",
     heroText:
-      "Leader Driving School helps you choose a category, prepare documents, study theory and get ready for the exam with a clear plan, a real manager and Telegram support.",
-    heroHighlights: ["1-minute request", "Documents can be sent online", "Support until the exam"],
+      "Choose a category and leave your phone. A manager will explain price, documents and the nearest start.",
+    heroHighlights: ["1-minute request", "Online documents", "Exam support"],
     primaryCta: "Send request",
     telegramCta: "Apply via Telegram",
     headerCta: "Apply in Telegram"
@@ -550,7 +550,7 @@ export default async function HomePage({
       </header>
 
       <main className="overflow-hidden bg-white pb-24 text-lider-graphite md:pb-0">
-        <section className="motion-section relative border-b border-lider-line bg-[radial-gradient(circle_at_top_right,rgba(255,30,30,0.13),transparent_30%),linear-gradient(180deg,#ffffff_0%,#f5f5f5_100%)]">
+        <section className="motion-section relative border-b border-lider-line bg-[linear-gradient(180deg,#ffffff_0%,#f6f8f7_100%)]">
           <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-[1.02fr_0.98fr] lg:items-center lg:py-16">
             <div className="space-y-6">
               <StatusPill tone="success">{copy.heroBadge}</StatusPill>
@@ -640,7 +640,7 @@ export default async function HomePage({
             </div>
 
             <div className="relative hidden lg:block">
-              <div className="absolute -right-8 top-10 h-44 w-44 rounded-full bg-lider-red/18 blur-3xl" />
+              <div className="absolute -right-8 top-10 h-44 w-44 rounded-full bg-[#0b5c4a]/12 blur-3xl" />
               <div className="relative overflow-hidden rounded-[30px] border border-white bg-lider-graphite shadow-[0_30px_90px_rgba(26,26,26,0.22)]">
                 <Image
                   src="/images/lesson-premium.png"
@@ -680,7 +680,7 @@ export default async function HomePage({
           </div>
         </section>
 
-        <section className="motion-section bg-lider-background py-10 sm:py-14">
+        <section className="motion-section hidden bg-lider-background py-10 sm:py-14 md:block">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
               <SectionHeader
@@ -1253,8 +1253,8 @@ export default async function HomePage({
 
       <ConversionWidgets
         activeLocale={activeLocale}
-        leadPopupDelayMs={process.env.NODE_ENV === "production" ? 25000 : 1500}
-        reopenAfterMs={35000}
+        leadPopupDelayMs={process.env.NODE_ENV === "production" ? 45000 : 1500}
+        reopenAfterMs={15 * 60 * 1000}
       />
     </>
   );

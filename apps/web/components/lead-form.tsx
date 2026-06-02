@@ -51,6 +51,7 @@ const formCopy: Record<
     phone: string;
     email: string;
     city: string;
+    fallbackName: string;
     category: string;
     branch: string;
     contactMethod: string;
@@ -81,6 +82,7 @@ const formCopy: Record<
     phone: "Телефон",
     email: "Email",
     city: "Місто",
+    fallbackName: "Клієнт Лідер",
     category: "Категорія",
     branch: "Філія",
     contactMethod: "Зручний спосіб зв'язку",
@@ -110,6 +112,7 @@ const formCopy: Record<
     phone: "Телефон",
     email: "Email",
     city: "Город",
+    fallbackName: "Клиент Лидер",
     category: "Категория",
     branch: "Филиал",
     contactMethod: "Удобный способ связи",
@@ -139,6 +142,7 @@ const formCopy: Record<
     phone: "Phone",
     email: "Email",
     city: "City",
+    fallbackName: "Leader client",
     category: "Category",
     branch: "Branch",
     contactMethod: "Preferred contact method",
@@ -176,6 +180,7 @@ export function LeadForm({
 }: LeadFormProps) {
   const copy = formCopy[locale];
   const formId = useId();
+  const isPopup = variant === "popup";
   const [status, setStatus] = useState<"idle" | "saving" | "uploading" | "saved" | "error">("idle");
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const [documentFiles, setDocumentFiles] = useState<string[]>([]);
@@ -198,6 +203,7 @@ export function LeadForm({
       documents: [],
       language: locale,
       source: analyticsSource === "popup" ? "popup" : "website",
+      city: isPopup ? copy.cityPlaceholder : "",
       consentAccepted: false
     }
   });
@@ -218,6 +224,7 @@ export function LeadForm({
     const payload = {
       ...values,
       ...leadContext,
+      name: values.name?.trim() || copy.fallbackName,
       preferredContactMethod: values.contactMethod,
       documentFiles,
       documents: documentFiles.map((name) => ({ name, status: "pending_upload" as const })),
@@ -288,7 +295,7 @@ export function LeadForm({
       name: "",
       phone: "",
       email: "",
-      city: "",
+      city: isPopup ? copy.cityPlaceholder : "",
       message: "",
       consentAccepted: false
     });
@@ -305,8 +312,6 @@ export function LeadForm({
     onSuccess?.();
   }
 
-  const isPopup = variant === "popup";
-
   function onDocumentFilesChange(files: FileList | null) {
     const list = Array.from(files ?? []).slice(0, 8);
     const names = list.map((file) => file.name);
@@ -321,7 +326,7 @@ export function LeadForm({
       onSubmit={handleSubmit(onSubmit)}
       className={cn(
         "grid gap-4 rounded-[22px] bg-white p-5 shadow-soft",
-        isPopup && "rounded-[18px] border border-lider-line p-4 shadow-none sm:p-5",
+        isPopup && "rounded-none border-0 p-0 shadow-none",
         className
       )}
     >
@@ -331,13 +336,13 @@ export function LeadForm({
           {description ? <p className="mt-2 text-sm leading-6 text-lider-muted">{description}</p> : null}
         </div>
       ) : null}
-      <div>
+      <div className={isPopup ? "hidden" : undefined}>
         <label className="text-sm font-semibold text-lider-graphite" htmlFor={`${formId}-requestType`}>
           {copy.requestType}
         </label>
         <select
           id={`${formId}-requestType`}
-          className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-lider-red focus:ring-4 focus:ring-lider-red/10"
+          className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-[#0b5c4a] focus:ring-4 focus:ring-[#0b5c4a]/10"
           {...register("requestType")}
         >
           {requestTypes.map((item) => (
@@ -350,62 +355,67 @@ export function LeadForm({
       <div>
         <label className="text-sm font-semibold text-lider-graphite" htmlFor={`${formId}-name`}>
           {copy.name}
+          {isPopup ? (
+            <span className="ml-1 font-medium text-lider-muted">
+              {locale === "en" ? "(optional)" : locale === "ru" ? "(необязательно)" : "(необов'язково)"}
+            </span>
+          ) : null}
         </label>
         <input
           id={`${formId}-name`}
-          className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-lider-red focus:ring-4 focus:ring-lider-red/10"
+          className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-[#0b5c4a] focus:ring-4 focus:ring-[#0b5c4a]/10"
           placeholder={copy.namePlaceholder}
           {...register("name")}
         />
         {errors.name ? <p className="mt-1 text-xs text-red-600">{copy.errors.name}</p> : null}
       </div>
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className={cn("grid gap-4", isPopup ? "" : "md:grid-cols-3")}>
         <div>
           <label className="text-sm font-semibold text-lider-graphite" htmlFor={`${formId}-phone`}>
             {copy.phone}
           </label>
           <input
             id={`${formId}-phone`}
-            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-lider-red focus:ring-4 focus:ring-lider-red/10"
+            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-[#0b5c4a] focus:ring-4 focus:ring-[#0b5c4a]/10"
             placeholder="050 000 00 00"
             {...register("phone")}
           />
           {errors.phone ? <p className="mt-1 text-xs text-red-600">{copy.errors.phone}</p> : null}
         </div>
-        <div>
+        <div className={isPopup ? "hidden" : undefined}>
           <label className="text-sm font-semibold text-lider-graphite" htmlFor={`${formId}-email`}>
             {copy.email}
           </label>
           <input
             id={`${formId}-email`}
             type="email"
-            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-lider-red focus:ring-4 focus:ring-lider-red/10"
+            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-[#0b5c4a] focus:ring-4 focus:ring-[#0b5c4a]/10"
             placeholder="name@example.com"
             {...register("email")}
           />
           {errors.email ? <p className="mt-1 text-xs text-red-600">{copy.errors.email}</p> : null}
         </div>
-        <div>
+        <div className={isPopup ? "hidden" : undefined}>
           <label className="text-sm font-semibold text-lider-graphite" htmlFor={`${formId}-city`}>
             {copy.city}
           </label>
           <input
             id={`${formId}-city`}
-            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-lider-red focus:ring-4 focus:ring-lider-red/10"
+            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-[#0b5c4a] focus:ring-4 focus:ring-[#0b5c4a]/10"
             placeholder={copy.cityPlaceholder}
             {...register("city")}
           />
           {errors.city ? <p className="mt-1 text-xs text-red-600">{copy.errors.city}</p> : null}
         </div>
       </div>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className={isPopup ? "hidden" : "grid gap-4 md:grid-cols-2"}>
         <div>
           <label className="text-sm font-semibold text-lider-graphite" htmlFor={`${formId}-category`}>
             {copy.category}
           </label>
           <select
             id={`${formId}-category`}
-            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-lider-red focus:ring-4 focus:ring-lider-red/10"
+            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-[#0b5c4a] focus:ring-4 focus:ring-[#0b5c4a]/10"
             {...register("category")}
           >
             {categoryOptions.map((category) => (
@@ -421,7 +431,7 @@ export function LeadForm({
           </label>
           <select
             id={`${formId}-branchId`}
-            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-lider-red focus:ring-4 focus:ring-lider-red/10"
+            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-[#0b5c4a] focus:ring-4 focus:ring-[#0b5c4a]/10"
             {...register("branchId")}
           >
             {branches.map((branch) => (
@@ -432,13 +442,13 @@ export function LeadForm({
           </select>
         </div>
       </div>
-      <div>
+      <div className={isPopup ? "hidden" : undefined}>
         <label className="text-sm font-semibold text-lider-graphite" htmlFor={`${formId}-contactMethod`}>
           {copy.contactMethod}
         </label>
         <select
           id={`${formId}-contactMethod`}
-          className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-lider-red focus:ring-4 focus:ring-lider-red/10"
+          className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-[#0b5c4a] focus:ring-4 focus:ring-[#0b5c4a]/10"
           {...register("contactMethod")}
         >
           {contactMethods.map((item) => (
@@ -448,7 +458,7 @@ export function LeadForm({
           ))}
         </select>
       </div>
-      <div className="rounded-[16px] border border-dashed border-lider-red/35 bg-[#fff7f7] p-4">
+      <div className={cn("rounded-[16px] border border-dashed border-[#b9d8ce] bg-[#f1f7f4] p-4", isPopup && "hidden")}>
         <label
           className="flex cursor-pointer flex-col gap-3 text-sm font-semibold text-lider-graphite sm:flex-row sm:items-center sm:justify-between"
           htmlFor={`${formId}-documents`}
@@ -484,15 +494,15 @@ export function LeadForm({
           </div>
         ) : null}
       </div>
-      <div>
+      <div className={isPopup ? "hidden" : undefined}>
         <label className="text-sm font-semibold text-lider-graphite" htmlFor={`${formId}-message`}>
           {copy.comment}
         </label>
         <textarea
           id={`${formId}-message`}
           className={cn(
-            "mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-red",
-            "transition focus:ring-4 focus:ring-lider-red/10",
+            "mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-[#0b5c4a]",
+            "transition focus:ring-4 focus:ring-[#0b5c4a]/10",
             isPopup ? "min-h-20" : "min-h-24"
           )}
           placeholder={copy.messagePlaceholder}
@@ -502,7 +512,7 @@ export function LeadForm({
       <label className="flex items-start gap-3 rounded-[16px] bg-lider-background p-4 text-sm font-semibold leading-6 text-lider-muted">
         <input
           type="checkbox"
-          className="mt-1 h-4 w-4 rounded border-lider-line text-lider-red focus:ring-lider-red"
+          className="mt-1 h-4 w-4 rounded border-lider-line accent-[#0b5c4a] focus:ring-[#0b5c4a]"
           {...register("consentAccepted")}
         />
         <span>{copy.consent}</span>

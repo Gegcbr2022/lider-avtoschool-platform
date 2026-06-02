@@ -2,59 +2,52 @@
 
 import type { Locale } from "@lider/shared";
 import { AnimatePresence, motion } from "framer-motion";
-import { BrainCircuit, CalendarCheck, HelpCircle, Sparkles, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { MessageCircle, ShieldCheck, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { trackEvent } from "../lib/analytics";
 import { LeadForm } from "./lead-form";
 
 const NEXT_SHOW_KEY = "lider-lead-popup-next-show-at";
-const VARIANT_KEY = "lider-lead-popup-variant";
 const LEAD_SUBMITTED_KEY = "lider-lead-submitted";
 const SESSION_SHOWS_KEY = "lider-lead-popup-session-shows";
-const DEFAULT_DELAY_MS = 25_000;
-const DEFAULT_REOPEN_MS = 35_000;
-const MAX_SESSION_SHOWS = 3;
+const DEFAULT_DELAY_MS = 45_000;
+const DEFAULT_REOPEN_MS = 15 * 60_000;
+const MAX_SESSION_SHOWS = 1;
 
-const popupVariants = [
+type PopupTrigger = "timer" | "section-depth" | "exit-intent" | "manual" | "repeat";
+
+const popupCopy: Record<
+  Locale,
   {
-    id: "consultation",
-    icon: HelpCircle,
-    title: "Потрібна консультація щодо прав?",
-    eyebrow: "Консультація за 1 хвилину",
-    text: "Залиште контакт, і менеджер підкаже ціну теорії, документи, філію та найближчий старт у вашому місті.",
-    bullets: ["A, A1, B, C, CE", "Ціна і графік без очікування", "Київ, Дніпро, Донеччина"],
-    submitLabel: "Зв'яжіться зі мною"
-  },
-  {
-    id: "category-picker",
-    icon: BrainCircuit,
-    title: "Не знаєте, яка категорія потрібна?",
-    eyebrow: "Підбір категорії",
-    text: "Менеджер або онлайн-помічник допоможе обрати між A, A1, B, C і CE за досвідом, метою та містом навчання.",
-    bullets: ["3-5 уточнюючих питань", "Рекомендація категорії", "План старту навчання"],
-    submitLabel: "Підібрати категорію"
-  },
-  {
-    id: "first-lesson",
-    icon: CalendarCheck,
-    title: "Запланувати перше заняття?",
-    eyebrow: "Перший урок",
-    text: "Підкажемо, як почати теорію онлайн, що підготувати з документів і коли можна вийти на практику.",
-    bullets: ["Онлайн-теорія", "Документи без хаосу", "Практика за графіком"],
-    submitLabel: "Уточнити перший урок"
-  },
-  {
-    id: "ai-help",
-    icon: Sparkles,
-    title: "Онлайн-помічник уже на зв'язку",
-    eyebrow: "Швидка відповідь",
-    text: "Можете поставити питання про ціну, категорії, філії, документи або ПДР прямо в чаті, а заявку залишити після відповіді.",
-    bullets: ["Працює 24/7", "Пояснює простими словами", "Передає заявку менеджеру"],
-    submitLabel: "Отримати консультацію"
+    title: string;
+    text: string;
+    note: string;
+    submit: string;
+    close: string;
   }
-] as const;
-
-type PopupTrigger = "timer" | "section-depth" | "middle-scroll" | "exit-intent" | "repeat";
+> = {
+  uk: {
+    title: "Залиште телефон",
+    text: "Менеджер коротко підкаже ціну, документи та найближчий старт. Без довгої анкети.",
+    note: "Тільки для консультації щодо навчання.",
+    submit: "Залишити заявку",
+    close: "Закрити форму"
+  },
+  ru: {
+    title: "Оставьте телефон",
+    text: "Менеджер коротко подскажет цену, документы и ближайший старт. Без длинной анкеты.",
+    note: "Только для консультации по обучению.",
+    submit: "Оставить заявку",
+    close: "Закрыть форму"
+  },
+  en: {
+    title: "Leave your phone",
+    text: "A manager will quickly explain price, documents and the nearest start. No long form.",
+    note: "Only for a training consultation.",
+    submit: "Apply now",
+    close: "Close form"
+  }
+};
 
 export function LeadPopup({
   locale,
@@ -70,8 +63,7 @@ export function LeadPopup({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const triggerRef = useRef<PopupTrigger>("timer");
   const viewedSectionsRef = useRef(new Set<string>());
-  const variant = useMemo(() => popupVariants[getVariantIndex()], []);
-  const Icon = variant.icon;
+  const copy = popupCopy[locale] ?? popupCopy.uk;
 
   useEffect(() => {
     const timer = window.setTimeout(() => tryOpen("timer"), delayMs);
@@ -79,6 +71,11 @@ export function LeadPopup({
 
     function onLeadCreated() {
       setIsOpen(false);
+    }
+
+    function onOpenRequest(event: Event) {
+      const customEvent = event as CustomEvent<{ source?: string }>;
+      tryOpen("manual", true, customEvent.detail?.source);
     }
 
     function onAiState(event: Event) {
@@ -98,6 +95,7 @@ export function LeadPopup({
     }
 
     window.addEventListener("lider-lead-created", onLeadCreated);
+    window.addEventListener("lider-open-lead-popup", onOpenRequest);
     window.addEventListener("lider-ai-chat-state", onAiState);
     window.addEventListener("lider-mobile-menu-state", onMenuState);
 
@@ -105,6 +103,7 @@ export function LeadPopup({
       window.clearTimeout(timer);
       window.clearInterval(repeatTimer);
       window.removeEventListener("lider-lead-created", onLeadCreated);
+      window.removeEventListener("lider-open-lead-popup", onOpenRequest);
       window.removeEventListener("lider-ai-chat-state", onAiState);
       window.removeEventListener("lider-mobile-menu-state", onMenuState);
     };
@@ -123,11 +122,7 @@ export function LeadPopup({
         }
       });
 
-      if (progress > 0.45) {
-        tryOpen("middle-scroll");
-      }
-
-      if (viewedSectionsRef.current.size >= 3) {
+      if (progress > 0.55 || viewedSectionsRef.current.size >= 4) {
         tryOpen("section-depth");
       }
     }
@@ -145,7 +140,7 @@ export function LeadPopup({
       window.removeEventListener("scroll", onScroll);
       document.removeEventListener("mouseleave", onMouseLeave);
     };
-  }, [isAiOpen, isMenuOpen]);
+  }, [isAiOpen, isMenuOpen, isOpen]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -169,37 +164,31 @@ export function LeadPopup({
     };
   }, [isOpen]);
 
-  function tryOpen(trigger: PopupTrigger) {
-    if (isOpen || isAiOpen || isMenuOpen || hasSubmittedLead()) {
+  function tryOpen(trigger: PopupTrigger, force = false, source?: string) {
+    if (isOpen || isAiOpen || isMenuOpen || (!force && hasSubmittedLead())) {
       return;
     }
 
-    const nextAllowedAt = Number(window.localStorage.getItem(NEXT_SHOW_KEY) ?? 0);
-    const sessionShows = Number(window.sessionStorage.getItem(SESSION_SHOWS_KEY) ?? 0);
+    if (!force) {
+      const nextAllowedAt = Number(window.localStorage.getItem(NEXT_SHOW_KEY) ?? 0);
+      const sessionShows = Number(window.sessionStorage.getItem(SESSION_SHOWS_KEY) ?? 0);
 
-    if (Date.now() < nextAllowedAt || sessionShows >= MAX_SESSION_SHOWS) {
-      return;
+      if (Date.now() < nextAllowedAt || sessionShows >= MAX_SESSION_SHOWS) {
+        return;
+      }
+
+      window.sessionStorage.setItem(SESSION_SHOWS_KEY, String(sessionShows + 1));
     }
 
     triggerRef.current = trigger;
-    window.sessionStorage.setItem(SESSION_SHOWS_KEY, String(sessionShows + 1));
     setIsOpen(true);
-    trackEvent("popup_shown", { trigger, variant: variant.id, count: sessionShows + 1 });
-
-    if (trigger === "exit-intent") {
-      trackEvent("exit_popup_shown", { variant: variant.id });
-    }
+    trackEvent("popup_shown", { trigger, source: source ?? trigger, forced: force });
   }
 
   function closePopup(reason: string) {
     window.localStorage.setItem(NEXT_SHOW_KEY, String(Date.now() + reopenAfterMs));
-    trackEvent("popup_closed", { reason, trigger: triggerRef.current, variant: variant.id });
+    trackEvent("popup_closed", { reason, trigger: triggerRef.current });
     setIsOpen(false);
-  }
-
-  function openAiChat() {
-    closePopup("open-ai-chat");
-    window.dispatchEvent(new CustomEvent("lider-open-ai-chat", { detail: { source: "popup", variant: variant.id } }));
   }
 
   return (
@@ -209,113 +198,72 @@ export function LeadPopup({
         data-lider-lead-popup-root
         aria-hidden="true"
         tabIndex={-1}
-        onClick={() => tryOpen("timer")}
+        onClick={() => tryOpen("manual", true, "hidden-trigger")}
         className="pointer-events-none fixed left-0 top-0 h-px w-px opacity-0"
       />
       <AnimatePresence>
         {isOpen ? (
           <motion.div
-          className="fixed inset-0 z-[80] flex items-end justify-center bg-[#1a1a1a]/70 px-3 py-3 backdrop-blur-sm sm:items-center sm:px-4"
-          role="presentation"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) {
-              closePopup("backdrop");
-            }
-          }}
-        >
-          <motion.section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="lead-popup-title"
-            className="safe-bottom flex max-h-[calc(100dvh-1.5rem)] w-full max-w-5xl flex-col overflow-hidden rounded-[24px] border border-white/30 bg-white shadow-[0_32px_100px_rgba(0,0,0,0.32)] sm:max-h-[calc(100vh-2rem)]"
-            initial={{ opacity: 0, y: 28 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 18 }}
-            transition={{ duration: 0.24, ease: [0.2, 0.8, 0.2, 1] }}
+            className="fixed inset-0 z-[80] flex items-end justify-center bg-[#171b1a]/58 px-3 py-3 backdrop-blur-sm sm:items-center sm:px-4"
+            role="presentation"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) {
+                closePopup("backdrop");
+              }
+            }}
           >
-            <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between gap-3 border-b border-lider-line bg-white px-4 py-3 sm:px-5">
-              <div className="min-w-0">
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-lider-red">{variant.eyebrow}</p>
-                <p className="truncate text-sm font-black text-lider-graphite">Автошкола «Лідер»</p>
-              </div>
-              <button
-                type="button"
-                aria-label="Закрити форму"
-                onClick={() => closePopup("button")}
-                className="tap-target inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-lider-graphite text-white transition hover:bg-[#2a2a2a]"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div className="min-h-0 overflow-y-auto">
-              <div className="grid lg:grid-cols-[0.85fr_1fr]">
-                <div className="relative bg-lider-red p-4 text-white sm:p-6 lg:p-8">
-                <div className="inline-flex h-12 w-12 items-center justify-center rounded-[16px] bg-white/15 text-white">
-                  <Icon size={22} />
-                </div>
-                <p className="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-white/70">
-                  {variant.eyebrow}
-                </p>
-                <h2 id="lead-popup-title" className="mt-3 text-2xl font-black tracking-[-0.03em] sm:text-4xl">
-                  {variant.title}
-                </h2>
-                <p className="mt-3 text-sm leading-6 text-white/78 sm:leading-7">{variant.text}</p>
-                <div className="mt-5 grid gap-2 text-sm sm:mt-7 sm:gap-3">
-                  {variant.bullets.map((item) => (
-                    <div
-                      key={item}
-                      className="rounded-[14px] border border-white/15 bg-white/8 px-4 py-3 font-semibold"
-                    >
-                      {item}
-                    </div>
-                  ))}
+            <motion.section
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="lead-popup-title"
+              className="safe-bottom w-full max-w-[460px] overflow-hidden rounded-[26px] border border-white/70 bg-white shadow-[0_28px_90px_rgba(0,0,0,0.22)]"
+              initial={{ opacity: 0, y: 24, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 18, scale: 0.98 }}
+              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <div className="flex items-start justify-between gap-4 px-5 pb-2 pt-5">
+                <div>
+                  <div className="inline-flex h-10 w-10 items-center justify-center rounded-[14px] bg-[#e6f4ef] text-[#0b5c4a]">
+                    <MessageCircle size={20} aria-hidden />
+                  </div>
+                  <h2 id="lead-popup-title" className="mt-4 text-3xl font-black tracking-[-0.03em] text-lider-graphite">
+                    {copy.title}
+                  </h2>
+                  <p className="mt-3 text-base font-semibold leading-7 text-lider-muted">{copy.text}</p>
                 </div>
                 <button
                   type="button"
-                  onClick={openAiChat}
-                  className="mt-5 inline-flex items-center gap-2 text-sm font-black text-white underline decoration-white/30 underline-offset-4 transition hover:decoration-white"
+                  aria-label={copy.close}
+                  onClick={() => closePopup("button")}
+                  className="tap-target inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-lider-background text-lider-graphite transition hover:bg-[#e7ecea]"
                 >
-                  Запитати онлайн-помічника
+                  <X size={18} />
                 </button>
               </div>
-              <div className="p-3 sm:p-5 lg:p-6">
+
+              <div className="px-5 pb-5">
+                <div className="mb-4 flex items-center gap-2 rounded-[16px] bg-[#f1f7f4] px-4 py-3 text-sm font-semibold text-[#315d50]">
+                  <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden />
+                  {copy.note}
+                </div>
                 <LeadForm
                   variant="popup"
                   analyticsSource="popup"
                   locale={locale}
-                  title="Залиште заявку"
-                  description="Контакти потрібні тільки для консультації щодо навчання. Після заявки форма більше не турбуватиме."
-                  submitLabel={variant.submitLabel}
+                  submitLabel={copy.submit}
                   onSuccess={() => closePopup("lead-created")}
                 />
               </div>
-              </div>
-            </div>
-          </motion.section>
+            </motion.section>
           </motion.div>
         ) : null}
       </AnimatePresence>
     </>
   );
-}
-
-function getVariantIndex() {
-  if (typeof window === "undefined") {
-    return 0;
-  }
-
-  const saved = Number(window.localStorage.getItem(VARIANT_KEY));
-
-  if (Number.isInteger(saved) && saved >= 0 && saved < popupVariants.length) {
-    return saved;
-  }
-
-  const next = Math.floor(Math.random() * popupVariants.length);
-  window.localStorage.setItem(VARIANT_KEY, String(next));
-  return next;
 }
 
 function hasSubmittedLead() {

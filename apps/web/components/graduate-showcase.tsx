@@ -9,11 +9,11 @@ import { useMemo, useState } from "react";
 const allCity = "Усі міста";
 const allCategory = "Усі категорії";
 const photoGradients: Record<string, string> = {
-  "graduate-maria": "linear-gradient(135deg, #fff1f1 0%, #ffffff 48%, #ff1e1e 100%)",
+  "graduate-maria": "linear-gradient(135deg, #e6f4ef 0%, #ffffff 48%, #0b5c4a 100%)",
   "graduate-andrii": "linear-gradient(135deg, #f5f5f5 0%, #ffffff 45%, #1a1a1a 100%)",
   "graduate-oksana": "linear-gradient(135deg, #ffffff 0%, #f4f4f4 52%, #ff4b4b 100%)",
-  "graduate-serhii": "linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 52%, #ff1e1e 100%)",
-  "graduate-anna": "linear-gradient(135deg, #f4f4f4 0%, #ffffff 55%, #ff1e1e 100%)",
+  "graduate-serhii": "linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 52%, #0b5c4a 100%)",
+  "graduate-anna": "linear-gradient(135deg, #f4f4f4 0%, #ffffff 55%, #0b5c4a 100%)",
   "graduate-volodymyr": "linear-gradient(135deg, #ffffff 0%, #e5e5e5 45%, #1a1a1a 100%)"
 };
 
@@ -84,7 +84,7 @@ export function GraduateShowcase() {
             >
               <div
                 className="relative h-44"
-                style={{ background: photoGradients[story.id] ?? "linear-gradient(135deg, #f4f4f4, #ff1e1e)" }}
+                style={{ background: photoGradients[story.id] ?? "linear-gradient(135deg, #f4f4f4, #0b5c4a)" }}
               >
                 <div className="absolute inset-x-4 bottom-4 flex items-end justify-between">
                   <div className="flex h-16 w-16 items-center justify-center rounded-[20px] border border-white/50 bg-white/88 text-xl font-black text-lider-red shadow-sm backdrop-blur">

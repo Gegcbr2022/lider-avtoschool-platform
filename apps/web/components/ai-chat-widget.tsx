@@ -280,7 +280,7 @@ export function AiChatWidget() {
                     key={prompt}
                     type="button"
                     onClick={() => submitMessage(undefined, prompt)}
-                    className="rounded-full bg-[#fff1f1] px-3 py-1.5 text-xs font-semibold text-lider-red transition hover:bg-[#ffe1e1]"
+                    className="rounded-full bg-[#e6f4ef] px-3 py-1.5 text-xs font-semibold text-lider-red transition hover:bg-[#d8eee6]"
                   >
                     {prompt}
                   </button>
@@ -382,7 +382,7 @@ export function AiChatWidget() {
                 <button
                   type="button"
                   onClick={() => setLeadMode((current) => !current)}
-                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-[#fff1f1] text-lider-red transition hover:bg-[#ffe1e1]"
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-[#e6f4ef] text-lider-red transition hover:bg-[#d8eee6]"
                   aria-label="Залишити заявку"
                 >
                   <BrainCircuit size={19} />
@@ -411,16 +411,16 @@ export function AiChatWidget() {
       <button
         type="button"
         onClick={() => (isOpen ? closeChat() : openChat("floating-button"))}
-        className="ai-chat-launcher group relative inline-flex h-14 w-14 items-center justify-center rounded-[20px] bg-lider-red text-white shadow-[0_16px_45px_rgba(255,30,30,0.32)] transition hover:-translate-y-1 hover:bg-lider-redDark md:h-16 md:w-16 md:rounded-[22px]"
+        className="ai-chat-launcher group relative inline-flex h-14 w-14 items-center justify-center rounded-[20px] bg-[#0b5c4a] text-white shadow-[0_16px_45px_rgba(11,92,74,0.26)] transition hover:-translate-y-1 hover:bg-[#084737] md:h-16 md:w-16 md:rounded-[22px]"
         aria-label="Відкрити онлайн-помічника"
       >
         <span
-          className={`absolute inset-0 rounded-[22px] bg-lider-red/30 blur-xl transition group-hover:bg-lider-red/45 ${
+          className={`absolute inset-0 rounded-[22px] bg-[#0b5c4a]/25 blur-xl transition group-hover:bg-[#0b5c4a]/38 ${
             unreadPulse ? "opacity-100" : "opacity-70"
           }`}
         />
         <MessageCircle className="relative" size={28} />
-        <span className="absolute -right-2 -top-2 flex h-6 min-w-8 items-center justify-center rounded-full border-2 border-white bg-white px-1 text-[10px] font-black text-lider-red">
+        <span className="absolute -right-2 -top-2 flex h-6 min-w-8 items-center justify-center rounded-full border-2 border-white bg-white px-1 text-[10px] font-black text-[#0b5c4a]">
           Чат
         </span>
         <span className="absolute -bottom-1 -left-1 h-4 w-4 rounded-full border-2 border-white bg-[#42e785]" />

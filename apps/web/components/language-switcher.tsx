@@ -37,8 +37,8 @@ export function LanguageSwitcher({ activeLocale, compact = false }: { activeLoca
           aria-pressed={activeLocale === option.locale}
           className={`tap-target rounded-full px-2 py-2 text-xs font-black transition ${
             activeLocale === option.locale
-              ? "bg-lider-red text-white shadow-[0_10px_24px_rgba(255,30,30,0.2)]"
-              : "text-lider-muted hover:bg-[#fff1f1] hover:text-lider-red"
+              ? "bg-lider-red text-white shadow-[0_10px_24px_rgba(11,92,74,0.18)]"
+              : "text-lider-muted hover:bg-[#e6f4ef] hover:text-lider-red"
           }`}
         >
           {option.label}

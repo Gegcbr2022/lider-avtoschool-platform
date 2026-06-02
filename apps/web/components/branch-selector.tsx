@@ -30,7 +30,7 @@ export function BranchSelector() {
                 onClick={() => setActiveId(branch.id)}
                 className={`tap-target rounded-[18px] border px-4 py-3 text-left text-sm font-bold transition ${
                   activeId === branch.id
-                    ? "border-lider-red bg-lider-red text-white shadow-[0_16px_42px_rgba(255,30,30,0.24)]"
+                    ? "border-[#0b5c4a] bg-[#0b5c4a] text-white shadow-[0_16px_42px_rgba(11,92,74,0.2)]"
                     : "border-white/12 bg-white/8 text-white/78 hover:border-white/30"
                 }`}
               >
@@ -58,14 +58,14 @@ export function BranchSelector() {
               />
               <div className="grid gap-4 p-3 md:grid-cols-[1fr_auto] md:items-end md:p-5">
                 <div>
-                  <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.13em] text-lider-red">
+                  <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.13em] text-[#0b5c4a]">
                     <MapPinned size={14} />
                     Обрана філія
                   </p>
                   <h3 className="mt-3 text-3xl font-black tracking-[-0.03em]">{activeBranch.city}</h3>
                   <p className="mt-2 text-sm leading-6 text-lider-muted">{activeBranch.address}</p>
                   <p className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-lider-graphite">
-                    <Clock3 size={16} className="text-lider-red" />
+                    <Clock3 size={16} className="text-[#0b5c4a]" />
                     {activeBranch.workingHours}
                   </p>
                 </div>

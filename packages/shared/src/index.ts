@@ -834,7 +834,7 @@ export const leadDocumentSchema = z.object({
 const optionalTrackingField = z.string().trim().max(180).optional();
 
 export const leadFormSchema = z.object({
-  name: z.string().trim().min(2).max(80),
+  name: z.string().trim().max(80).default(""),
   phone: z.string().trim().min(9).max(30),
   email: z.union([z.string().trim().email(), z.literal("")]).optional(),
   city: z.string().trim().min(2).max(80),

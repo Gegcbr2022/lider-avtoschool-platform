@@ -3,10 +3,10 @@ import { clsx } from "clsx";
 
 export const designTokens = {
   colors: {
-    green900: "#b80000",
-    green800: "#ff1e1e",
-    green700: "#ff4b4b",
-    yellow: "#ff1e1e",
+    green900: "#084737",
+    green800: "#0b5c4a",
+    green700: "#14733d",
+    yellow: "#ffd600",
     graphite: "#1a1a1a",
     muted: "#666666",
     line: "#e5e5e5",
@@ -32,10 +32,10 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center rounded-[16px] px-5 py-3 text-sm font-semibold transition hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#ff1e1e] focus:ring-offset-2",
-        variant === "primary" && "bg-[#ff1e1e] text-white hover:bg-[#d81414]",
+        "inline-flex items-center justify-center rounded-[16px] px-5 py-3 text-sm font-semibold transition hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-[#0b5c4a] focus:ring-offset-2",
+        variant === "primary" && "bg-[#0b5c4a] text-white hover:bg-[#084737]",
         variant === "secondary" && "bg-[#1a1a1a] text-white hover:bg-[#2a2a2a]",
-        variant === "ghost" && "bg-transparent text-[#ff1e1e] hover:bg-[#fff1f1]",
+        variant === "ghost" && "bg-transparent text-[#0b5c4a] hover:bg-[#e6f4ef]",
         className
       )}
       {...props}
@@ -67,7 +67,7 @@ export function SectionHeader({
   return (
     <div className={cn("max-w-3xl", align === "center" && "mx-auto text-center")}>
       {eyebrow ? (
-        <p className="mb-3 text-xs font-black uppercase tracking-[0.16em] text-[#ff1e1e]">{eyebrow}</p>
+        <p className="mb-3 text-xs font-black uppercase tracking-[0.16em] text-[#0b5c4a]">{eyebrow}</p>
       ) : null}
       <h2 className="text-3xl font-semibold tracking-[-0.02em] text-[#171b1a] md:text-5xl">{title}</h2>
       <p className="mt-4 text-base leading-7 text-[#666666] md:text-lg">{description}</p>
@@ -86,8 +86,8 @@ export function StatusPill({
     <span
       className={cn(
         "inline-flex rounded-full px-3 py-1 text-xs font-semibold",
-        tone === "neutral" && "bg-[#fff1f1] text-[#ff1e1e]",
-        tone === "success" && "bg-[#fff1f1] text-[#d81414]",
+        tone === "neutral" && "bg-[#f1f4f3] text-[#315d50]",
+        tone === "success" && "bg-[#e6f4ef] text-[#0b5c4a]",
         tone === "warning" && "bg-[#f4f4f4] text-[#1a1a1a]"
       )}
     >
