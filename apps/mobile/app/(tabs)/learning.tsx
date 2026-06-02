@@ -19,18 +19,16 @@ export default function LearningTab() {
           {courseProgress.completedLessons}/{courseProgress.totalLessons} уроків, середній результат тестів{" "}
           {courseProgress.testScore}%.
         </Text>
-        <ProgressBar value={(courseProgress.completedLessons / courseProgress.totalLessons) * 100} color={colors.green} />
+        <ProgressBar
+          value={(courseProgress.completedLessons / courseProgress.totalLessons) * 100}
+          color={colors.green}
+        />
       </Card>
 
       <Card>
         <Label>Активні уроки</Label>
         {lessons.map(([title, detail, progress]) => (
-          <Row
-            key={title}
-            title={title}
-            detail={detail}
-            right={<Text style={styles.percent}>{progress}%</Text>}
-          />
+          <Row key={title} title={title} detail={detail} right={<Text style={styles.percent}>{progress}%</Text>} />
         ))}
       </Card>
 

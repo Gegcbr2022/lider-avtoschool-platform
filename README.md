@@ -2,18 +2,18 @@
 
 Монорепозиторий цифровой платформы автошколы «Лідер»: публичный сайт, CRM/админ-панель, мобильный кабинет ученика, Firebase API, общие доменные пакеты и инфраструктура.
 
-Основной язык продукта: украинский. Документация для разработки и поддержки ведётся на русском языке.
+Основной язык продукта: украинский. Документация, отчёты и инструкции по проекту ведутся на русском языке.
 
-## Что входит в проект
+## Что входит
 
-- `apps/web` — публичный сайт на Next.js с SEO-страницами, лид-формой, sitemap и robots.
+- `apps/web` — публичный сайт на Next.js: премиальная главная, SEO-страницы, popup-заявка, лид-форма, sitemap, robots и schema.org.
 - `apps/admin` — CRM/админ-панель на Next.js для заявок, учеников, практики, платежей и LMS.
-- `apps/mobile` — Expo Router приложение для Android/iOS с кабинетом ученика.
-- `apps/api` — Firebase Cloud Functions API на Express с Zod-валидацией.
+- `apps/mobile` — Expo Router приложение для Android/iOS с кабинетом ученика, onboarding, быстрыми действиями и состояниями UI.
+- `apps/api` — Firebase Cloud Functions API на Express с Zod-валидацией, CORS, rate limiting и Telegram-логированием лидов.
+- `packages/shared` — филиалы, услуги, маркетинговые данные, демо-данные, Zod-схемы и i18n.
 - `packages/types` — общие TypeScript-контракты.
-- `packages/shared` — филиалы, услуги, демо-данные, схемы валидации и i18n.
-- `packages/ui` — общие React UI-примитивы и дизайн-токены.
-- `packages/config` — конфигурация URL, домена и окружений.
+- `packages/ui` — React UI-примитивы и дизайн-токены.
+- `packages/config` — публичная runtime-конфигурация URL/API/domain.
 - `infrastructure/firebase` — Firestore rules, Storage rules и индексы.
 
 ## Быстрый старт
@@ -24,31 +24,29 @@ npm run typecheck
 npm run dev:web
 ```
 
-Сайт будет доступен на `http://localhost:3000`.
+Сайт: `http://localhost:3000`.
 
-Для админки:
+Админка:
 
 ```bash
 npm run dev:admin
 ```
 
-Админка будет доступна на `http://localhost:3001`.
-
-Для API-эмуляторов:
+API/Firebase emulators:
 
 ```bash
 npm run dev:api
 ```
 
-Для мобильного приложения:
+Мобильное приложение:
 
 ```bash
 npm run dev:mobile
 ```
 
-## Обязательные проверки
+## Проверки
 
-Перед коммитом и деплоем выполнять:
+Перед коммитом и деплоем:
 
 ```bash
 npm run lint
@@ -57,23 +55,36 @@ npm run test
 npm run build
 ```
 
-## Документация
+Дополнительно для мобильного приложения:
 
-- [DEPLOYMENT.md](DEPLOYMENT.md) — локальный запуск, сборка, деплой и CI/CD.
-- [FIREBASE_SETUP.md](FIREBASE_SETUP.md) — Firebase, rules, Functions, эмуляторы и доступы.
-- [ENVIRONMENT.md](ENVIRONMENT.md) — все переменные окружения и правила хранения секретов.
-- [PROJECT_ARCHITECTURE.md](PROJECT_ARCHITECTURE.md) — архитектура, приложения, пакеты, API и данные.
-- [ADMIN_GUIDE.md](ADMIN_GUIDE.md) — роли, CRM-процесс и работа админки.
+```bash
+cd apps/mobile
+npx expo-doctor
+```
+
+## Production URL
+
+Текущий сайт работает на:
+
+https://lider.bdslab.net/
+
+## Основные документы
+
+- [PROJECT_AUDIT.md](PROJECT_AUDIT.md) — полный аудит кода, UI/UX, SEO, ENV, Firebase, GitHub, mobile и безопасности.
+- [FINAL_IMPROVEMENT_REPORT.md](FINAL_IMPROVEMENT_REPORT.md) — что улучшено в текущей итерации.
+- [DEPLOYMENT.md](DEPLOYMENT.md) — деплой web/admin/API/mobile.
+- [USER_GUIDE.md](USER_GUIDE.md) — как пользоваться сайтом, CRM и мобильным кабинетом.
+- [HOW_TO_USE_PROJECT.md](HOW_TO_USE_PROJECT.md) — инструкция для человека без опыта разработки.
+- [APK_BUILD_REPORT.md](APK_BUILD_REPORT.md) — статус APK-сборки.
+- [ANDROID_TEST_REPORT.md](ANDROID_TEST_REPORT.md) — статус проверки эмулятора Android.
+- [GITHUB_DEPLOY_REPORT.md](GITHUB_DEPLOY_REPORT.md) — GitHub, push и CI/CD.
 - [CHANGELOG.md](CHANGELOG.md) — история изменений.
-- [FINAL_REPORT.md](FINAL_REPORT.md) — итоговый технический отчёт по текущему аудиту.
-
-Дополнительные узкие материалы по мобильным сторам, CI и безопасности лежат в `docs/`.
 
 ## Важный статус
 
-Проект собирается локально, но полноценный production-запуск зависит от ручных доступов:
+Код собирается локально. Полноценный production-запуск зависит от внешних доступов:
 
-- Google/Firebase авторизация для деплоя Functions, Firestore rules и Storage rules.
-- Production-домены для сайта и админки.
-- Секреты платёжных, Telegram, AI, аналитических и мониторинговых провайдеров.
-- Финальная настройка Firebase Auth, App Check, custom claims и реальных коллекций Firestore.
+- Firebase/Google доступ для деплоя Functions, Firestore rules и Storage rules.
+- Production ENV: `API_URL`, `NEXT_PUBLIC_SITE_URL`, Telegram, AI, платежи, аналитика, мониторинг.
+- Expo/EAS аккаунт или `EXPO_TOKEN` для APK/AAB.
+- Android SDK/ADB/AVD для локального APK и emulator QA.

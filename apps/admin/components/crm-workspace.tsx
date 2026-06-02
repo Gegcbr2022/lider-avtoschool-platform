@@ -3,7 +3,16 @@
 import { branches, sampleLeads, samplePayments, sampleSlots } from "@lider/shared";
 import { StatusPill } from "@lider/ui";
 import type { LeadStatus } from "@lider/types";
-import { Bell, CalendarDays, CheckCircle2, CircleDollarSign, Gauge, Search, UsersRound, type LucideIcon } from "lucide-react";
+import {
+  Bell,
+  CalendarDays,
+  CheckCircle2,
+  CircleDollarSign,
+  Gauge,
+  Search,
+  UsersRound,
+  type LucideIcon
+} from "lucide-react";
 import Image from "next/image";
 import { useMemo, useState } from "react";
 
@@ -42,16 +51,18 @@ export function CrmWorkspace() {
           </div>
         </div>
         <nav className="mt-8 space-y-1 text-sm">
-          {["Dashboard", "Leads", "Students", "Bookings", "Payments", "LMS", "Documents", "Settings"].map((item, index) => (
-            <button
-              key={item}
-              className={`w-full rounded-[10px] px-3 py-2 text-left font-medium transition ${
-                index === 0 ? "bg-white text-[#00362d]" : "text-white/70 hover:bg-white/10 hover:text-white"
-              }`}
-            >
-              {item}
-            </button>
-          ))}
+          {["Dashboard", "Leads", "Students", "Bookings", "Payments", "LMS", "Documents", "Settings"].map(
+            (item, index) => (
+              <button
+                key={item}
+                className={`w-full rounded-[10px] px-3 py-2 text-left font-medium transition ${
+                  index === 0 ? "bg-white text-[#00362d]" : "text-white/70 hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                {item}
+              </button>
+            )
+          )}
         </nav>
       </aside>
 
@@ -121,7 +132,9 @@ export function CrmWorkspace() {
                       <td className="py-4 pr-4">{lead.city}</td>
                       <td className="py-4 pr-4 font-semibold">{lead.category}</td>
                       <td className="py-4 pr-4">
-                        <StatusPill tone={lead.status === "paid" ? "success" : lead.status === "new" ? "warning" : "neutral"}>
+                        <StatusPill
+                          tone={lead.status === "paid" ? "success" : lead.status === "new" ? "warning" : "neutral"}
+                        >
                           {stageLabels[lead.status]}
                         </StatusPill>
                       </td>
@@ -145,14 +158,19 @@ export function CrmWorkspace() {
                 {sampleSlots.map((slot) => {
                   const branch = branches.find((item) => item.id === slot.branchId);
                   return (
-                    <div key={slot.id} className="grid gap-3 rounded-[14px] border border-[#dce7e3] p-4 md:grid-cols-[1fr_auto] md:items-center">
+                    <div
+                      key={slot.id}
+                      className="grid gap-3 rounded-[14px] border border-[#dce7e3] p-4 md:grid-cols-[1fr_auto] md:items-center"
+                    >
                       <div>
                         <p className="font-semibold text-[#171b1a]">{slot.instructor}</p>
                         <p className="text-sm text-[#5f6f6a]">
                           {branch?.city} · {slot.vehicle} · {new Date(slot.startsAt).toLocaleString("uk-UA")}
                         </p>
                       </div>
-                      <StatusPill tone={slot.availableSeats > 1 ? "success" : "warning"}>{slot.availableSeats} місця</StatusPill>
+                      <StatusPill tone={slot.availableSeats > 1 ? "success" : "warning"}>
+                        {slot.availableSeats} місця
+                      </StatusPill>
                     </div>
                   );
                 })}
@@ -166,10 +184,15 @@ export function CrmWorkspace() {
               </div>
               <div className="mt-5 space-y-3">
                 {samplePayments.map((payment) => (
-                  <div key={payment.id} className="flex items-center justify-between gap-4 rounded-[14px] border border-[#dce7e3] p-4">
+                  <div
+                    key={payment.id}
+                    className="flex items-center justify-between gap-4 rounded-[14px] border border-[#dce7e3] p-4"
+                  >
                     <div>
                       <p className="font-semibold text-[#171b1a]">{payment.studentName}</p>
-                      <p className="text-sm text-[#5f6f6a]">{payment.provider} · {payment.id}</p>
+                      <p className="text-sm text-[#5f6f6a]">
+                        {payment.provider} · {payment.id}
+                      </p>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-[#171b1a]">{payment.amount.toLocaleString("uk-UA")} грн</p>

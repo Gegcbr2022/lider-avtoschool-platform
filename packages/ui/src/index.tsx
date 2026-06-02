@@ -43,15 +43,7 @@ export function Button({
   );
 }
 
-export function MetricCard({
-  label,
-  value,
-  detail
-}: {
-  label: string;
-  value: string;
-  detail: string;
-}) {
+export function MetricCard({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
     <article className="rounded-[14px] border border-[#dce7e3] bg-white p-4 shadow-sm">
       <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#5f6f6a]">{label}</p>
@@ -78,7 +70,13 @@ export function SectionHeader({
   );
 }
 
-export function StatusPill({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "success" | "warning" }) {
+export function StatusPill({
+  children,
+  tone = "neutral"
+}: {
+  children: ReactNode;
+  tone?: "neutral" | "success" | "warning";
+}) {
   return (
     <span
       className={cn(

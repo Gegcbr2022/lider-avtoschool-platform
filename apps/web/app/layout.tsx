@@ -12,19 +12,27 @@ export const metadata: Metadata = {
     template: `%s | ${siteBrand.name}`
   },
   description:
-    "Сучасна автошкола з онлайн-заявкою, особистим кабінетом, записом на практику, LMS, платежами та підтримкою менеджера.",
+    "Автошкола Лідер: категорії A, A1, B, C, CE, онлайн-теорія, практика з інструктором, філії, документи, кабінет учня і мобільний застосунок.",
   openGraph: {
     title: `${siteBrand.name} | Навчання водінню`,
-    description: "Курси категорій A, A1, B, C, CE у Києві, Слов'янську, Краматорську та Дніпрі.",
+    description: "Курси категорій A, A1, B, C, CE у Києві, Слов'янську, Краматорську, Дніпрі та Добропіллі.",
     url: config.siteUrl,
     siteName: siteBrand.name,
     locale: "uk_UA",
-    type: "website"
+    type: "website",
+    images: [
+      {
+        url: "/images/hero-driving-school.png",
+        width: 1600,
+        height: 1000,
+        alt: "Інструктор та студент автошколи Лідер"
+      }
+    ]
   },
   twitter: {
     card: "summary_large_image",
     title: `${siteBrand.name} | Навчання водінню`,
-    description: "Онлайн-заявка, практика, LMS, документи та платежі в одному кабінеті."
+    description: "Онлайн-заявка, практика, LMS, документи, філії та підтримка менеджера в одному цифровому процесі."
   }
 };
 

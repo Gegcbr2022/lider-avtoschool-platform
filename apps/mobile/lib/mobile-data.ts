@@ -46,6 +46,32 @@ export const notifications = [
   "Оплата зарахована через LiqPay"
 ] as const;
 
+export const onboardingSteps = [
+  {
+    title: "Документи",
+    detail: "Медична довідка ще очікує завантаження"
+  },
+  {
+    title: "Теорія",
+    detail: "Наступний урок: проїзд перехресть"
+  },
+  {
+    title: "Практика",
+    detail: "Підтвердіть заняття з інструктором"
+  }
+] as const;
+
+export const quickActions = [
+  {
+    title: "Завантажити довідку",
+    detail: "PDF або фото до 10 МБ"
+  },
+  {
+    title: "Написати менеджеру",
+    detail: "Олена відповість у робочий час"
+  }
+] as const;
+
 export const testCategories = [
   "Знаки",
   "Розмітка",

@@ -2,32 +2,41 @@
 
 ## 2026-06-02
 
-- Проверено состояние GitHub: remote настроен, `main` синхронизирован с `origin/main`, открытых PR и issues не найдено.
-- Проверен GitHub Actions: последние два workflow `CI` завершились успешно.
-- Удалены реальные секреты из `.env.example`; пример окружения заменён безопасными пустыми значениями.
-- Добавлена переменная `ALLOWED_ORIGINS` для CORS API.
-- Добавлена переменная `TELEGRAM_WEBHOOK_SECRET` для проверки Telegram webhook.
-- Синхронизирован локальный API URL с Firebase dev project `lider-avtoschool-dev`.
-- Обновлены филиалы: добавлено Доброполье.
-- Обновлены цены и длительности услуг по фактическому контенту автошколы.
-- Добавлены карточки переподготовки A, A1, B и C.
-- Подключён реальный логотип к web/admin.
-- Добавлен favicon в web/admin приложения.
-- Исходный украинский контент автошколы перенесён в `docs/source-content/`.
-- Улучшена обработка ошибок лид-формы.
-- API route `/api/leads` теперь корректно отвечает на битый JSON и требует `API_URL` в production.
-- CORS в Functions API ограничен разрешёнными origin.
-- Demo payment adapter больше не работает как успешная заглушка в production.
-- Telegram webhook в production требует secret token.
-- Firestore rules ужесточены для `bookings` и `payments`: студент видит только собственный scope.
-- Storage rules ужесточены для `student-documents`: запись разрешена сотрудникам или владельцу.
-- Старые устаревшие статус-отчёты и дубли документации удалены.
-- Создана единая русскоязычная документация в корне проекта.
-- Выполнены `npm install`, `lint`, `typecheck`, `test`, `build`.
-- Выполнен Playwright smoke публичного сайта: desktop, форма заявки, mobile, console health.
+### Добавлено
+
+- Новый премиальный landing для `apps/web` с усиленным hero, CTA, trust-фактами, этапами обучения, онлайн-блоком, инструкторами, автопарком и финальным CTA.
+- Блок `Наші випускники` как современный аналог идеи `Гордість` с временными структурированными данными.
+- Popup-заявка с задержкой, затемнением, закрытием, `Escape`, localStorage и повторным показом через время.
+- Расширенные SEO-страницы: `avtoshkola-kyiv`, `avtoshkola-dnipro`, `avtoshkola-kramatorsk`, `avtoshkola-sloviansk`, `avtoshkola-dobropillia`, `kategoriia-a`, `kategoriia-b`, `kategoriia-c`, `kategoriia-ce`.
+- JSON-LD schema: `DrivingSchool`, `FAQPage`, `BreadcrumbList`, `Course`, city `DrivingSchool`.
+- Shared marketing data: этапы обучения, преимущества, выпускники, инструкторы, автопарк, FAQ.
+- Mobile UI components: `InsightCard`, `SkeletonBlock`, `EmptyState`.
+- Mobile home: onboarding, быстрые действия, skeleton и empty state.
+- Документы: `PROJECT_AUDIT.md`, `APK_BUILD_REPORT.md`, `ANDROID_TEST_REPORT.md`, `GITHUB_DEPLOY_REPORT.md`, `USER_GUIDE.md`, `HOW_TO_USE_PROJECT.md`, `FINAL_IMPROVEMENT_REPORT.md`.
+
+### Изменено
+
+- `LeadForm` стала переиспользуемой для страницы и popup, получила уникальные `id`, заголовки, описание и кастомный submit label.
+- `apps/web/app/[slug]/page.tsx` теперь рендерит полноценные посадочные страницы вместо шаблонной заглушки.
+- `apps/mobile/metro.config.js` сохраняет Expo default watch folders и добавляет workspace root.
+- Mobile Expo-зависимости приведены к ожидаемым версиям SDK 53.
+- Метаданные OpenGraph/Twitter обновлены под все филиалы и текущий коммерческий фокус.
+- `.gitignore` игнорирует временные Playwright-артефакты.
+
+### Проверено
+
+- `npm run typecheck` — успешно.
+- `npm run build` — успешно.
+- `npx expo-doctor` в `apps/mobile` — 18/18 проверок.
+- Playwright smoke: desktop главная, mobile главная, popup, SEO page `/avtoshkola-kyiv`, dev-отправка лид-формы.
+
+### Ограничения
+
+- APK не собран: EAS требует Expo account или `EXPO_TOKEN`, Android SDK/ADB/emulator отсутствуют.
+- `npm audit --omit=dev` показывает moderate advisories в транзитивных зависимостях Expo/Next/Firebase; high/critical нет.
 
 ## 2026-06-01
 
-- Создан initial production platform scaffold.
+- Создан production-oriented scaffold монорепозитория.
 - Добавлены web, admin, mobile, api и shared packages.
-- Добавлены Firebase rules, indexes и CI.
+- Добавлены Firebase rules, indexes и GitHub CI.

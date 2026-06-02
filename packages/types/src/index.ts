@@ -21,14 +21,7 @@ export type ServiceCard = {
   outcomes: string[];
 };
 
-export type LeadStatus =
-  | "new"
-  | "contacted"
-  | "consultation"
-  | "contract"
-  | "paid"
-  | "learning"
-  | "completed";
+export type LeadStatus = "new" | "contacted" | "consultation" | "contract" | "paid" | "learning" | "completed";
 
 export type Lead = {
   id: string;

@@ -2,6 +2,8 @@
 .env.*
 !.env.example
 .snapshots
+.playwright-cli
+output
 .next
 .expo
 .firebase

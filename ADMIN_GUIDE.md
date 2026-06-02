@@ -87,7 +87,7 @@ packages/shared/src/index.ts
 Массив:
 
 ```ts
-branches
+branches;
 ```
 
 После подключения Firestore филиалы лучше перенести в коллекцию `branches`, а в коде оставить только fallback/default data.
@@ -103,7 +103,7 @@ packages/shared/src/index.ts
 Массив:
 
 ```ts
-services
+services;
 ```
 
 Цены указаны как `priceFrom` и отражают стоимость теоретической части. Практические занятия оплачиваются отдельно по тарифу города.

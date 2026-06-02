@@ -9,7 +9,9 @@ export default function TestsTab() {
       <Card tone="yellow">
         <Label>Режим</Label>
         <Text style={styles.examTitle}>Екзамен: 20 питань</Text>
-        <Text style={styles.examText}>Останній результат: 34/40, 85%. Таймер і статистика готові до підключення API.</Text>
+        <Text style={styles.examText}>
+          Останній результат: 34/40, 85%. Таймер і статистика готові до підключення API.
+        </Text>
         <ProgressBar value={85} color={colors.green} />
       </Card>
 
@@ -26,7 +28,9 @@ export default function TestsTab() {
 
       <Card>
         <Label>Міні-ігри</Label>
-        <Text style={styles.body}>Вікторина по знаках, реакція на світлофор, паркування, рейтинг, досягнення і рекорди.</Text>
+        <Text style={styles.body}>
+          Вікторина по знаках, реакція на світлофор, паркування, рейтинг, досягнення і рекорди.
+        </Text>
       </Card>
 
       <PrimaryButton>Почати тренування</PrimaryButton>

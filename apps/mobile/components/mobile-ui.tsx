@@ -19,13 +19,7 @@ export function Screen({ title, subtitle, children }: { title: string; subtitle?
 
 export function Card({ children, tone = "light" }: { children: ReactNode; tone?: "light" | "green" | "yellow" }) {
   return (
-    <View
-      style={[
-        styles.card,
-        tone === "green" && styles.greenCard,
-        tone === "yellow" && styles.yellowCard
-      ]}
-    >
+    <View style={[styles.card, tone === "green" && styles.greenCard, tone === "yellow" && styles.yellowCard]}>
       {children}
     </View>
   );
@@ -63,12 +57,57 @@ export function Row({ title, detail, right }: { title: string; detail: string; r
   );
 }
 
-export function Pill({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "success" | "warning" }) {
+export function Pill({
+  children,
+  tone = "neutral"
+}: {
+  children: ReactNode;
+  tone?: "neutral" | "success" | "warning";
+}) {
   return (
     <View style={[styles.pill, tone === "success" && styles.successPill, tone === "warning" && styles.warningPill]}>
-      <Text style={[styles.pillText, tone === "success" && styles.successText, tone === "warning" && styles.warningText]}>
+      <Text
+        style={[styles.pillText, tone === "success" && styles.successText, tone === "warning" && styles.warningText]}
+      >
         {children}
       </Text>
+    </View>
+  );
+}
+
+export function InsightCard({
+  title,
+  detail,
+  accent = "green"
+}: {
+  title: string;
+  detail: string;
+  accent?: "green" | "yellow";
+}) {
+  return (
+    <View style={[styles.insight, accent === "yellow" && styles.yellowInsight]}>
+      <Text style={[styles.insightTitle, accent === "yellow" && styles.yellowInsightTitle]}>{title}</Text>
+      <Text style={[styles.insightDetail, accent === "yellow" && styles.yellowInsightDetail]}>{detail}</Text>
+    </View>
+  );
+}
+
+export function SkeletonBlock() {
+  return (
+    <View style={styles.skeletonCard}>
+      <View style={[styles.skeletonLine, styles.skeletonWide]} />
+      <View style={styles.skeletonLine} />
+      <View style={[styles.skeletonLine, styles.skeletonShort]} />
+    </View>
+  );
+}
+
+export function EmptyState({ title, detail }: { title: string; detail: string }) {
+  return (
+    <View style={styles.emptyState}>
+      <Text style={styles.emptyIcon}>+</Text>
+      <Text style={styles.emptyTitle}>{title}</Text>
+      <Text style={styles.emptyDetail}>{detail}</Text>
     </View>
   );
 }
@@ -185,5 +224,81 @@ const styles = StyleSheet.create({
   },
   warningText: {
     color: colors.warning
+  },
+  insight: {
+    flex: 1,
+    borderRadius: radii.md,
+    padding: 16,
+    backgroundColor: colors.green
+  },
+  yellowInsight: {
+    backgroundColor: colors.yellow
+  },
+  insightTitle: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: "900"
+  },
+  yellowInsightTitle: {
+    color: colors.graphite
+  },
+  insightDetail: {
+    marginTop: 8,
+    color: "rgba(255,255,255,0.74)",
+    lineHeight: 20
+  },
+  yellowInsightDetail: {
+    color: colors.graphite
+  },
+  skeletonCard: {
+    borderRadius: radii.md,
+    padding: 18,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.line,
+    gap: 10
+  },
+  skeletonLine: {
+    height: 12,
+    width: "72%",
+    borderRadius: 999,
+    backgroundColor: "#edf5f2"
+  },
+  skeletonWide: {
+    width: "88%"
+  },
+  skeletonShort: {
+    width: "48%"
+  },
+  emptyState: {
+    borderRadius: radii.md,
+    padding: 18,
+    alignItems: "center",
+    backgroundColor: "#edf5f2"
+  },
+  emptyIcon: {
+    height: 36,
+    width: 36,
+    borderRadius: 18,
+    textAlign: "center",
+    textAlignVertical: "center",
+    overflow: "hidden",
+    backgroundColor: colors.white,
+    color: colors.green,
+    fontSize: 24,
+    fontWeight: "900"
+  },
+  emptyTitle: {
+    marginTop: 12,
+    color: colors.graphite,
+    fontSize: 18,
+    fontWeight: "900",
+    textAlign: "center"
+  },
+  emptyDetail: {
+    marginTop: 6,
+    color: colors.muted,
+    lineHeight: 22,
+    textAlign: "center"
   }
 });

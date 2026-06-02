@@ -2,16 +2,30 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { branches, leadFormSchema } from "@lider/shared";
-import { Button } from "@lider/ui";
-import { useState } from "react";
+import { Button, cn } from "@lider/ui";
+import { useId, useState } from "react";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
 
 type LeadFormValues = z.infer<typeof leadFormSchema>;
+type LeadFormProps = {
+  variant?: "page" | "popup";
+  className?: string;
+  title?: string;
+  description?: string;
+  submitLabel?: string;
+};
 
 const categoryOptions: LeadFormValues["category"][] = ["A", "A1", "B", "C", "CE"];
 
-export function LeadForm() {
+export function LeadForm({
+  variant = "page",
+  className,
+  title,
+  description,
+  submitLabel = "Отримати консультацію"
+}: LeadFormProps) {
+  const formId = useId();
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const {
     register,
@@ -49,14 +63,29 @@ export function LeadForm() {
     setStatus("saved");
   }
 
+  const isPopup = variant === "popup";
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 rounded-[22px] bg-white p-5 shadow-soft">
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className={cn(
+        "grid gap-4 rounded-[22px] bg-white p-5 shadow-soft",
+        isPopup && "max-h-[75vh] overflow-y-auto rounded-[18px] border border-lider-line p-4 shadow-none",
+        className
+      )}
+    >
+      {title || description ? (
+        <div>
+          {title ? <h3 className="text-xl font-semibold tracking-[-0.01em] text-lider-graphite">{title}</h3> : null}
+          {description ? <p className="mt-2 text-sm leading-6 text-lider-muted">{description}</p> : null}
+        </div>
+      ) : null}
       <div>
-        <label className="text-sm font-semibold text-lider-graphite" htmlFor="name">
+        <label className="text-sm font-semibold text-lider-graphite" htmlFor={`${formId}-name`}>
           Ім'я
         </label>
         <input
-          id="name"
+          id={`${formId}-name`}
           className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-green"
           placeholder="Марія"
           {...register("name")}
@@ -65,11 +94,11 @@ export function LeadForm() {
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <div>
-          <label className="text-sm font-semibold text-lider-graphite" htmlFor="phone">
+          <label className="text-sm font-semibold text-lider-graphite" htmlFor={`${formId}-phone`}>
             Телефон
           </label>
           <input
-            id="phone"
+            id={`${formId}-phone`}
             className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-green"
             placeholder="050 000 00 00"
             {...register("phone")}
@@ -77,11 +106,11 @@ export function LeadForm() {
           {errors.phone ? <p className="mt-1 text-xs text-red-600">Вкажіть коректний номер телефону.</p> : null}
         </div>
         <div>
-          <label className="text-sm font-semibold text-lider-graphite" htmlFor="city">
+          <label className="text-sm font-semibold text-lider-graphite" htmlFor={`${formId}-city`}>
             Місто
           </label>
           <input
-            id="city"
+            id={`${formId}-city`}
             className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-green"
             placeholder="Київ"
             {...register("city")}
@@ -91,11 +120,11 @@ export function LeadForm() {
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <div>
-          <label className="text-sm font-semibold text-lider-graphite" htmlFor="category">
+          <label className="text-sm font-semibold text-lider-graphite" htmlFor={`${formId}-category`}>
             Категорія
           </label>
           <select
-            id="category"
+            id={`${formId}-category`}
             className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-green"
             {...register("category")}
           >
@@ -107,11 +136,11 @@ export function LeadForm() {
           </select>
         </div>
         <div>
-          <label className="text-sm font-semibold text-lider-graphite" htmlFor="branchId">
+          <label className="text-sm font-semibold text-lider-graphite" htmlFor={`${formId}-branchId`}>
             Філія
           </label>
           <select
-            id="branchId"
+            id={`${formId}-branchId`}
             className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-green"
             {...register("branchId")}
           >
@@ -124,18 +153,21 @@ export function LeadForm() {
         </div>
       </div>
       <div>
-        <label className="text-sm font-semibold text-lider-graphite" htmlFor="message">
+        <label className="text-sm font-semibold text-lider-graphite" htmlFor={`${formId}-message`}>
           Коментар
         </label>
         <textarea
-          id="message"
-          className="mt-2 min-h-24 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-green"
+          id={`${formId}-message`}
+          className={cn(
+            "mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-green",
+            isPopup ? "min-h-20" : "min-h-24"
+          )}
           placeholder="Зручний час для дзвінка"
           {...register("message")}
         />
       </div>
       <Button type="submit" disabled={status === "saving"} className="w-full">
-        {status === "saving" ? "Відправляємо..." : "Отримати консультацію"}
+        {status === "saving" ? "Відправляємо..." : submitLabel}
       </Button>
       {status === "saved" ? (
         <p className="text-sm font-medium text-[#14733d]">Заявку прийнято. Менеджер зв'яжеться з вами.</p>

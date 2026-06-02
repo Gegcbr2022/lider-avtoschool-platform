@@ -8,4 +8,3 @@
 - [ ] Security/privacy impact reviewed
 
 ## Release Notes
-

@@ -1,15 +1,6 @@
 # Деплой и эксплуатация
 
-## Текущий статус
-
-Проект готовится как production-oriented монорепозиторий, но реальный деплой в текущей сессии ограничен доступами:
-
-- GitHub remote доступен: `https://github.com/Gegcbr2022/lider-avtoschool-platform.git`.
-- Ветка `main` синхронизирована с `origin/main`.
-- GitHub CLI установлен и авторизован.
-- GitHub Actions `CI` на последних двух push завершился успешно.
-- Firebase CLI установлен, но Firebase/Google авторизация в текущей сессии отсутствует.
-- Vercel CLI в системе не установлен.
+Дата обновления: 2026-06-02.
 
 ## Локальная подготовка
 
@@ -21,60 +12,62 @@ npm run test
 npm run build
 ```
 
-`npm install` достаточно для локальной разработки. В CI и production-сборках предпочтительно использовать:
-
-```bash
-npm ci
-```
+`npm ci` использовать в CI и чистых production-сборках.
 
 ## Локальный запуск
 
-Публичный сайт:
-
 ```bash
-npm run dev:web
+npm run dev:web      # http://localhost:3000
+npm run dev:admin    # http://localhost:3001
+npm run dev:api      # Firebase emulators
+npm run dev:mobile   # Expo
 ```
 
-Админка:
+## Web/Admin
 
-```bash
-npm run dev:admin
-```
+`apps/web` и `apps/admin` — Next.js приложения. Для Vercel/Netlify лучше заводить отдельные проекты:
 
-Firebase Functions и эмуляторы:
+- web root: `apps/web`;
+- admin root: `apps/admin`.
 
-```bash
-npm run dev:api
-```
+Обязательные production ENV:
 
-Мобильное приложение:
+- `NEXT_PUBLIC_SITE_URL`
+- `APP_DOMAIN`
+- `API_URL`
+- `ALLOWED_ORIGINS`
 
-```bash
-npm run dev:mobile
-```
+Опциональные ENV:
 
-## Firebase deploy
+- `SENTRY_DSN`
+- `POSTHOG_KEY`
+- `TELEGRAM_LOG_CHAT_ID`
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_WEBHOOK_SECRET`
+- `OPENAI_API_KEY`
+- `LIQPAY_PUBLIC_KEY`
+- `LIQPAY_PRIVATE_KEY`
+- `FONDY_MERCHANT_ID`
+- `FONDY_SECRET_KEY`
+- `MONOBANK_TOKEN`
 
-Перед деплоем нужен вход в Firebase:
+## Firebase
+
+Перед деплоем:
 
 ```bash
 npx firebase login
-npx firebase use dev
-```
-
-Проверить список проектов:
-
-```bash
 npx firebase projects:list
+npx firebase use <project-id>
 ```
 
-Деплой правил и индексов:
+Деплой rules/indexes:
 
 ```bash
 npx firebase deploy --only firestore:rules,firestore:indexes,storage
 ```
 
-Деплой API:
+Деплой Functions API:
 
 ```bash
 npx firebase deploy --only functions
@@ -86,37 +79,18 @@ npx firebase deploy --only functions
 npx firebase deploy
 ```
 
-Важно: в `firebase.json` сейчас настроены Functions, Firestore, Storage и эмуляторы. Hosting для Next.js не настроен, поэтому web/admin лучше деплоить на Vercel, Netlify или другой Next.js-compatible хостинг.
+В `firebase.json` настроены Functions, Firestore, Storage и emulators. Hosting для Next.js не используется.
 
-## Vercel deploy
+## GitHub Actions
 
-Если выбран Vercel:
+Workflow: `.github/workflows/ci.yml`.
 
-```bash
-npm install -g vercel
-vercel login
-vercel link
-vercel env add NEXT_PUBLIC_SITE_URL production
-vercel env add APP_DOMAIN production
-vercel env add API_URL production
-vercel --prod
-```
-
-Для монорепозитория лучше завести два проекта:
-
-- `lider-web` с root directory `apps/web`;
-- `lider-admin` с root directory `apps/admin`.
-
-Оба проекта должны получить свои переменные окружения из `ENVIRONMENT.md`.
-
-## GitHub workflow
-
-CI находится в `.github/workflows/ci.yml` и запускается на:
+Запуск:
 
 - `push` в `main`, `develop`, `staging`;
 - `pull_request`.
 
-CI выполняет:
+Команды CI:
 
 ```bash
 npm ci
@@ -126,28 +100,52 @@ npm run test
 npm run build
 ```
 
-## Мобильная сборка
-
-Мобильное приложение находится в `apps/mobile`.
-
-Локальный запуск:
+Проверка статуса:
 
 ```bash
-npm run dev:mobile
+gh run list --limit 5
+gh run watch <run-id>
 ```
 
-EAS preview build:
+## Mobile / APK
+
+Проверка Expo-проекта:
 
 ```bash
 cd apps/mobile
+npx expo-doctor
+```
+
+Preview APK/AAB через EAS:
+
+```bash
+cd apps/mobile
+npx eas login
 npx eas build --profile preview --platform android
 ```
 
-Production build:
+CI-вариант:
 
 ```bash
+set EXPO_TOKEN=<token>
 cd apps/mobile
-npx eas build --profile production --platform all
+npx eas build --profile preview --platform android --non-interactive
 ```
 
-Для публикации нужны Expo/EAS аккаунт, Android package `ua.lider.avtoschool`, iOS bundle identifier `ua.lider.avtoschool`, и store assets.
+Локальная Android-сборка дополнительно требует:
+
+- Android Studio / Android SDK;
+- `adb` в PATH;
+- `emulator` в PATH;
+- хотя бы один AVD;
+- Java JDK;
+- Expo/EAS аккаунт или `EXPO_TOKEN`.
+
+## Текущие ограничения окружения
+
+В текущей сессии проверено:
+
+- `adb` не найден;
+- `emulator` не найден;
+- EAS CLI доступен, но APK build требует Expo account или `EXPO_TOKEN`;
+- `npx expo-doctor` после правок проходит 18/18 проверок.

@@ -13,7 +13,9 @@ export default function ProfileTab() {
           </View>
           <View style={styles.profileText}>
             <Text style={styles.name}>{student.name}</Text>
-            <Text style={styles.meta}>Категорія {student.category} · менеджер {student.manager}</Text>
+            <Text style={styles.meta}>
+              Категорія {student.category} · менеджер {student.manager}
+            </Text>
           </View>
         </View>
       </Card>
@@ -26,7 +28,15 @@ export default function ProfileTab() {
             title={document.title}
             detail={document.detail}
             right={
-              <Pill tone={document.status === "Перевірено" ? "success" : document.status === "Потрібно додати" ? "warning" : "neutral"}>
+              <Pill
+                tone={
+                  document.status === "Перевірено"
+                    ? "success"
+                    : document.status === "Потрібно додати"
+                      ? "warning"
+                      : "neutral"
+                }
+              >
                 {document.status}
               </Pill>
             }
