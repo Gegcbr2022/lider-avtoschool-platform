@@ -9,12 +9,12 @@ import { useMemo, useState } from "react";
 const allCity = "Усі міста";
 const allCategory = "Усі категорії";
 const photoGradients: Record<string, string> = {
-  "graduate-maria": "linear-gradient(135deg, #e9f7ef 0%, #d7f0e3 52%, #ffd600 100%)",
-  "graduate-andrii": "linear-gradient(135deg, #eaf4f1 0%, #b9d9cf 50%, #004d40 100%)",
-  "graduate-oksana": "linear-gradient(135deg, #fff6bf 0%, #f9fcfa 48%, #b9d9cf 100%)",
-  "graduate-serhii": "linear-gradient(135deg, #0f1714 0%, #004d40 55%, #ffd600 100%)",
-  "graduate-anna": "linear-gradient(135deg, #f7fbf9 0%, #d7f0e3 55%, #ffd600 100%)",
-  "graduate-volodymyr": "linear-gradient(135deg, #dbeafe 0%, #eaf4f1 45%, #004d40 100%)"
+  "graduate-maria": "linear-gradient(135deg, #fff1f1 0%, #ffffff 48%, #ff1e1e 100%)",
+  "graduate-andrii": "linear-gradient(135deg, #f5f5f5 0%, #ffffff 45%, #1a1a1a 100%)",
+  "graduate-oksana": "linear-gradient(135deg, #ffffff 0%, #f4f4f4 52%, #ff4b4b 100%)",
+  "graduate-serhii": "linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 52%, #ff1e1e 100%)",
+  "graduate-anna": "linear-gradient(135deg, #f4f4f4 0%, #ffffff 55%, #ff1e1e 100%)",
+  "graduate-volodymyr": "linear-gradient(135deg, #ffffff 0%, #e5e5e5 45%, #1a1a1a 100%)"
 };
 
 export function GraduateShowcase() {
@@ -44,8 +44,8 @@ export function GraduateShowcase() {
               onClick={() => setCity(item)}
               className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
                 city === item
-                  ? "border-lider-green bg-lider-green text-white"
-                  : "border-lider-line bg-white text-lider-green hover:border-lider-green"
+                  ? "border-lider-red bg-lider-red text-white"
+                  : "border-lider-line bg-white text-lider-red hover:border-lider-red"
               }`}
             >
               {item}
@@ -60,8 +60,8 @@ export function GraduateShowcase() {
               onClick={() => setCategory(item)}
               className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
                 category === item
-                  ? "border-lider-yellow bg-lider-yellow text-lider-graphite"
-                  : "border-lider-line bg-white text-lider-muted hover:border-lider-yellow"
+                  ? "border-lider-red bg-lider-red text-white"
+                  : "border-lider-line bg-white text-lider-muted hover:border-lider-red"
               }`}
             >
               {item}
@@ -84,18 +84,18 @@ export function GraduateShowcase() {
             >
               <div
                 className="relative h-44"
-                style={{ background: photoGradients[story.id] ?? "linear-gradient(135deg, #eaf4f1, #ffd600)" }}
+                style={{ background: photoGradients[story.id] ?? "linear-gradient(135deg, #f4f4f4, #ff1e1e)" }}
               >
                 <div className="absolute inset-x-4 bottom-4 flex items-end justify-between">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-[20px] border border-white/50 bg-white/88 text-xl font-black text-lider-green shadow-sm backdrop-blur">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-[20px] border border-white/50 bg-white/88 text-xl font-black text-lider-red shadow-sm backdrop-blur">
                     {story.initials}
                   </div>
-                  <div className="rounded-full bg-white/88 px-3 py-1 text-xs font-bold text-lider-green shadow-sm backdrop-blur">
+                  <div className="rounded-full bg-white/88 px-3 py-1 text-xs font-bold text-lider-graphite shadow-sm backdrop-blur">
                     {story.date}
                   </div>
                 </div>
                 <div className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full bg-lider-graphite/80 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur">
-                  <Trophy size={13} className="text-lider-yellow" />
+                  <Trophy size={13} className="text-lider-red" />
                   Наша гордість
                 </div>
               </div>
@@ -105,7 +105,7 @@ export function GraduateShowcase() {
                   <StatusPill tone="success">Категорія {story.category}</StatusPill>
                 </div>
                 <p className="mt-1 text-sm font-medium text-lider-muted">{story.city}</p>
-                <p className="mt-4 text-sm font-semibold text-lider-green">{story.badge}</p>
+                <p className="mt-4 text-sm font-semibold text-lider-red">{story.badge}</p>
                 <p className="mt-3 text-sm leading-6 text-lider-muted">“{story.quote}”</p>
               </div>
             </motion.article>

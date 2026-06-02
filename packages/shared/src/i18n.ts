@@ -23,7 +23,7 @@ export const dictionaries = {
     web: {
       heroTitle: "Навчання водінню без хаосу в документах, графіку та оплатах",
       heroText:
-        "Автошкола «Лідер» поєднує сайт, CRM, особистий кабінет, мобільний застосунок, LMS, платежі та запис на практику в одну цифрову систему."
+        "Автошкола «Лідер» допомагає пройти шлях від консультації до іспиту: категорія, філіал, графік, практика та підтримка менеджера."
     }
   },
   ru: {
@@ -44,7 +44,7 @@ export const dictionaries = {
     web: {
       heroTitle: "Обучение вождению без хаоса в документах, графике и оплатах",
       heroText:
-        "Автошкола «Лидер» объединяет сайт, CRM, личный кабинет, мобильное приложение, LMS, платежи и запись на практику в одну цифровую систему."
+        "Автошкола «Лидер» помогает пройти путь от консультации до экзамена: категория, филиал, график, практика и поддержка менеджера."
     }
   },
   en: {
@@ -65,7 +65,7 @@ export const dictionaries = {
     web: {
       heroTitle: "Driving education without chaos in documents, schedule and payments",
       heroText:
-        "Leader Driving School connects the website, CRM, student account, mobile app, LMS, payments and practice booking into one digital system."
+        "Leader Driving School helps students move from consultation to exam with category guidance, branch choice, scheduling, practice and support."
     }
   }
 } as const;

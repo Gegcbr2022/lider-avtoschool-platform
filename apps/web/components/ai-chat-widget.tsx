@@ -41,6 +41,7 @@ export function AiChatWidget() {
   const [isSending, setIsSending] = useState(false);
   const [leadMode, setLeadMode] = useState(false);
   const [leadStatus, setLeadStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [hasScrolled, setHasScrolled] = useState(false);
   const [leadDraft, setLeadDraft] = useState<LeadDraft>({
     name: "",
     phone: "",
@@ -58,6 +59,17 @@ export function AiChatWidget() {
 
     window.addEventListener("lider-open-ai-chat", onOpenAiChat);
     return () => window.removeEventListener("lider-open-ai-chat", onOpenAiChat);
+  }, []);
+
+  useEffect(() => {
+    function onScroll() {
+      setHasScrolled(window.scrollY > 280);
+    }
+
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   useEffect(() => {
@@ -175,22 +187,26 @@ export function AiChatWidget() {
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
+    <div
+      className={`fixed bottom-44 right-4 z-50 flex flex-col items-end gap-3 transition md:bottom-6 md:right-6 ${
+        hasScrolled || isOpen ? "opacity-100" : "pointer-events-none opacity-0 md:pointer-events-auto md:opacity-100"
+      }`}
+    >
       <AnimatePresence>
         {isOpen ? (
           <motion.section
-            className="w-[calc(100vw-2.5rem)] max-w-[410px] overflow-hidden rounded-[24px] border border-lider-line bg-white shadow-[0_28px_90px_rgba(0,0,0,0.22)]"
+            className="flex max-h-[calc(100dvh-7.5rem)] w-[calc(100vw-2rem)] max-w-[410px] flex-col overflow-hidden rounded-[24px] border border-lider-line bg-white shadow-[0_28px_90px_rgba(0,0,0,0.22)] md:max-h-[78vh]"
             initial={{ opacity: 0, y: 24, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 18, scale: 0.98 }}
             transition={{ duration: 0.22 }}
             aria-label="AI-помічник автошколи"
           >
-            <header className="flex items-center justify-between gap-3 bg-lider-green px-4 py-4 text-white">
+            <header className="flex items-center justify-between gap-3 bg-lider-graphite px-4 py-4 text-white">
               <div className="flex items-center gap-3">
-                <span className="relative inline-flex h-11 w-11 items-center justify-center rounded-[16px] bg-lider-yellow text-lider-graphite">
+                <span className="relative inline-flex h-11 w-11 items-center justify-center rounded-[16px] bg-lider-red text-white">
                   <Bot size={22} />
-                  <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-lider-green bg-[#42e785]" />
+                  <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-lider-graphite bg-[#42e785]" />
                 </span>
                 <div>
                   <p className="text-sm font-semibold">AI-помічник Лідер</p>
@@ -207,7 +223,7 @@ export function AiChatWidget() {
               </button>
             </header>
 
-            <div className="max-h-[58vh] space-y-3 overflow-y-auto bg-[#f7fbf9] px-4 py-4">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-lider-background px-4 py-4">
               {messages.map((message, index) => (
                 <div
                   key={`${message.role}-${index}`}
@@ -216,7 +232,7 @@ export function AiChatWidget() {
                   <div
                     className={`max-w-[86%] rounded-[18px] px-4 py-3 text-sm leading-6 ${
                       message.role === "user"
-                        ? "bg-lider-green text-white"
+                        ? "bg-lider-red text-white"
                         : "border border-lider-line bg-white text-lider-graphite"
                     }`}
                   >
@@ -239,7 +255,7 @@ export function AiChatWidget() {
                     key={prompt}
                     type="button"
                     onClick={() => submitMessage(undefined, prompt)}
-                    className="rounded-full bg-[#edf5f2] px-3 py-1.5 text-xs font-semibold text-lider-green transition hover:bg-[#dceee8]"
+                    className="rounded-full bg-[#fff1f1] px-3 py-1.5 text-xs font-semibold text-lider-red transition hover:bg-[#ffe1e1]"
                   >
                     {prompt}
                   </button>
@@ -250,7 +266,7 @@ export function AiChatWidget() {
                 {leadMode ? (
                   <motion.form
                     onSubmit={submitLead}
-                    className="mb-3 grid gap-2 rounded-[18px] border border-lider-line bg-[#f9fcfa] p-3"
+                    className="mb-3 grid gap-2 rounded-[18px] border border-lider-line bg-lider-background p-3"
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
@@ -261,14 +277,14 @@ export function AiChatWidget() {
                         value={leadDraft.name}
                         onChange={(event) => setLeadDraft((current) => ({ ...current, name: event.target.value }))}
                         placeholder="Ім'я"
-                        className="rounded-[12px] border border-lider-line px-3 py-2 text-sm outline-none focus:border-lider-green"
+                        className="rounded-[12px] border border-lider-line px-3 py-2 text-sm outline-none focus:border-lider-red"
                       />
                       <input
                         required
                         value={leadDraft.phone}
                         onChange={(event) => setLeadDraft((current) => ({ ...current, phone: event.target.value }))}
                         placeholder="Телефон"
-                        className="rounded-[12px] border border-lider-line px-3 py-2 text-sm outline-none focus:border-lider-green"
+                        className="rounded-[12px] border border-lider-line px-3 py-2 text-sm outline-none focus:border-lider-red"
                       />
                     </div>
                     <div className="grid gap-2 sm:grid-cols-2">
@@ -276,14 +292,14 @@ export function AiChatWidget() {
                         value={leadDraft.telegram}
                         onChange={(event) => setLeadDraft((current) => ({ ...current, telegram: event.target.value }))}
                         placeholder="Telegram"
-                        className="rounded-[12px] border border-lider-line px-3 py-2 text-sm outline-none focus:border-lider-green"
+                        className="rounded-[12px] border border-lider-line px-3 py-2 text-sm outline-none focus:border-lider-red"
                       />
                       <input
                         required
                         value={leadDraft.city}
                         onChange={(event) => setLeadDraft((current) => ({ ...current, city: event.target.value }))}
                         placeholder="Місто"
-                        className="rounded-[12px] border border-lider-line px-3 py-2 text-sm outline-none focus:border-lider-green"
+                        className="rounded-[12px] border border-lider-line px-3 py-2 text-sm outline-none focus:border-lider-red"
                       />
                     </div>
                     <select
@@ -294,7 +310,7 @@ export function AiChatWidget() {
                           category: event.target.value as LeadDraft["category"]
                         }))
                       }
-                      className="rounded-[12px] border border-lider-line px-3 py-2 text-sm outline-none focus:border-lider-green"
+                      className="rounded-[12px] border border-lider-line px-3 py-2 text-sm outline-none focus:border-lider-red"
                     >
                       {["A", "A1", "B", "C", "CE"].map((category) => (
                         <option key={category} value={category}>
@@ -306,12 +322,12 @@ export function AiChatWidget() {
                       value={leadDraft.comment}
                       onChange={(event) => setLeadDraft((current) => ({ ...current, comment: event.target.value }))}
                       placeholder="Коментар або зручний час"
-                      className="rounded-[12px] border border-lider-line px-3 py-2 text-sm outline-none focus:border-lider-green"
+                      className="rounded-[12px] border border-lider-line px-3 py-2 text-sm outline-none focus:border-lider-red"
                     />
                     <button
                       type="submit"
                       disabled={leadStatus === "saving"}
-                      className="rounded-[12px] bg-lider-yellow px-4 py-2.5 text-sm font-semibold text-lider-graphite transition hover:bg-[#ffdf33]"
+                      className="rounded-[12px] bg-lider-red px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-lider-redDark"
                     >
                       {leadStatus === "saving" ? "Передаємо..." : "Передати менеджеру"}
                     </button>
@@ -329,7 +345,7 @@ export function AiChatWidget() {
                 <button
                   type="button"
                   onClick={() => setLeadMode((current) => !current)}
-                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-[#edf5f2] text-lider-green transition hover:bg-[#dceee8]"
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-[#fff1f1] text-lider-red transition hover:bg-[#ffe1e1]"
                   aria-label="Залишити заявку"
                 >
                   <BrainCircuit size={19} />
@@ -339,12 +355,12 @@ export function AiChatWidget() {
                   onChange={(event) => setInput(event.target.value)}
                   placeholder="Напишіть питання..."
                   maxLength={1000}
-                  className="min-w-0 flex-1 rounded-[14px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-green"
+                  className="min-w-0 flex-1 rounded-[14px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-red"
                 />
                 <button
                   type="submit"
                   disabled={isSending}
-                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-lider-green text-white transition hover:bg-[#063f36]"
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-lider-red text-white transition hover:bg-lider-redDark"
                   aria-label="Надіслати питання"
                 >
                   <Send size={18} />
@@ -358,18 +374,20 @@ export function AiChatWidget() {
       <button
         type="button"
         onClick={() => (isOpen ? closeChat() : openChat("floating-button"))}
-        className={`ai-chat-launcher group relative inline-flex h-16 w-16 items-center justify-center rounded-[22px] bg-lider-green text-white shadow-[0_16px_45px_rgba(0,77,64,0.32)] transition hover:-translate-y-1 hover:bg-[#063f36] ${
-          unreadPulse ? "animate-bounce" : ""
-        }`}
+        className="ai-chat-launcher group relative inline-flex h-14 w-14 items-center justify-center rounded-[20px] bg-lider-red text-white shadow-[0_16px_45px_rgba(255,30,30,0.32)] transition hover:-translate-y-1 hover:bg-lider-redDark md:h-16 md:w-16 md:rounded-[22px]"
         aria-label="Відкрити AI-помічника"
       >
-        <span className="absolute inset-0 rounded-[22px] bg-lider-yellow/30 blur-xl transition group-hover:bg-lider-yellow/45" />
+        <span
+          className={`absolute inset-0 rounded-[22px] bg-lider-red/30 blur-xl transition group-hover:bg-lider-red/45 ${
+            unreadPulse ? "opacity-100" : "opacity-70"
+          }`}
+        />
         <MessageCircle className="relative" size={28} />
-        <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-lider-yellow text-[10px] font-black text-lider-graphite">
+        <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-white text-[10px] font-black text-lider-red">
           AI
         </span>
         <span className="absolute -bottom-1 -left-1 h-4 w-4 rounded-full border-2 border-white bg-[#42e785]" />
-        <Sparkles className="absolute -left-2 -top-2 h-4 w-4 text-lider-yellow" />
+        <Sparkles className="absolute -left-2 -top-2 h-4 w-4 text-white" />
       </button>
     </div>
   );

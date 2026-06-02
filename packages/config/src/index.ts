@@ -5,14 +5,20 @@ export type PublicRuntimeConfig = {
 };
 
 export function getPublicRuntimeConfig(env: NodeJS.ProcessEnv = process.env): PublicRuntimeConfig {
-  const siteUrl = env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  const appDomain = env.APP_DOMAIN ?? new URL(siteUrl).host;
+  const rawSiteUrl = env.NEXT_PUBLIC_SITE_URL?.trim();
+  const siteUrl = normalizeSiteUrl(rawSiteUrl || "http://localhost:3000");
+  const rawAppDomain = env.APP_DOMAIN?.trim();
+  const appDomain = rawAppDomain || new URL(siteUrl).host;
 
   return {
     siteUrl,
     appDomain,
-    apiUrl: env.API_URL ?? "http://localhost:5001/lider-avtoschool-dev/europe-west1/api"
+    apiUrl: env.API_URL?.trim() || "http://localhost:5001/lider-avtoschool-dev/europe-west1/api"
   };
+}
+
+function normalizeSiteUrl(value: string) {
+  return /^https?:\/\//i.test(value) ? value : `https://${value}`;
 }
 
 export const deploymentEnvironments = ["dev", "staging", "production"] as const;

@@ -184,10 +184,19 @@ export function LeadPopup({
   }
 
   return (
-    <AnimatePresence>
-      {isOpen ? (
-        <motion.div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-[#071512]/70 px-4 py-4 backdrop-blur-sm sm:items-center"
+    <>
+      <button
+        type="button"
+        data-lider-lead-popup-root
+        aria-hidden="true"
+        tabIndex={-1}
+        onClick={() => tryOpen("timer")}
+        className="pointer-events-none fixed left-0 top-0 h-px w-px opacity-0"
+      />
+      <AnimatePresence>
+        {isOpen ? (
+          <motion.div
+          className="fixed inset-0 z-[80] flex items-end justify-center bg-[#1a1a1a]/70 px-3 py-3 backdrop-blur-sm sm:items-center sm:px-4"
           role="presentation"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -202,33 +211,40 @@ export function LeadPopup({
             role="dialog"
             aria-modal="true"
             aria-labelledby="lead-popup-title"
-            className="w-full max-w-5xl overflow-hidden rounded-[24px] border border-white/20 bg-white shadow-[0_32px_100px_rgba(0,0,0,0.32)]"
-            initial={{ opacity: 0, y: 28, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 18, scale: 0.98 }}
+            className="safe-bottom flex max-h-[calc(100dvh-1.5rem)] w-full max-w-5xl flex-col overflow-hidden rounded-[24px] border border-white/30 bg-white shadow-[0_32px_100px_rgba(0,0,0,0.32)] sm:max-h-[calc(100vh-2rem)]"
+            initial={{ opacity: 0, y: 28 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 18 }}
             transition={{ duration: 0.24, ease: [0.2, 0.8, 0.2, 1] }}
           >
-            <div className="grid lg:grid-cols-[0.85fr_1fr]">
-              <div className="relative bg-lider-green p-6 text-white sm:p-8">
-                <button
-                  type="button"
-                  aria-label="Закрити форму"
-                  onClick={() => closePopup("button")}
-                  className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/12 text-white transition hover:bg-white/20"
-                >
-                  <X size={18} />
-                </button>
-                <div className="inline-flex h-12 w-12 items-center justify-center rounded-[16px] bg-lider-yellow text-lider-graphite">
+            <div className="sticky top-0 z-10 flex shrink-0 items-center justify-between gap-3 border-b border-lider-line bg-white px-4 py-3 sm:px-5">
+              <div className="min-w-0">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-lider-red">{variant.eyebrow}</p>
+                <p className="truncate text-sm font-black text-lider-graphite">Автошкола «Лідер»</p>
+              </div>
+              <button
+                type="button"
+                aria-label="Закрити форму"
+                onClick={() => closePopup("button")}
+                className="tap-target inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-lider-graphite text-white transition hover:bg-[#2a2a2a]"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="min-h-0 overflow-y-auto">
+              <div className="grid lg:grid-cols-[0.85fr_1fr]">
+                <div className="relative bg-lider-red p-4 text-white sm:p-6 lg:p-8">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-[16px] bg-white/15 text-white">
                   <Icon size={22} />
                 </div>
-                <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-lider-yellow">
+                <p className="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-white/70">
                   {variant.eyebrow}
                 </p>
-                <h2 id="lead-popup-title" className="mt-4 text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
+                <h2 id="lead-popup-title" className="mt-3 text-2xl font-black tracking-[-0.03em] sm:text-4xl">
                   {variant.title}
                 </h2>
-                <p className="mt-4 text-sm leading-7 text-white/74">{variant.text}</p>
-                <div className="mt-8 grid gap-3 text-sm">
+                <p className="mt-3 text-sm leading-6 text-white/78 sm:leading-7">{variant.text}</p>
+                <div className="mt-5 grid gap-2 text-sm sm:mt-7 sm:gap-3">
                   {variant.bullets.map((item) => (
                     <div
                       key={item}
@@ -241,26 +257,28 @@ export function LeadPopup({
                 <button
                   type="button"
                   onClick={openAiChat}
-                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-lider-yellow transition hover:text-white"
+                  className="mt-5 inline-flex items-center gap-2 text-sm font-black text-white underline decoration-white/30 underline-offset-4 transition hover:decoration-white"
                 >
                   Запитати AI-помічника
                 </button>
               </div>
-              <div className="p-4 sm:p-6">
+              <div className="p-3 sm:p-5 lg:p-6">
                 <LeadForm
                   variant="popup"
                   analyticsSource="popup"
                   title="Залиште заявку"
-                  description="Контакти потрібні тільки для консультації щодо навчання. Після заявки popup більше не показується."
+                  description="Контакти потрібні тільки для консультації щодо навчання. Після заявки форма більше не турбуватиме."
                   submitLabel={variant.submitLabel}
                   onSuccess={() => closePopup("lead-created")}
                 />
               </div>
+              </div>
             </div>
           </motion.section>
-        </motion.div>
-      ) : null}
-    </AnimatePresence>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </>
   );
 }
 

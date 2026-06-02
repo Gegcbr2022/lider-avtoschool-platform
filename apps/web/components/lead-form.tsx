@@ -83,7 +83,7 @@ export function LeadForm({
       onSubmit={handleSubmit(onSubmit)}
       className={cn(
         "grid gap-4 rounded-[22px] bg-white p-5 shadow-soft",
-        isPopup && "max-h-[75vh] overflow-y-auto rounded-[18px] border border-lider-line p-4 shadow-none",
+        isPopup && "rounded-[18px] border border-lider-line p-4 shadow-none sm:p-5",
         className
       )}
     >
@@ -99,7 +99,7 @@ export function LeadForm({
         </label>
         <input
           id={`${formId}-name`}
-          className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-green"
+          className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-red"
           placeholder="Марія"
           {...register("name")}
         />
@@ -112,7 +112,7 @@ export function LeadForm({
           </label>
           <input
             id={`${formId}-phone`}
-            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-green"
+            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-red"
             placeholder="050 000 00 00"
             {...register("phone")}
           />
@@ -124,7 +124,7 @@ export function LeadForm({
           </label>
           <input
             id={`${formId}-city`}
-            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-green"
+            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-red"
             placeholder="Київ"
             {...register("city")}
           />
@@ -138,7 +138,7 @@ export function LeadForm({
           </label>
           <select
             id={`${formId}-category`}
-            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-green"
+            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-red"
             {...register("category")}
           >
             {categoryOptions.map((category) => (
@@ -154,7 +154,7 @@ export function LeadForm({
           </label>
           <select
             id={`${formId}-branchId`}
-            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-green"
+            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-red"
             {...register("branchId")}
           >
             {branches.map((branch) => (
@@ -172,7 +172,7 @@ export function LeadForm({
         <textarea
           id={`${formId}-message`}
           className={cn(
-            "mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-green",
+            "mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-red",
             isPopup ? "min-h-20" : "min-h-24"
           )}
           placeholder="Зручний час для дзвінка"

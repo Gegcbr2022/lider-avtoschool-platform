@@ -58,8 +58,8 @@ export default async function ContentPage({ params }: PageProps) {
             {siteBrand.name}
           </Link>
           <Link
-            href="/#lead"
-            className="rounded-[12px] bg-lider-yellow px-4 py-2 text-sm font-semibold text-lider-graphite"
+            href="/#signup"
+            className="rounded-[12px] bg-lider-red px-4 py-2 text-sm font-semibold text-white"
           >
             Записатися
           </Link>
@@ -69,7 +69,7 @@ export default async function ContentPage({ params }: PageProps) {
       <section className="premium-surface soft-grid px-5 py-16 lg:px-8 lg:py-24">
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1fr_0.78fr] lg:items-center">
           <div className="reveal-up">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lider-green">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lider-red">
               {page.eyebrow ?? "Автошкола Лідер"}
             </p>
             <h1 className="mt-4 max-w-4xl text-4xl font-semibold tracking-[-0.04em] text-lider-graphite md:text-6xl">
@@ -79,13 +79,13 @@ export default async function ContentPage({ params }: PageProps) {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
                 href="#application"
-                className="inline-flex items-center justify-center rounded-[12px] bg-lider-yellow px-5 py-3 text-sm font-semibold text-[#0f1714] transition hover:bg-[#ffdf33]"
+                className="inline-flex items-center justify-center rounded-[12px] bg-lider-red px-5 py-3 text-sm font-semibold text-white transition hover:bg-lider-redDark"
               >
                 {page.cta ?? "Отримати консультацію"}
               </Link>
               <Link
                 href="/"
-                className="inline-flex items-center justify-center gap-2 rounded-[12px] bg-white px-5 py-3 text-sm font-semibold text-lider-green transition hover:bg-[#eaf4f1]"
+                className="inline-flex items-center justify-center gap-2 rounded-[12px] bg-white px-5 py-3 text-sm font-semibold text-lider-red transition hover:bg-[#fff1f1]"
               >
                 На головну <ArrowRight size={16} />
               </Link>
@@ -100,19 +100,19 @@ export default async function ContentPage({ params }: PageProps) {
                   key={item}
                   className="flex items-center gap-3 rounded-[14px] border border-lider-line bg-white px-4 py-3"
                 >
-                  <CheckCircle2 className="h-5 w-5 text-lider-green" />
+                  <CheckCircle2 className="h-5 w-5 text-lider-red" />
                   <span className="text-sm font-semibold text-lider-graphite">{item}</span>
                 </div>
               ))}
             </div>
             {branch ? (
-              <div className="mt-5 rounded-[16px] bg-lider-green p-4 text-white">
-                <MapPin className="h-5 w-5 text-lider-yellow" />
+              <div className="mt-5 rounded-[16px] bg-lider-red p-4 text-white">
+                <MapPin className="h-5 w-5 text-white" />
                 <p className="mt-3 text-lg font-semibold">{branch.city}</p>
                 <p className="mt-1 text-sm text-white/72">{branch.address}</p>
                 <a
                   href={`tel:${branch.phone}`}
-                  className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-lider-yellow"
+                  className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-white underline decoration-white/30 underline-offset-4"
                 >
                   <Phone size={15} />
                   {branch.phone}
@@ -128,13 +128,13 @@ export default async function ContentPage({ params }: PageProps) {
           <div>
             <SectionHeader
               title={page.kind === "category" ? "Що входить у курс" : "Як це працює"}
-              description="Сторінка підключена до sitemap, metadata і статичної генерації Next.js. Контент можна винести в CMS без зміни URL."
+              description="Кожна сторінка допомагає швидко зрозуміти маршрут: що підготувати, з ким зв'язатися і як почати навчання без зайвих кроків."
             />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             {(page.checklist ?? ["Залиште заявку", "Отримайте дзвінок", "Почніть навчання"]).map((item, index) => (
               <article key={item} className="rounded-[18px] border border-lider-line bg-white p-5 shadow-sm">
-                <span className="text-sm font-semibold text-lider-green">0{index + 1}</span>
+                <span className="text-sm font-semibold text-lider-red">0{index + 1}</span>
                 <h2 className="mt-3 text-lg font-semibold text-lider-graphite">{item}</h2>
                 <p className="mt-2 text-sm leading-6 text-lider-muted">
                   Менеджер автошколи допоможе пройти цей крок без зайвих дзвінків і дублювання інформації.
@@ -149,7 +149,7 @@ export default async function ContentPage({ params }: PageProps) {
         <div className="mx-auto max-w-7xl">
           <SectionHeader
             title={page.kind === "city" ? "Доступні категорії у філії" : "Програми навчання"}
-            description="Картки беруться з єдиного shared-шару, тому ціни, категорії і тривалість однакові на головній, SEO-сторінках і в майбутньому мобільному застосунку."
+            description="Ціни, категорії та тривалість подані однаково на всіх сторінках, щоб перед заявкою не було плутанини."
           />
           <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
             {relatedServices.map((service) => (
@@ -161,7 +161,7 @@ export default async function ContentPage({ params }: PageProps) {
                   </StatusPill>
                 </div>
                 <p className="mt-3 text-sm leading-6 text-lider-muted">{service.summary}</p>
-                <p className="mt-5 text-lg font-semibold text-lider-green">
+                <p className="mt-5 text-lg font-semibold text-lider-red">
                   від {service.priceFrom.toLocaleString("uk-UA")} грн
                 </p>
               </article>
@@ -175,7 +175,7 @@ export default async function ContentPage({ params }: PageProps) {
           <div>
             <SectionHeader
               title="Залиште заявку"
-              description="Форма валідована, працює через `/api/leads` і в production передає заявку у Firebase Cloud Function за `API_URL`."
+              description="Залиште телефон, місто та категорію. Менеджер уточнить деталі, підкаже документи і допоможе обрати найближчий старт."
             />
             <div className="mt-8 space-y-4">
               {homeFaq.slice(0, 3).map((item) => (
