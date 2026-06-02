@@ -8,6 +8,8 @@ export type Branch = {
   address: string;
   phone: string;
   mapQuery: string;
+  workingHours?: string;
+  routeUrl?: string;
 };
 
 export type ServiceCard = {

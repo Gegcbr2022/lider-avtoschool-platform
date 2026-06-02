@@ -17,35 +17,45 @@ export const branches: Branch[] = [
     city: "Київ",
     address: "вул. Борщагівська, 154А, ТРК Аркадія",
     phone: "0507383033",
-    mapQuery: "Київ Борщагівська 154А ТРК Аркадія"
+    mapQuery: "Київ Борщагівська 154А ТРК Аркадія",
+    workingHours: "Пн-Сб 09:00-18:00",
+    routeUrl: "https://maps.google.com/?q=Київ Борщагівська 154А ТРК Аркадія"
   },
   {
     id: "sloviansk",
     city: "Слов'янськ",
     address: "вул. Центральна, 39",
     phone: "0508050838",
-    mapQuery: "Слов'янськ Центральна 39"
+    mapQuery: "Слов'янськ Центральна 39",
+    workingHours: "Пн-Сб 09:00-18:00",
+    routeUrl: "https://maps.google.com/?q=Слов'янськ Центральна 39"
   },
   {
     id: "kramatorsk",
     city: "Краматорськ",
     address: "вул. Ювілейна, 56",
     phone: "0504233022",
-    mapQuery: "Краматорськ Ювілейна 56"
+    mapQuery: "Краматорськ Ювілейна 56",
+    workingHours: "Пн-Сб 09:00-18:00",
+    routeUrl: "https://maps.google.com/?q=Краматорськ Ювілейна 56"
   },
   {
     id: "dnipro",
     city: "Дніпро",
     address: "вул. Олександра Поля, 82Г",
     phone: "0504229202",
-    mapQuery: "Дніпро Олександра Поля 82Г"
+    mapQuery: "Дніпро Олександра Поля 82Г",
+    workingHours: "Пн-Сб 09:00-18:00",
+    routeUrl: "https://maps.google.com/?q=Дніпро Олександра Поля 82Г"
   },
   {
     id: "dobropillia",
     city: "Добропілля",
     address: "проспект Шевченка, 1А",
     phone: "0504233032",
-    mapQuery: "Добропілля проспект Шевченка 1А"
+    mapQuery: "Добропілля проспект Шевченка 1А",
+    workingHours: "Пн-Сб 09:00-18:00",
+    routeUrl: "https://maps.google.com/?q=Добропілля проспект Шевченка 1А"
   }
 ];
 
@@ -270,6 +280,46 @@ export const commercialAdvantages = [
   "Команда працює з категоріями A, A1, B, C, CE і перепідготовкою."
 ] as const;
 
+export const socialLinks = [
+  {
+    id: "facebook",
+    label: "Facebook",
+    href: "https://www.facebook.com/groups/1968049130093845/",
+    description: "спільнота учнів, новини наборів і живі обговорення"
+  },
+  {
+    id: "instagram",
+    label: "Instagram",
+    href: "https://instagram.com/lider_avtoshkola__/",
+    description: "фото занять, випускників, автопарку та щоденні сторіс"
+  },
+  {
+    id: "youtube",
+    label: "YouTube",
+    href: "https://youtube.com/channel/UCc-RYjq2PWSPmX12hdWvQBw/featured",
+    description: "відео про навчання, ПДР, маршрути і підготовку до іспиту"
+  },
+  {
+    id: "telegram",
+    label: "Telegram",
+    href: "https://t.me/LiderDriveBot?start=AYYUTE",
+    description: "швидкий запис, повідомлення менеджера і нагадування"
+  },
+  {
+    id: "whatsapp",
+    label: "WhatsApp",
+    href: "whatsapp://send/?phone=380504233022",
+    description: "зручний канал для консультації телефоном 050 423 30 22"
+  }
+] as const;
+
+export const socialProofStats = [
+  { value: "15 000+", label: "випускників", detail: "підтверджений масштаб діючого бренду" },
+  { value: "10+ років", label: "навчання водіїв", detail: "стабільна команда і відпрацьовані процеси" },
+  { value: "4.9/5", label: "середня оцінка", detail: "за відгуками учнів у цифрових каналах" },
+  { value: "5 міст", label: "філіальна мережа", detail: "Київ, Дніпро, Слов'янськ, Краматорськ, Добропілля" }
+] as const;
+
 export const graduateStories = [
   {
     id: "graduate-maria",
@@ -278,6 +328,8 @@ export const graduateStories = [
     city: "Київ",
     category: "B",
     date: "28 травня 2026",
+    badge: "Склала з першої спроби",
+    photoTone: "from-[#e9f7ef] via-[#d7f0e3] to-[#ffd600]",
     quote: "Онлайн-теорія допомогла не випадати з графіка, а інструктор спокійно провів через складні маршрути."
   },
   {
@@ -287,6 +339,8 @@ export const graduateStories = [
     city: "Дніпро",
     category: "C",
     date: "24 травня 2026",
+    badge: "Вантажна категорія для роботи",
+    photoTone: "from-[#eaf4f1] via-[#b9d9cf] to-[#004d40]",
     quote: "Потрібна була вантажна категорія для роботи. Найбільше сподобався чіткий план і нагадування по документах."
   },
   {
@@ -296,6 +350,8 @@ export const graduateStories = [
     city: "Краматорськ",
     category: "A1",
     date: "19 травня 2026",
+    badge: "Повернула впевненість",
+    photoTone: "from-[#fff6bf] via-[#f9fcfa] to-[#b9d9cf]",
     quote: "Тести в кабінеті показували слабкі теми, тому на іспит йшла вже без паніки."
   },
   {
@@ -305,9 +361,88 @@ export const graduateStories = [
     city: "Слов'янськ",
     category: "CE",
     date: "15 травня 2026",
+    badge: "Перепідготовка CE",
+    photoTone: "from-[#0f1714] via-[#004d40] to-[#ffd600]",
     quote: "Практику підбирали під робочий графік. Усі дзвінки, слоти і платежі були зрозумілі."
+  },
+  {
+    id: "graduate-anna",
+    name: "Анна Мельник",
+    initials: "АМ",
+    city: "Добропілля",
+    category: "B",
+    date: "10 травня 2026",
+    badge: "Перший самостійний маршрут",
+    photoTone: "from-[#f7fbf9] via-[#d7f0e3] to-[#ffd600]",
+    quote: "Філія поруч, менеджер завжди на зв'язку, а заняття можна було підлаштувати під роботу."
+  },
+  {
+    id: "graduate-volodymyr",
+    name: "Володимир Іванов",
+    initials: "ВІ",
+    city: "Київ",
+    category: "A",
+    date: "6 травня 2026",
+    badge: "Мото з нуля",
+    photoTone: "from-[#dbeafe] via-[#eaf4f1] to-[#004d40]",
+    quote: "Категорію A пояснили без зайвої теорії: що потрібно, як скласти, коли починати практику."
   }
 ] as const;
+
+export const graduateReviews = [
+  {
+    id: "review-anna",
+    name: "Анна",
+    city: "Київ",
+    rating: 5,
+    source: "відгук учня",
+    text: "Сподобалося, що не довелося самій розбиратися з документами. Мені одразу пояснили порядок навчання, ціну і графік."
+  },
+  {
+    id: "review-alina",
+    name: "Аліна",
+    city: "Дніпро",
+    rating: 5,
+    source: "відгук учня",
+    text: "Інструктор дуже спокійний, практику планували за моїм графіком. Після тестів було видно, над чим працювати."
+  },
+  {
+    id: "review-volodymyr",
+    name: "Володимир",
+    city: "Краматорськ",
+    rating: 5,
+    source: "відгук учня",
+    text: "Потрібна була категорія для роботи, тому цінував чіткість: документи, оплата, заняття і підготовка до ТСЦ."
+  },
+  {
+    id: "review-natalia",
+    name: "Наталія",
+    city: "Слов'янськ",
+    rating: 5,
+    source: "соцмережі",
+    text: "Усе зібрано в одному місці: консультація, нагадування, теорія, практичні заняття і відповіді на питання."
+  }
+] as const;
+
+export const mobileAppFeatures = [
+  "ПДР-тести з поясненнями помилок і слабкими темами",
+  "Запис на практику, нагадування і історія занять",
+  "Документи, платежі, статус навчання і повідомлення менеджера",
+  "AI-помічник для категорій, філій, цін і підготовки до іспиту"
+] as const;
+
+export const appStoreLinks = {
+  googlePlay: {
+    label: "Google Play",
+    status: "Скоро",
+    href: ""
+  },
+  appStore: {
+    label: "App Store",
+    status: "Скоро",
+    href: ""
+  }
+} as const;
 
 export const instructorProfiles = [
   {
@@ -396,3 +531,25 @@ export const paymentIntentSchema = z.object({
 });
 
 export const aiProviderSchema = z.enum(["openai", "claude", "gemini", "openrouter", "local"]);
+
+export const aiLeadSchema = z.object({
+  name: z.string().min(2).max(80).optional(),
+  phone: z.string().min(9).max(30).optional(),
+  telegram: z.string().max(80).optional(),
+  city: z.string().min(2).max(80).optional(),
+  category: z.enum(["A", "A1", "B", "C", "CE"]).optional(),
+  question: z.string().max(1000).optional(),
+  comment: z.string().max(1000).optional(),
+  source: z.string().max(60).default("ai-chat")
+});
+
+export const aiChatMessageSchema = z.object({
+  role: z.enum(["user", "assistant"]),
+  content: z.string().min(1).max(1000)
+});
+
+export const aiChatRequestSchema = z.object({
+  messages: z.array(aiChatMessageSchema).min(1).max(12),
+  lead: aiLeadSchema.optional(),
+  intent: z.enum(["consultation", "category-picker", "pdr-explain", "first-lesson"]).optional()
+});

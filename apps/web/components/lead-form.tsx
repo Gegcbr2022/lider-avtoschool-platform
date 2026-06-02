@@ -6,6 +6,7 @@ import { Button, cn } from "@lider/ui";
 import { useId, useState } from "react";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
+import { trackEvent } from "../lib/analytics";
 
 type LeadFormValues = z.infer<typeof leadFormSchema>;
 type LeadFormProps = {
@@ -14,6 +15,8 @@ type LeadFormProps = {
   title?: string;
   description?: string;
   submitLabel?: string;
+  analyticsSource?: string;
+  onSuccess?: () => void;
 };
 
 const categoryOptions: LeadFormValues["category"][] = ["A", "A1", "B", "C", "CE"];
@@ -23,7 +26,9 @@ export function LeadForm({
   className,
   title,
   description,
-  submitLabel = "Отримати консультацію"
+  submitLabel = "Отримати консультацію",
+  analyticsSource = "lead-form",
+  onSuccess
 }: LeadFormProps) {
   const formId = useId();
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -60,7 +65,15 @@ export function LeadForm({
     }
 
     reset({ category: "B", branchId: "kyiv", name: "", phone: "", city: "", message: "" });
+    window.localStorage.setItem("lider-lead-submitted", "true");
+    window.dispatchEvent(new CustomEvent("lider-lead-created"));
+    trackEvent(analyticsSource === "popup" ? "popup_lead_created" : "lead_created", {
+      source: analyticsSource,
+      city: values.city,
+      category: values.category
+    });
     setStatus("saved");
+    onSuccess?.();
   }
 
   const isPopup = variant === "popup";

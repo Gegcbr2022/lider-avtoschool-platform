@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Card, Label, ProgressBar, PrimaryButton, Screen } from "../../components/mobile-ui";
 import { testCategories } from "../../lib/mobile-data";
 import { colors } from "../../lib/theme";
 
 export default function TestsTab() {
+  const [showExplanation, setShowExplanation] = useState(false);
+
   return (
     <Screen title="ПДР тренажер" subtitle="Екзаменаційний режим: 20 питань, таймер, історія спроб і категорії тем.">
       <Card tone="yellow">
@@ -31,6 +34,26 @@ export default function TestsTab() {
         <Text style={styles.body}>
           Вікторина по знаках, реакція на світлофор, паркування, рейтинг, досягнення і рекорди.
         </Text>
+      </Card>
+
+      <Card>
+        <Label>AI пояснення помилки</Label>
+        <Text style={styles.questionTitle}>Приклад: кому потрібно дати дорогу на нерегульованому перехресті?</Text>
+        <Text style={styles.body}>
+          Якщо відповідь неправильна, AI пояснює правило простими словами і пропонує тему для повторення.
+        </Text>
+        {showExplanation ? (
+          <View style={styles.explanation}>
+            <Text style={styles.explanationTitle}>Пояснення AI</Text>
+            <Text style={styles.explanationText}>
+              На нерегульованому перехресті діє правило пріоритету: спочатку перевіряємо знаки, потім перешкоду справа.
+              Якщо знаків немає, пропустіть транспортний засіб, який наближається справа.
+            </Text>
+          </View>
+        ) : null}
+        <Pressable style={styles.aiButton} onPress={() => setShowExplanation((current) => !current)}>
+          <Text style={styles.aiButtonText}>{showExplanation ? "Сховати пояснення" : "Пояснити помилку AI"}</Text>
+        </Pressable>
       </Card>
 
       <PrimaryButton>Почати тренування</PrimaryButton>
@@ -70,5 +93,38 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: colors.muted,
     lineHeight: 22
+  },
+  questionTitle: {
+    marginTop: 10,
+    color: colors.graphite,
+    fontSize: 18,
+    fontWeight: "900",
+    lineHeight: 24
+  },
+  explanation: {
+    marginTop: 14,
+    borderRadius: 16,
+    backgroundColor: "#edf5f2",
+    padding: 14
+  },
+  explanationTitle: {
+    color: colors.green,
+    fontWeight: "900"
+  },
+  explanationText: {
+    marginTop: 8,
+    color: colors.graphite,
+    lineHeight: 22
+  },
+  aiButton: {
+    marginTop: 14,
+    borderRadius: 16,
+    backgroundColor: colors.green,
+    paddingVertical: 13,
+    alignItems: "center"
+  },
+  aiButtonText: {
+    color: colors.white,
+    fontWeight: "900"
   }
 });

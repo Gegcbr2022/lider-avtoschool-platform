@@ -4,7 +4,13 @@ import { getApps, initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { onRequest } from "firebase-functions/v2/https";
 import { bookingRequestSchema, leadFormSchema, paymentIntentSchema } from "../../../packages/shared/src/index";
-import { aiConsultationSchema, answerStudentQuestion } from "./ai-providers";
+import {
+  aiChatSchema,
+  aiConsultationSchema,
+  aiLeadPayloadSchema,
+  answerAiChat,
+  answerStudentQuestion
+} from "./ai-providers";
 import { paymentProviders } from "./payment-providers";
 
 const firebaseApp = getApps().length ? getApps()[0] : initializeApp();
@@ -121,6 +127,40 @@ app.post("/ai/consult", async (request, response) => {
   }
 
   response.json(await answerStudentQuestion(parsed.data));
+});
+
+app.post("/ai/chat", async (request, response) => {
+  const parsed = aiChatSchema.safeParse(request.body);
+
+  if (!parsed.success) {
+    response.status(422).json({ error: "Invalid AI chat payload", issues: parsed.error.flatten() });
+    return;
+  }
+
+  const result = await answerAiChat(parsed.data);
+  response.json(result);
+});
+
+app.post("/ai/leads", async (request, response) => {
+  const parsed = aiLeadPayloadSchema.safeParse(request.body);
+
+  if (!parsed.success) {
+    response.status(422).json({ error: "Invalid AI lead payload", issues: parsed.error.flatten() });
+    return;
+  }
+
+  const aiLead = {
+    ...parsed.data,
+    status: parsed.data.status ?? "new",
+    createdAt: parsed.data.createdAt ?? new Date().toISOString()
+  };
+  const persistence = await persist("aiLeads", aiLead);
+
+  await sendLeadToTelegram({ ...aiLead, source: "ai-chat" }, persistence.id).catch((error: unknown) => {
+    console.error("Telegram AI lead logging failed", error);
+  });
+
+  response.status(201).json({ id: persistence.id, persistence: persistence.mode, aiLead });
 });
 
 async function persist(collection: string, payload: Record<string, unknown>) {

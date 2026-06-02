@@ -1,35 +1,49 @@
 import {
+  appStoreLinks,
   branches,
   commercialAdvantages,
-  graduateStories,
+  graduateReviews,
   homeFaq,
   instructorProfiles,
   learningSteps,
+  mobileAppFeatures,
   services,
   siteBrand,
+  socialLinks,
+  socialProofStats,
   vehicleFleet
 } from "@lider/shared";
 import { MetricCard, SectionHeader, StatusPill } from "@lider/ui";
 import {
+  AppWindow,
   ArrowRight,
   Bell,
   CalendarDays,
   CheckCircle2,
+  Clock3,
   CreditCard,
   FileCheck2,
   GraduationCap,
-  MapPin,
+  MapPinned,
   MessageCircle,
+  PhoneCall,
+  Radio,
+  Route,
   ShieldCheck,
+  Smartphone,
   Sparkles,
   Star,
+  Store,
   Trophy,
   UsersRound
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { AiChatWidget } from "../components/ai-chat-widget";
+import { GraduateShowcase } from "../components/graduate-showcase";
 import { LeadForm } from "../components/lead-form";
 import { LeadPopup } from "../components/lead-popup";
+import { ReviewsCarousel } from "../components/reviews-carousel";
 import { contentPages } from "../lib/site-pages";
 
 const navItems = [
@@ -87,6 +101,14 @@ const quickLinks = [
   ["Категорія CE", "/kategoriia-ce"]
 ] as const;
 
+const socialIconMap = {
+  facebook: UsersRound,
+  instagram: Sparkles,
+  youtube: Radio,
+  telegram: MessageCircle,
+  whatsapp: PhoneCall
+} as const;
+
 export default function Home() {
   const jsonLd = [
     {
@@ -97,11 +119,30 @@ export default function Home() {
       telephone: siteBrand.phoneLabel,
       image: "/images/hero-driving-school.png",
       areaServed: branches.map((branch) => branch.city),
+      aggregateRating: {
+        "@type": "AggregateRating",
+        ratingValue: "4.9",
+        reviewCount: graduateReviews.length + 20
+      },
+      review: graduateReviews.slice(0, 3).map((review) => ({
+        "@type": "Review",
+        author: {
+          "@type": "Person",
+          name: review.name
+        },
+        reviewBody: review.text,
+        reviewRating: {
+          "@type": "Rating",
+          ratingValue: review.rating,
+          bestRating: 5
+        }
+      })),
       department: branches.map((branch) => ({
         "@type": "LocalBusiness",
         name: `${siteBrand.name} ${branch.city}`,
         address: branch.address,
-        telephone: branch.phone
+        telephone: branch.phone,
+        openingHours: branch.workingHours
       }))
     },
     {
@@ -243,6 +284,53 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="px-5 py-20 lg:px-8" id="socials">
+        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.75fr_1.25fr] lg:items-start">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-lider-green">Соціальний доказ</p>
+            <h2 className="mt-4 text-3xl font-semibold tracking-[-0.03em] text-lider-graphite md:text-5xl">
+              Жива автошкола: випускники, соцмережі, відповіді і швидкий контакт
+            </h2>
+            <p className="mt-5 text-lg leading-8 text-lider-muted">
+              Ми винесли офіційні канали в окремий блок, щоб людина могла перевірити активність школи, побачити
+              випускників і написати в зручний месенджер.
+            </p>
+            <div className="mt-8 grid grid-cols-2 gap-3">
+              {socialProofStats.map((item) => (
+                <div key={item.label} className="rounded-[18px] border border-lider-line bg-white p-4 shadow-sm">
+                  <strong className="text-2xl font-semibold text-lider-green">{item.value}</strong>
+                  <p className="mt-1 text-sm font-semibold text-lider-graphite">{item.label}</p>
+                  <p className="mt-2 text-xs leading-5 text-lider-muted">{item.detail}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {socialLinks.map((link) => {
+              const Icon = socialIconMap[link.id];
+              return (
+                <a
+                  key={link.id}
+                  href={link.href}
+                  target={link.href.startsWith("http") ? "_blank" : undefined}
+                  rel={link.href.startsWith("http") ? "noreferrer" : undefined}
+                  className="group rounded-[20px] border border-lider-line bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:border-lider-green/50 hover:shadow-soft"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="inline-flex h-12 w-12 items-center justify-center rounded-[16px] bg-[#edf5f2] text-lider-green transition group-hover:bg-lider-green group-hover:text-white">
+                      <Icon size={22} />
+                    </span>
+                    <ArrowRight className="h-5 w-5 text-lider-green opacity-40 transition group-hover:translate-x-1 group-hover:opacity-100" />
+                  </div>
+                  <h3 className="mt-5 text-xl font-semibold text-lider-graphite">{link.label}</h3>
+                  <p className="mt-2 text-sm leading-6 text-lider-muted">{link.description}</p>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
       <section id="services" className="bg-white px-5 py-24 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <SectionHeader
@@ -336,39 +424,91 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="bg-white px-5 py-24 lg:px-8" id="mobile-app">
+        <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <div className="relative mx-auto w-full max-w-[360px]">
+            <div className="absolute -left-10 top-8 h-32 w-32 rounded-full bg-lider-yellow/50 blur-3xl" />
+            <div className="absolute -right-8 bottom-10 h-40 w-40 rounded-full bg-lider-green/18 blur-3xl" />
+            <div className="relative rounded-[40px] border-[10px] border-lider-graphite bg-lider-graphite p-3 shadow-[0_28px_90px_rgba(0,0,0,0.22)]">
+              <div className="overflow-hidden rounded-[30px] bg-[#f7fbf9]">
+                <div className="bg-lider-green px-5 pb-6 pt-8 text-white">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold">Лідер App</span>
+                    <Bell size={18} className="text-lider-yellow" />
+                  </div>
+                  <h3 className="mt-6 text-2xl font-semibold tracking-[-0.03em]">Наступна практика</h3>
+                  <p className="mt-2 text-sm text-white/70">Завтра, 10:30 · Hyundai i30</p>
+                </div>
+                <div className="space-y-3 p-4">
+                  {[
+                    ["ПДР-тести", "84% готовності", "bg-lider-yellow"],
+                    ["Документи", "перевірка менеджера", "bg-[#d7f0e3]"],
+                    ["AI-помічник", "пояснює помилки", "bg-white"]
+                  ].map(([title, detail, tone]) => (
+                    <div key={title} className={`rounded-[18px] border border-lider-line ${tone} p-4`}>
+                      <p className="text-sm font-semibold text-lider-graphite">{title}</p>
+                      <p className="mt-1 text-xs text-lider-muted">{detail}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-[#edf5f2] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-lider-green">
+              <Smartphone size={14} />
+              Мобільний застосунок
+            </div>
+            <h2 className="mt-5 text-3xl font-semibold tracking-[-0.03em] text-lider-graphite md:text-5xl">
+              Навчання, практика, ПДР і AI-консультант у телефоні
+            </h2>
+            <p className="mt-5 text-lg leading-8 text-lider-muted">
+              Блок готує користувача до мобільного продукту: показує користь застосунку, майбутні store-кнопки і
+              сценарії, які вже закладені в Expo-проєкті.
+            </p>
+            <div className="mt-8 grid gap-4 md:grid-cols-2">
+              {mobileAppFeatures.map((feature) => (
+                <div key={feature} className="rounded-[18px] border border-lider-line bg-white p-5 shadow-sm">
+                  <AppWindow className="h-5 w-5 text-lider-green" />
+                  <p className="mt-4 text-sm leading-6 text-lider-muted">{feature}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              {Object.values(appStoreLinks).map((store) => (
+                <button
+                  key={store.label}
+                  type="button"
+                  className="inline-flex items-center justify-center gap-3 rounded-[14px] border border-lider-line bg-lider-graphite px-5 py-3 text-left text-white"
+                >
+                  <Store size={18} className="text-lider-yellow" />
+                  <span>
+                    <span className="block text-xs text-white/58">{store.status}</span>
+                    <span className="block text-sm font-semibold">{store.label}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section id="graduates" className="bg-white px-5 py-24 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
             <SectionHeader
               title="Наші випускники"
-              description="Аналог блока «Гордість», але у сучасному форматі: структуровані історії, дати, міста, категорії і короткі відгуки. Реальні фото можна підключити після юридичного погодження."
+              description="Розвиток блоку «Гордість» з prava.today/events: структуровані історії, дати, міста, категорії, бейджі, місце під фото і фільтрація для майбутньої повної ленти випускників."
             />
             <Link href="/reviews" className="inline-flex items-center gap-2 font-semibold text-lider-green">
               Більше історій <ArrowRight size={16} />
             </Link>
           </div>
-          <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-            {graduateStories.map((story) => (
-              <article
-                key={story.id}
-                className="rounded-[18px] border border-lider-line bg-[#f9fcfa] p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-soft"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-[18px] bg-lider-green text-lg font-semibold text-lider-yellow">
-                    {story.initials}
-                  </div>
-                  <StatusPill tone="success">Категорія {story.category}</StatusPill>
-                </div>
-                <h3 className="mt-5 text-lg font-semibold text-lider-graphite">{story.name}</h3>
-                <p className="mt-1 text-sm font-medium text-lider-muted">
-                  {story.city} · {story.date}
-                </p>
-                <p className="mt-4 text-sm leading-6 text-lider-muted">“{story.quote}”</p>
-              </article>
-            ))}
-          </div>
+          <GraduateShowcase />
         </div>
       </section>
+
+      <ReviewsCarousel />
 
       <section className="px-5 py-24 lg:px-8">
         <div className="mx-auto grid max-w-7xl gap-8 xl:grid-cols-[1fr_0.85fr]">
@@ -465,15 +605,60 @@ export default function Home() {
               Усі контакти <ArrowRight size={16} />
             </Link>
           </div>
-          <div className="mt-12 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {branches.map((branch) => (
-              <article key={branch.id} className="rounded-[18px] border border-white/15 bg-white/8 p-5">
-                <MapPin className="h-5 w-5 text-lider-yellow" />
-                <h3 className="mt-4 text-xl font-semibold">{branch.city}</h3>
-                <p className="mt-2 text-sm leading-6 text-white/75">{branch.address}</p>
-                <a className="mt-4 block font-semibold text-lider-yellow" href={`tel:${branch.phone}`}>
-                  {branch.phone}
-                </a>
+              <article
+                key={branch.id}
+                className="overflow-hidden rounded-[20px] border border-white/15 bg-white text-lider-graphite shadow-soft"
+              >
+                <iframe
+                  title={`Карта філії ${branch.city}`}
+                  src={`https://maps.google.com/maps?q=${encodeURIComponent(branch.mapQuery)}&output=embed`}
+                  className="h-44 w-full border-0"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+                <div className="p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.13em] text-lider-green">
+                        <MapPinned size={14} />
+                        Філія
+                      </p>
+                      <h3 className="mt-3 text-2xl font-semibold">{branch.city}</h3>
+                    </div>
+                    <StatusPill tone="success">поруч</StatusPill>
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-lider-muted">{branch.address}</p>
+                  <p className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-lider-muted">
+                    <Clock3 size={16} className="text-lider-green" />
+                    {branch.workingHours}
+                  </p>
+                  <div className="mt-5 grid gap-2 sm:grid-cols-3">
+                    <a
+                      href={branch.routeUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center justify-center gap-2 rounded-[12px] bg-[#edf5f2] px-3 py-2 text-xs font-semibold text-lider-green"
+                    >
+                      <Route size={15} />
+                      Маршрут
+                    </a>
+                    <a
+                      href={`tel:${branch.phone}`}
+                      className="inline-flex items-center justify-center gap-2 rounded-[12px] bg-[#edf5f2] px-3 py-2 text-xs font-semibold text-lider-green"
+                    >
+                      <PhoneCall size={15} />
+                      Дзвінок
+                    </a>
+                    <Link
+                      href="#lead"
+                      className="inline-flex items-center justify-center rounded-[12px] bg-lider-yellow px-3 py-2 text-xs font-semibold text-lider-graphite"
+                    >
+                      Запис
+                    </Link>
+                  </div>
+                </div>
               </article>
             ))}
           </div>
@@ -551,7 +736,8 @@ export default function Home() {
           </div>
         </div>
       </footer>
-      <LeadPopup delayMs={process.env.NODE_ENV === "production" ? 60_000 : 1_500} />
+      <AiChatWidget />
+      <LeadPopup delayMs={process.env.NODE_ENV === "production" ? 25_000 : 1_500} reopenAfterMs={35_000} />
     </main>
   );
 }
