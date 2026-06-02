@@ -44,6 +44,35 @@ app.get("/health", (_request, response) => {
   });
 });
 
+app.get("/health/email", (_request, response) => {
+  const cfg = {
+    LEAD_EMAIL_ENABLED: process.env.LEAD_EMAIL_ENABLED ?? "(not set)",
+    LEAD_EMAIL_TO: process.env.LEAD_EMAIL_TO ? "✓ set" : "(not set)",
+    LEAD_EMAIL_FROM: process.env.LEAD_EMAIL_FROM ? "✓ set" : "(not set)",
+    LEAD_EMAIL_CC: process.env.LEAD_EMAIL_CC ? "✓ set" : "(empty — ok)",
+    RESEND_API_KEY: process.env.RESEND_API_KEY ? "✓ set" : "(not set)",
+    SMTP_HOST: process.env.SMTP_HOST ?? "(not set)",
+    SMTP_PORT: process.env.SMTP_PORT ?? "(not set)",
+    SMTP_USER: process.env.SMTP_USER ? "✓ set" : "(not set)",
+    SMTP_PASS: process.env.SMTP_PASS ? "✓ set" : "(not set)"
+  };
+
+  const enabled = process.env.LEAD_EMAIL_ENABLED === "true";
+  const hasResend = Boolean(process.env.RESEND_API_KEY);
+  const hasSmtp = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+  const hasTransport = hasResend || hasSmtp;
+  const hasTo = Boolean(process.env.LEAD_EMAIL_TO);
+
+  const ready = enabled && hasTransport && hasTo;
+  const issues: string[] = [];
+
+  if (!enabled) issues.push("LEAD_EMAIL_ENABLED is not 'true' — must be exactly the string true");
+  if (!hasTransport) issues.push("No transport: set RESEND_API_KEY or all of SMTP_HOST + SMTP_USER + SMTP_PASS");
+  if (!hasTo) issues.push("LEAD_EMAIL_TO is empty");
+
+  response.json({ ready, cfg, issues, provider: hasResend ? "resend" : hasSmtp ? "smtp" : "none" });
+});
+
 app.post("/leads", async (request, response) => {
   const parsed = createLeadSchema.safeParse(enrichLeadPayload(request));
 
@@ -583,21 +612,24 @@ function createMailTransport() {
 }
 
 async function sendLeadEmail(lead: Record<string, unknown>, leadId: string) {
+  console.log(`[email] sendLeadEmail called for ${leadId}. LEAD_EMAIL_ENABLED=${process.env.LEAD_EMAIL_ENABLED}`);
+
   if (process.env.LEAD_EMAIL_ENABLED !== "true") {
+    console.log(`[email] skipped: LEAD_EMAIL_ENABLED="${process.env.LEAD_EMAIL_ENABLED}" (must be exactly "true")`);
     return;
   }
 
   const transport = createMailTransport();
 
   if (!transport) {
-    console.warn("Email skipped: no RESEND_API_KEY or SMTP_HOST/USER/PASS configured");
+    console.warn(`[email] skipped: no transport. RESEND_API_KEY=${Boolean(process.env.RESEND_API_KEY)} SMTP_HOST=${process.env.SMTP_HOST}`);
     return;
   }
 
   const toBase = process.env.LEAD_EMAIL_TO;
 
   if (!toBase) {
-    console.warn("Email skipped: LEAD_EMAIL_TO is not set");
+    console.warn("[email] skipped: LEAD_EMAIL_TO is not set");
     return;
   }
 
@@ -653,6 +685,8 @@ async function sendLeadEmail(lead: Record<string, unknown>, leadId: string) {
   <p style="margin-top:24px;font-size:12px;color:#aaa">Автошкола «Лідер» · lider.bdslab.net</p>
 </div>`.trim();
 
+  console.log(`[email] sending to=${to} cc=${cc ?? "none"} from=${from}`);
+
   try {
     await transport.sendMail({
       from,
@@ -661,9 +695,11 @@ async function sendLeadEmail(lead: Record<string, unknown>, leadId: string) {
       subject: `Нова заявка з сайту Лідер — ${String(lead.name ?? "-")}, ${String(lead.category ?? "-")}, ${String(lead.city ?? "-")}`,
       html
     });
-    console.log(`Lead email sent for ${leadId} to ${to}`);
+    console.log(`[email] ✓ sent for leadId=${leadId} to=${to}`);
   } catch (error) {
-    console.error("Lead email send failed:", error);
+    console.error("[email] ✗ sendMail failed:", error);
+    // Re-throw so the caller logs it too
+    throw error;
   }
 }
 
