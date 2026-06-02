@@ -106,6 +106,48 @@ app.get("/health/email/send-test", async (_request, response) => {
   }
 });
 
+app.get("/health/email/test-lead", async (_request, response) => {
+  const fakeLead: Record<string, unknown> = {
+    name: "Тест Тестенко",
+    phone: "050 000 00 00",
+    email: "",
+    city: "Київ",
+    category: "B",
+    branchId: "kyiv",
+    source: "website",
+    contactMethod: "telegram",
+    preferredContactMethod: "telegram",
+    language: "uk",
+    message: "Тест email з lead flow",
+    documents: [],
+    consentAccepted: true,
+    status: "new",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  const testId = `test-${Date.now()}`;
+  const logs: string[] = [];
+  const origLog = console.log;
+  const origWarn = console.warn;
+  const origError = console.error;
+
+  console.log = (...args: unknown[]) => { logs.push(`LOG: ${args.join(" ")}`); origLog(...args); };
+  console.warn = (...args: unknown[]) => { logs.push(`WARN: ${args.join(" ")}`); origWarn(...args); };
+  console.error = (...args: unknown[]) => { logs.push(`ERROR: ${args.join(" ")}`); origError(...args); };
+
+  try {
+    await sendLeadEmail(fakeLead, testId);
+    response.json({ ok: true, logs, leadId: testId });
+  } catch (error) {
+    response.json({ ok: false, error: error instanceof Error ? error.message : String(error), logs });
+  } finally {
+    console.log = origLog;
+    console.warn = origWarn;
+    console.error = origError;
+  }
+});
+
 app.post("/leads", async (request, response) => {
   const parsed = createLeadSchema.safeParse(enrichLeadPayload(request));
 
