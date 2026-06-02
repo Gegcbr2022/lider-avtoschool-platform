@@ -191,6 +191,7 @@ async function sendLeadToTelegram(lead: Record<string, unknown>, leadId: string)
   const chatId = process.env.TELEGRAM_LOG_CHAT_ID;
 
   if (!botToken || !chatId) {
+    console.warn("Telegram lead logging skipped: TELEGRAM_BOT_TOKEN or TELEGRAM_LOG_CHAT_ID is missing");
     return;
   }
 
