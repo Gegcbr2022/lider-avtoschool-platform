@@ -1,16 +1,13 @@
 import {
   admissionDocuments,
-  appStoreLinks,
   branches,
   defaultLocale,
   graduateReviews,
   homeFaq,
   importantStudyNotes,
   locales,
-  mobileAppFeatures,
   priceFootnote,
   pridePhotos,
-  retentionFeatures,
   services,
   siteBrand,
   socialLinks,
@@ -20,20 +17,14 @@ import {
 import { MetricCard, SectionHeader, StatusPill } from "@lider/ui";
 import {
   ArrowRight,
-  Award,
   BookOpenCheck,
   CalendarDays,
   Car,
   CheckCircle2,
-  Clock3,
   FileCheck2,
-  GraduationCap,
   MessageCircle,
   Send,
   ShieldCheck,
-  Smartphone,
-  Star,
-  Trophy,
 } from "lucide-react";
 import Image from "next/image";
 import { BrandLogo } from "../components/brand-logo";
@@ -43,7 +34,6 @@ import { FaqAccordion } from "../components/faq-accordion";
 import { LanguageSwitcher } from "../components/language-switcher";
 import { MobileMenu } from "../components/mobile-menu";
 import { ReviewsCarousel } from "../components/reviews-carousel";
-import { SocialIcon } from "../components/social-icon";
 import { contentPages } from "../lib/site-pages";
 
 const homeCopy: Record<
@@ -63,7 +53,6 @@ const homeCopy: Record<
     navItems: [
       { href: "/categories", label: "Категорії" },
       { href: "/documents", label: "Документи" },
-      { href: "/pride", label: "Гордість" },
       { href: "/branches", label: "Філіали" },
       { href: "/faq", label: "FAQ" },
       { href: "/contacts", label: "Контакти" }
@@ -81,7 +70,6 @@ const homeCopy: Record<
     navItems: [
       { href: "/categories", label: "Категории" },
       { href: "/documents", label: "Документы" },
-      { href: "/pride", label: "Гордость" },
       { href: "/branches", label: "Филиалы" },
       { href: "/faq", label: "FAQ" },
       { href: "/contacts", label: "Контакты" }
@@ -99,7 +87,6 @@ const homeCopy: Record<
     navItems: [
       { href: "/categories", label: "Categories" },
       { href: "/documents", label: "Documents" },
-      { href: "/pride", label: "Pride" },
       { href: "/branches", label: "Branches" },
       { href: "/faq", label: "FAQ" },
       { href: "/contacts", label: "Contacts" }
@@ -118,13 +105,10 @@ const homeCopy: Record<
 const sectionCopy: Record<
   Locale,
   {
-    contactTitle: string;
-    contactDesc: string;
     servicesEyebrow: string;
     servicesTitle: string;
     servicesDesc: string;
     serviceCta: string;
-    telegramShort: string;
     priceLabel: string;
     documentsEyebrow: string;
     documentsTitle: string;
@@ -135,17 +119,6 @@ const sectionCopy: Record<
     benefitsTitle: string;
     benefitsDesc: string;
     benefitsCta: string;
-    storyEyebrow: string;
-    storyTitle: string;
-    storyDesc: string;
-    galleryEyebrow: string;
-    galleryTitle: string;
-    galleryDesc: string;
-    mobileEyebrow: string;
-    mobileTitle: string;
-    mobileDesc: string;
-    afterExamTitle: string;
-    afterExamDesc: string;
     prideEyebrow: string;
     prideTitle: string;
     prideDesc: string;
@@ -154,9 +127,6 @@ const sectionCopy: Record<
     graduatesEyebrow: string;
     graduatesTitle: string;
     graduatesDesc: string;
-    resultEyebrow: string;
-    resultTitle: string;
-    resultDesc: string;
     branchesEyebrow: string;
     branchesTitle: string;
     branchesDesc: string;
@@ -166,23 +136,18 @@ const sectionCopy: Record<
     signupEyebrow: string;
     signupTitle: string;
     signupDesc: string;
-    callbackLabel: string;
     footerDesc: string;
     footerPrivacy: string;
     footerTerms: string;
-    nearestBranch: string;
     servicesViewAll: string;
     servicesViewAllHint: string;
   }
 > = {
   uk: {
-    contactTitle: "Швидкий контакт там, де вам зручно",
-    contactDesc: "Соцмережі та месенджери залишили нижче основного сценарію, щоб не відволікати від короткої заявки.",
     servicesEyebrow: "Категорії та ціни",
     servicesTitle: "Оберіть програму під вашу ціль",
     servicesDesc: "Для першого авто, роботи, мотоцикла або відкриття додаткової категорії. Заявка займає менше хвилини.",
     serviceCta: "Заявка",
-    telegramShort: "Telegram",
     priceLabel: "Вартість",
     documentsEyebrow: "Документи",
     documentsTitle: "Що потрібно для вступу",
@@ -193,28 +158,14 @@ const sectionCopy: Record<
     benefitsTitle: "Не просто уроки, а зрозумілий маршрут до прав",
     benefitsDesc: "Ми прибрали зайвий шум: вам потрібні чітка ціна, нормальний графік, хороший інструктор і швидкий контакт з автошколою.",
     benefitsCta: "Отримати консультацію",
-    storyEyebrow: "Як проходить навчання",
-    storyTitle: "Більше життя на сторінці: заняття, майданчик, випускники",
-    storyDesc: "Показуємо атмосферу навчання й реальні етапи, з яких складається шлях до водійського посвідчення.",
-    galleryEyebrow: "Візуально про шлях",
-    galleryTitle: "Кожен етап навчання видно, а не тільки описано",
-    galleryDesc: "Більше реальних сцен для довіри: салон авто, знаки, практичний майданчик, посвідчення, онлайн-формат і щасливий фінал.",
-    mobileEyebrow: "Мобільний формат",
-    mobileTitle: "Слідкуйте за навчанням прямо з телефона",
-    mobileDesc: "Розклад, нагадування, матеріали й корисні підказки мають бути поруч. Ми будуємо сервіс так, щоб учню було легко рухатися від заняття до заняття без зайвих дзвінків.",
-    afterExamTitle: "Додаток має залишатися корисним і після іспиту",
-    afterExamDesc: "Після отримання прав",
     prideEyebrow: "Гордість Лідера",
     prideTitle: "Реальні випускники з правами, а не красиві слова",
     prideDesc: "Щороку сотні учнів проходять шлях від першого заняття до посвідчення водія. Ось їхні обличчя й категорії — живий доказ, що маршрут справді спрацьовує.",
-    prideNote: "Кожне посвідчення - це не «кейс», а чийсь новий рівень свободи: робота, родина, подорожі, перша самостійна дорога.",
+    prideNote: "Кожне посвідчення — це не «кейс», а чийсь новий рівень свободи: робота, родина, подорожі, перша самостійна дорога.",
     prideGalleryLink: "Вся галерея",
     graduatesEyebrow: "Відгуки",
     graduatesTitle: "Учні довіряють не обіцянкам, а спокійному процесу",
     graduatesDesc: "Короткі відгуки допомагають швидко зрозуміти, як проходить навчання: графік, інструктор, документи, практика і підготовка до іспиту.",
-    resultEyebrow: "Результат",
-    resultTitle: "Сильна школа відчувається в деталях",
-    resultDesc: "Нам важливо, щоб учень розумів маршрут, бачив прогрес і мав поруч людей, які відповідають швидко та по суті.",
     branchesEyebrow: "Філіали",
     branchesTitle: "Оберіть місто та зручний маршрут",
     branchesDesc: "Активний філіал показує адресу, маршрут, графік і форму для швидкої заявки.",
@@ -224,22 +175,17 @@ const sectionCopy: Record<
     signupEyebrow: "Заявка",
     signupTitle: "Готові почати навчання?",
     signupDesc: "Залиште номер — менеджер підкаже категорію, філіал і наступний набір.",
-    callbackLabel: "Зворотний дзвінок",
     footerDesc: "Курси водіння, практика, підготовка до іспиту та консультація щодо вибору категорії.",
     footerPrivacy: "Конфіденційність",
     footerTerms: "Умови",
-    nearestBranch: "Найближчий філіал",
     servicesViewAll: "Усі категорії та ціни",
     servicesViewAllHint: "Детальні програми, строки і умови перепідготовки"
   },
   ru: {
-    contactTitle: "Быстрый контакт там, где вам удобно",
-    contactDesc: "Соцсети и мессенджеры оставили ниже основного сценария, чтобы не отвлекать от короткой заявки.",
     servicesEyebrow: "Категории и цены",
     servicesTitle: "Выберите программу под вашу цель",
     servicesDesc: "Для первого авто, работы, мотоцикла или открытия дополнительной категории. Заявка занимает меньше минуты.",
     serviceCta: "Заявка",
-    telegramShort: "Telegram",
     priceLabel: "Стоимость",
     documentsEyebrow: "Документы",
     documentsTitle: "Что нужно для поступления",
@@ -250,17 +196,6 @@ const sectionCopy: Record<
     benefitsTitle: "Не просто уроки, а понятный маршрут к правам",
     benefitsDesc: "Мы убрали лишний шум: нужны чёткая цена, нормальный график, хороший инструктор и быстрый контакт с автошколой.",
     benefitsCta: "Получить консультацию",
-    storyEyebrow: "Как проходит обучение",
-    storyTitle: "Больше жизни на странице: занятия, площадка, выпускники",
-    storyDesc: "Показываем атмосферу обучения и реальные этапы, из которых складывается путь к водительскому удостоверению.",
-    galleryEyebrow: "Визуально о пути",
-    galleryTitle: "Каждый этап обучения виден, а не только описан",
-    galleryDesc: "Больше реальных сцен для доверия: салон авто, знаки, учебная площадка, удостоверение, онлайн-формат и счастливый финал.",
-    mobileEyebrow: "Мобильный формат",
-    mobileTitle: "Следите за обучением прямо с телефона",
-    mobileDesc: "Расписание, напоминания, материалы и полезные подсказки должны быть рядом. Мы строим сервис так, чтобы ученику было легко двигаться от занятия к занятию без лишних звонков.",
-    afterExamTitle: "Приложение должно оставаться полезным и после экзамена",
-    afterExamDesc: "После получения прав",
     prideEyebrow: "Гордость Лидера",
     prideTitle: "Реальные выпускники с правами, а не красивые слова",
     prideDesc: "Каждый год сотни учеников проходят путь от первого занятия до водительского удостоверения. Вот их лица и категории — живое доказательство, что маршрут действительно работает.",
@@ -269,9 +204,6 @@ const sectionCopy: Record<
     graduatesEyebrow: "Отзывы",
     graduatesTitle: "Ученики доверяют не обещаниям, а спокойному процессу",
     graduatesDesc: "Короткие отзывы помогают понять, как проходит обучение: расписание, инструктор, документы, практика и подготовка к экзамену.",
-    resultEyebrow: "Результат",
-    resultTitle: "Сильная школа чувствуется в деталях",
-    resultDesc: "Нам важно, чтобы ученик понимал маршрут, видел прогресс и имел рядом людей, которые отвечают быстро и по существу.",
     branchesEyebrow: "Филиалы",
     branchesTitle: "Выберите город и удобный маршрут",
     branchesDesc: "Активный филиал показывает адрес, маршрут, график и форму для быстрой заявки.",
@@ -281,22 +213,17 @@ const sectionCopy: Record<
     signupEyebrow: "Заявка",
     signupTitle: "Готовы начать обучение?",
     signupDesc: "Оставьте номер — менеджер подскажет категорию, филиал и ближайший набор.",
-    callbackLabel: "Обратный звонок",
     footerDesc: "Курсы вождения, практика, подготовка к экзамену и консультация по выбору категории.",
     footerPrivacy: "Конфиденциальность",
     footerTerms: "Условия",
-    nearestBranch: "Ближайший филиал",
     servicesViewAll: "Все категории и цены",
     servicesViewAllHint: "Подробные программы, сроки и условия переподготовки"
   },
   en: {
-    contactTitle: "Quick contact wherever it's convenient",
-    contactDesc: "Social links and messengers stay near the footer so the short request remains the main path.",
     servicesEyebrow: "Categories & prices",
     servicesTitle: "Choose a programme for your goal",
     servicesDesc: "For your first car, work, motorbike or an additional category. The request takes less than a minute.",
     serviceCta: "Apply",
-    telegramShort: "Telegram",
     priceLabel: "Cost",
     documentsEyebrow: "Documents",
     documentsTitle: "What you need to enrol",
@@ -307,17 +234,6 @@ const sectionCopy: Record<
     benefitsTitle: "Not just lessons — a clear route to a licence",
     benefitsDesc: "We removed the noise: you need a clear price, a normal schedule, a good instructor and quick contact with the school.",
     benefitsCta: "Get a consultation",
-    storyEyebrow: "How training works",
-    storyTitle: "More life on the page: lessons, ground, graduates",
-    storyDesc: "We show the training atmosphere and the real stages that make up the journey to a driving licence.",
-    galleryEyebrow: "The journey in pictures",
-    galleryTitle: "Every stage of training is visible, not just described",
-    galleryDesc: "More real scenes for trust: the car interior, signs, the practice ground, the licence, online format and a happy finish.",
-    mobileEyebrow: "Mobile format",
-    mobileTitle: "Follow your training straight from your phone",
-    mobileDesc: "Schedule, reminders, materials and useful tips should always be at hand. We build the service so students can move from lesson to lesson without extra calls.",
-    afterExamTitle: "The app should stay useful after the exam too",
-    afterExamDesc: "After getting the licence",
     prideEyebrow: "Leader Pride",
     prideTitle: "Real graduates with licences, not just words",
     prideDesc: "Every year hundreds of students complete the journey from their first lesson to a driving licence. These are their faces and categories — proof that the route really works.",
@@ -326,9 +242,6 @@ const sectionCopy: Record<
     graduatesEyebrow: "Reviews",
     graduatesTitle: "Students trust the calm process, not promises",
     graduatesDesc: "Short reviews help quickly understand the training: schedule, instructor, documents, practice and exam preparation.",
-    resultEyebrow: "Result",
-    resultTitle: "A strong school is felt in the details",
-    resultDesc: "It matters to us that students understand the route, see progress and have people nearby who respond quickly and to the point.",
     branchesEyebrow: "Branches",
     branchesTitle: "Choose your city and a convenient route",
     branchesDesc: "An active branch shows the address, route, schedule and a quick request form.",
@@ -338,11 +251,9 @@ const sectionCopy: Record<
     signupEyebrow: "Request",
     signupTitle: "Ready to start training?",
     signupDesc: "Leave your number — a manager will suggest the category, branch and nearest group.",
-    callbackLabel: "Callback",
     footerDesc: "Driving courses, practice, exam preparation and category consultation.",
     footerPrivacy: "Privacy",
     footerTerms: "Terms",
-    nearestBranch: "Nearest branch",
     servicesViewAll: "All categories & prices",
     servicesViewAllHint: "Full programmes, duration and retraining conditions"
   }
@@ -378,57 +289,6 @@ const premiumBenefits = [
     title: "Підтримка після заявки",
     text: "Менеджер швидко зорієнтує за ціною, філіалом, документами та найближчою групою.",
     icon: MessageCircle,
-  },
-];
-
-const storyPhotos = [
-  {
-    src: "/images/lesson-premium.png",
-    title: "Заняття з інструктором",
-    text: "Спокійне пояснення, практика в місті та короткі підсумки після кожного виїзду.",
-  },
-  {
-    src: "/images/practice-ground-premium.png",
-    title: "Практика на майданчику",
-    text: "Паркування, габарити, старт на підйомі та маневри перед міськими маршрутами.",
-  },
-  {
-    src: "/images/graduates-premium.png",
-    title: "Випускники після іспиту",
-    text: "Реальні історії людей, які пройшли шлях від першого заняття до водійського посвідчення.",
-  },
-];
-
-const learningGallery = [
-  {
-    src: "/images/car-interior-lesson.png",
-    title: "Практика в салоні",
-    text: "Інструктор показує дії на панелі й допомагає учню відчути автомобіль до виїзду в місто.",
-  },
-  {
-    src: "/images/exam-road-signs.png",
-    title: "Знаки та іспит",
-    text: "Пояснюємо дорожні знаки, вправи на майданчику й типові питання без зайвого тиску.",
-  },
-  {
-    src: "/images/license-success.png",
-    title: "Посвідчення в руках",
-    text: "Фінальна мета навчання - впевнено скласти іспит і отримати водійське посвідчення.",
-  },
-  {
-    src: "/images/hero-driving-school.png",
-    title: "Перший виїзд",
-    text: "Поступовий старт для новачків: маршрут, посадка, дзеркала, базові маневри й спокій.",
-  },
-  {
-    src: "/images/practice-ground-premium.png",
-    title: "Навчальний майданчик",
-    text: "Відпрацьовуємо паркування, габарити, старт і впевненість перед міським рухом.",
-  },
-  {
-    src: "/images/graduates-premium.png",
-    title: "Щасливі випускники",
-    text: "Після навчання важлива не тільки оцінка, а й відчуття готовності самостійно їхати.",
   },
 ];
 
@@ -536,6 +396,7 @@ export default async function HomePage({
       </header>
 
       <main className="overflow-hidden bg-white pb-24 text-lider-graphite md:pb-0">
+        {/* Hero */}
         <section className="motion-section relative border-b border-lider-line bg-[linear-gradient(180deg,#ffffff_0%,#fff8f8_100%)]">
           <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-[1.02fr_0.98fr] lg:items-center lg:py-16">
             <div className="space-y-6">
@@ -573,15 +434,15 @@ export default async function HomePage({
                   <ArrowRight className="h-5 w-5" aria-hidden />
                 </a>
                 {telegram ? (
-                <a
-                  href={telegram.href}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="tap-target hidden items-center justify-center gap-2 rounded-2xl border border-lider-line bg-white px-6 py-4 text-base font-black text-lider-graphite shadow-soft transition hover:border-lider-red hover:text-lider-red sm:inline-flex sm:rounded-full"
-                >
-                  <Send className="h-5 w-5" aria-hidden />
-                  {copy.telegramCta}
-                </a>
+                  <a
+                    href={telegram.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="tap-target hidden items-center justify-center gap-2 rounded-2xl border border-lider-line bg-white px-6 py-4 text-base font-black text-lider-graphite shadow-soft transition hover:border-lider-red hover:text-lider-red sm:inline-flex sm:rounded-full"
+                  >
+                    <Send className="h-5 w-5" aria-hidden />
+                    {copy.telegramCta}
+                  </a>
                 ) : null}
               </div>
 
@@ -595,7 +456,6 @@ export default async function HomePage({
                   </div>
                 ))}
               </div>
-
             </div>
 
             <div className="relative hidden lg:block">
@@ -631,6 +491,7 @@ export default async function HomePage({
           </div>
         </section>
 
+        {/* Social proof stats */}
         <section className="motion-section border-b border-lider-line bg-white py-6 sm:py-8">
           <div className="mx-auto grid max-w-7xl gap-3 px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
             {socialProofStats.map((stat) => (
@@ -639,6 +500,7 @@ export default async function HomePage({
           </div>
         </section>
 
+        {/* Services */}
         <section id="services" className="motion-section bg-white py-12 sm:py-16 lg:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <div className="flex flex-wrap items-end justify-between gap-4">
@@ -684,7 +546,7 @@ export default async function HomePage({
                     </p>
                     <a
                       href="#signup"
-                      className="tap-target red-cta mt-4 flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-black"
+                      className="tap-target mt-4 flex items-center justify-center rounded-2xl border border-lider-red/25 bg-lider-background px-4 py-3 text-sm font-black text-lider-red transition hover:border-lider-red hover:bg-[#fff5f5]"
                     >
                       {sc.serviceCta}
                     </a>
@@ -707,6 +569,7 @@ export default async function HomePage({
           </div>
         </section>
 
+        {/* Documents */}
         <section id="documents" className="motion-section bg-lider-background py-12 sm:py-16 lg:py-20">
           <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
             <div className="space-y-5">
@@ -756,6 +619,7 @@ export default async function HomePage({
           </div>
         </section>
 
+        {/* Benefits */}
         <section id="benefits" className="motion-section bg-lider-graphite py-12 text-white sm:py-16 lg:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <div className="grid gap-8 lg:grid-cols-[0.75fr_1.25fr] lg:items-start">
@@ -793,168 +657,7 @@ export default async function HomePage({
           </div>
         </section>
 
-        <section className="motion-section bg-white py-12 sm:py-16 lg:py-20">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6">
-            <SectionHeader
-              eyebrow={sc.storyEyebrow}
-              title={sc.storyTitle}
-              description={sc.storyDesc}
-            />
-            <div className="mt-8 grid gap-4 lg:grid-cols-3">
-              {storyPhotos.map((photo) => (
-                <article
-                  key={photo.title}
-                  className="overflow-hidden rounded-[26px] border border-lider-line bg-white shadow-soft"
-                >
-                  <Image
-                    src={photo.src}
-                    alt={photo.title}
-                    width={900}
-                    height={700}
-                    sizes="(max-width: 1024px) 100vw, 33vw"
-                    className="aspect-[4/3] w-full object-cover"
-                  />
-                  <div className="p-5">
-                    <h3 className="text-xl font-black text-lider-graphite">{photo.title}</h3>
-                    <p className="mt-2 text-sm font-semibold leading-6 text-lider-muted">
-                      {photo.text}
-                    </p>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="motion-section bg-lider-background py-12 sm:py-16 lg:py-20">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6">
-            <SectionHeader
-              eyebrow={sc.galleryEyebrow}
-              title={sc.galleryTitle}
-              description={sc.galleryDesc}
-            />
-            <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {learningGallery.map((photo, index) => (
-                <article
-                  key={photo.title}
-                  className={`group overflow-hidden rounded-[24px] border border-lider-line bg-white shadow-soft transition duration-300 hover:-translate-y-1 hover:border-lider-red/35 hover:shadow-premium ${
-                    index === 0 ? "md:col-span-2 xl:col-span-1" : ""
-                  }`}
-                >
-                  <div className="relative overflow-hidden bg-lider-graphite">
-                    <Image
-                      src={photo.src}
-                      alt={photo.title}
-                      width={1100}
-                      height={760}
-                      sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
-                      className="aspect-[4/3] w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                    />
-                    <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/55 to-transparent opacity-80" />
-                  </div>
-                  <div className="p-5">
-                    <h3 className="text-xl font-black text-lider-graphite">{photo.title}</h3>
-                    <p className="mt-2 text-sm font-semibold leading-6 text-lider-muted">
-                      {photo.text}
-                    </p>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="motion-section bg-lider-background py-12 sm:py-16 lg:py-20">
-          <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
-            <div className="space-y-6">
-              <StatusPill tone="success">{sc.mobileEyebrow}</StatusPill>
-              <h2 className="text-4xl font-black leading-tight text-lider-graphite sm:text-5xl">
-                {sc.mobileTitle}
-              </h2>
-              <p className="text-base font-semibold leading-7 text-lider-muted">
-                {sc.mobileDesc}
-              </p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {mobileAppFeatures.slice(0, 4).map((feature) => (
-                  <div key={feature} className="rounded-2xl bg-white p-4 shadow-soft">
-                    <CheckCircle2 className="h-5 w-5 text-lider-red" aria-hidden />
-                    <p className="mt-3 text-sm font-black leading-6 text-lider-graphite">
-                      {feature}
-                    </p>
-                  </div>
-                ))}
-              </div>
-              <div className="rounded-[26px] border border-lider-line bg-white p-5 shadow-soft">
-                <p className="text-sm font-black uppercase tracking-[0.14em] text-lider-red">
-                  {sc.afterExamDesc}
-                </p>
-                <h3 className="mt-2 text-2xl font-black text-lider-graphite">
-                  {sc.afterExamTitle}
-                </h3>
-                <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                  {retentionFeatures.slice(0, 4).map((feature) => (
-                    <div key={feature} className="rounded-2xl bg-lider-background px-4 py-3">
-                      <p className="text-sm font-bold leading-6 text-lider-muted">{feature}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                {Object.values(appStoreLinks).map((store) => (
-                  <span
-                    key={store.label}
-                    className="inline-flex items-center gap-2 rounded-full border border-lider-line bg-white px-4 py-3 text-sm font-black text-lider-graphite"
-                  >
-                    <Smartphone className="h-4 w-4 text-lider-red" aria-hidden />
-                    {store.label}: {store.status}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            <div className="relative min-h-[520px]">
-              <div className="absolute left-1/2 top-10 h-72 w-72 -translate-x-1/2 rounded-full bg-lider-red/18 blur-3xl" />
-              <div className="absolute left-[7%] top-16 w-[56%] max-w-[310px] -rotate-6 rounded-[34px] border-[10px] border-lider-graphite bg-lider-graphite shadow-[0_35px_90px_rgba(26,26,26,0.25)]">
-                <div className="overflow-hidden rounded-[24px] bg-white">
-                  <div className="bg-lider-red p-5 text-white">
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-white/75">
-                      сьогодні
-                    </p>
-                    <p className="mt-2 text-2xl font-black">Практика о 18:30</p>
-                  </div>
-                  <div className="space-y-3 p-5">
-                    {["Паркування", "Міський маршрут", "Питання до іспиту"].map((item) => (
-                      <div key={item} className="rounded-2xl bg-lider-background p-4">
-                        <p className="text-sm font-black text-lider-graphite">{item}</p>
-                        <p className="text-xs font-semibold text-lider-muted">готово до заняття</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="absolute bottom-6 right-[4%] w-[58%] max-w-[320px] rotate-6 rounded-[34px] border-[10px] border-white bg-white shadow-[0_35px_90px_rgba(26,26,26,0.22)]">
-                <div className="overflow-hidden rounded-[24px] bg-lider-graphite text-white">
-                  <div className="p-5">
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-white/60">
-                      філіал
-                    </p>
-                    <p className="mt-2 text-2xl font-black">Київ, центр</p>
-                    <div className="mt-5 rounded-2xl bg-white/10 p-4">
-                      <p className="text-sm font-black">Менеджер на зв’язку</p>
-                      <p className="mt-1 text-xs font-semibold text-white/62">
-                        підкаже графік і документи
-                      </p>
-                    </div>
-                  </div>
-                  <div className="bg-lider-red p-5">
-                    <p className="text-sm font-black">Записатися в один дотик</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
+        {/* Pride gallery */}
         <section id="pride" className="motion-section bg-white py-12 sm:py-16 lg:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <div className="grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
@@ -1001,6 +704,7 @@ export default async function HomePage({
           </div>
         </section>
 
+        {/* Reviews */}
         <section id="graduates" className="motion-section bg-lider-background py-12 sm:py-16 lg:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <SectionHeader
@@ -1014,43 +718,7 @@ export default async function HomePage({
           </div>
         </section>
 
-        <section className="motion-section bg-lider-graphite py-12 text-white sm:py-16 lg:py-20">
-          <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-            <div className="overflow-hidden rounded-[28px] border border-white/10 shadow-[0_30px_90px_rgba(0,0,0,0.25)]">
-              <Image
-                src="/images/practice-ground-premium.png"
-                alt="Практичний майданчик автошколи Лідер"
-                width={1100}
-                height={850}
-                sizes="(max-width: 1024px) 100vw, 52vw"
-                className="aspect-[4/3] w-full object-cover"
-              />
-            </div>
-            <div className="space-y-5">
-              <StatusPill tone="warning">{sc.resultEyebrow}</StatusPill>
-              <h2 className="text-4xl font-black leading-tight sm:text-5xl">
-                {sc.resultTitle}
-              </h2>
-              <p className="text-base font-semibold leading-7 text-white/68">
-                {sc.resultDesc}
-              </p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {[
-                  { icon: Trophy, label: "Високий відсоток складання" },
-                  { icon: Award, label: "Інструктори з досвідом" },
-                  { icon: Clock3, label: "Групи стартують регулярно" },
-                  { icon: GraduationCap, label: "Підтримка до іспиту" },
-                ].map((item) => (
-                  <div key={item.label} className="rounded-2xl bg-white/[0.07] p-4">
-                    <item.icon className="h-6 w-6 text-lider-red" aria-hidden />
-                    <p className="mt-3 text-sm font-black text-white">{item.label}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
+        {/* Branches */}
         <section id="branches" className="motion-section bg-white py-12 sm:py-16 lg:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <SectionHeader
@@ -1064,6 +732,7 @@ export default async function HomePage({
           </div>
         </section>
 
+        {/* FAQ */}
         <section id="faq" className="motion-section bg-lider-background py-12 sm:py-16 lg:py-20">
           <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.85fr_1.15fr]">
             <SectionHeader
@@ -1075,6 +744,7 @@ export default async function HomePage({
           </div>
         </section>
 
+        {/* Final CTA */}
         <section id="signup" className="motion-section bg-white pb-20 pt-12 sm:py-16 lg:py-20">
           <div className="mx-auto max-w-5xl px-4 sm:px-6">
             <div id="contacts" className="overflow-hidden rounded-[30px] border border-lider-line bg-lider-graphite p-6 text-white shadow-[0_28px_90px_rgba(26,26,26,0.18)] sm:p-8 lg:p-10">
@@ -1095,38 +765,6 @@ export default async function HomePage({
                   {copy.primaryCta}
                   <ArrowRight className="h-5 w-5" aria-hidden />
                 </a>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="motion-section bg-lider-background py-10 sm:py-14">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6">
-            <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-              <SectionHeader
-                eyebrow="Ми поруч"
-                title={sc.contactTitle}
-                description={sc.contactDesc}
-              />
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {socialLinks.map((social) => (
-                  <a
-                    key={social.id}
-                    href={social.href}
-                    aria-label={`Відкрити ${social.label} автошколи Лідер`}
-                    target={social.href.startsWith("http") ? "_blank" : undefined}
-                    rel={social.href.startsWith("http") ? "noreferrer" : undefined}
-                    className="group rounded-3xl border border-white bg-white p-4 shadow-soft transition hover:-translate-y-1 hover:shadow-premium"
-                  >
-                    <SocialIcon id={social.id} label={social.label} />
-                    <span className="mt-4 block text-sm font-black text-lider-graphite">
-                      {social.label}
-                    </span>
-                    <span className="mt-1 block text-xs font-semibold text-lider-muted">
-                      перейти
-                    </span>
-                  </a>
-                ))}
               </div>
             </div>
           </div>
@@ -1190,6 +828,20 @@ export default async function HomePage({
             >
               {copy.primaryCta}
             </a>
+            <div className="flex flex-wrap gap-2 pt-1">
+              {socialLinks.filter((s) => s.id !== "telegram").map((s) => (
+                <a
+                  key={s.id}
+                  href={s.href}
+                  target={s.href.startsWith("http") ? "_blank" : undefined}
+                  rel={s.href.startsWith("http") ? "noreferrer" : undefined}
+                  aria-label={s.label}
+                  className="rounded-xl bg-white/[0.07] px-3 py-2 text-xs font-bold text-white/55 transition hover:text-white/90"
+                >
+                  {s.label}
+                </a>
+              ))}
+            </div>
           </div>
         </div>
         <div className="border-t border-white/10 px-4 py-4 sm:px-6">
