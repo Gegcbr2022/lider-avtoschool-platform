@@ -28,7 +28,6 @@ import {
   Clock3,
   FileCheck2,
   GraduationCap,
-  MapPinned,
   MessageCircle,
   Send,
   ShieldCheck,
@@ -42,7 +41,6 @@ import { BranchSelector } from "../components/branch-selector";
 import { ConversionWidgets } from "../components/conversion-widgets";
 import { FaqAccordion } from "../components/faq-accordion";
 import { LanguageSwitcher } from "../components/language-switcher";
-import { LeadForm } from "../components/lead-form";
 import { MobileMenu } from "../components/mobile-menu";
 import { ReviewsCarousel } from "../components/reviews-carousel";
 import { SocialIcon } from "../components/social-icon";
@@ -179,7 +177,7 @@ const sectionCopy: Record<
 > = {
   uk: {
     contactTitle: "Швидкий контакт там, де вам зручно",
-    contactDesc: "Поставте питання, забронюйте консультацію або одразу оберіть філіал. Всі кнопки великі й зручні для мобільного екрана.",
+    contactDesc: "Соцмережі та месенджери залишили нижче основного сценарію, щоб не відволікати від короткої заявки.",
     servicesEyebrow: "Категорії та ціни",
     servicesTitle: "Оберіть програму під вашу ціль",
     servicesDesc: "Для першого авто, роботи, мотоцикла або відкриття додаткової категорії. Заявка займає менше хвилини.",
@@ -224,8 +222,8 @@ const sectionCopy: Record<
     faqTitle: "Коротко про головне перед стартом",
     faqDesc: "Зібрали питання, які найчастіше ставлять перед записом: документи, строки, оплата, іспит і вибір категорії.",
     signupEyebrow: "Заявка",
-    signupTitle: "Залиште контакт, і ми підберемо найкращий старт",
-    signupDesc: "Менеджер уточнить категорію, місто, графік, ціну та найближчу групу. Можна попросити відповідь дзвінком, у Telegram або WhatsApp.",
+    signupTitle: "Готові почати навчання?",
+    signupDesc: "Залиште номер — менеджер підкаже категорію, філіал і наступний набір.",
     callbackLabel: "Зворотний дзвінок",
     footerDesc: "Курси водіння, практика, підготовка до іспиту та консультація щодо вибору категорії.",
     footerPrivacy: "Конфіденційність",
@@ -236,7 +234,7 @@ const sectionCopy: Record<
   },
   ru: {
     contactTitle: "Быстрый контакт там, где вам удобно",
-    contactDesc: "Задайте вопрос, забронируйте консультацию или сразу выберите филиал. Все кнопки крупные и удобные для мобильного экрана.",
+    contactDesc: "Соцсети и мессенджеры оставили ниже основного сценария, чтобы не отвлекать от короткой заявки.",
     servicesEyebrow: "Категории и цены",
     servicesTitle: "Выберите программу под вашу цель",
     servicesDesc: "Для первого авто, работы, мотоцикла или открытия дополнительной категории. Заявка занимает меньше минуты.",
@@ -281,8 +279,8 @@ const sectionCopy: Record<
     faqTitle: "Коротко о главном перед стартом",
     faqDesc: "Собрали вопросы, которые чаще всего задают перед записью: документы, сроки, оплата, экзамен и выбор категории.",
     signupEyebrow: "Заявка",
-    signupTitle: "Оставьте контакт, и мы подберём лучший старт",
-    signupDesc: "Менеджер уточнит категорию, город, график, цену и ближайшую группу. Можно попросить ответ звонком, в Telegram или WhatsApp.",
+    signupTitle: "Готовы начать обучение?",
+    signupDesc: "Оставьте номер — менеджер подскажет категорию, филиал и ближайший набор.",
     callbackLabel: "Обратный звонок",
     footerDesc: "Курсы вождения, практика, подготовка к экзамену и консультация по выбору категории.",
     footerPrivacy: "Конфиденциальность",
@@ -293,7 +291,7 @@ const sectionCopy: Record<
   },
   en: {
     contactTitle: "Quick contact wherever it's convenient",
-    contactDesc: "Ask a question, book a consultation or choose a branch right away. All buttons are large and mobile-friendly.",
+    contactDesc: "Social links and messengers stay near the footer so the short request remains the main path.",
     servicesEyebrow: "Categories & prices",
     servicesTitle: "Choose a programme for your goal",
     servicesDesc: "For your first car, work, motorbike or an additional category. The request takes less than a minute.",
@@ -338,8 +336,8 @@ const sectionCopy: Record<
     faqTitle: "Key facts before you start",
     faqDesc: "Common questions asked before signing up: documents, duration, payment, exam and category choice.",
     signupEyebrow: "Request",
-    signupTitle: "Leave your contact and we'll find the best start",
-    signupDesc: "A manager will clarify category, city, schedule, price and the nearest group. You can ask for a reply by call, Telegram or WhatsApp.",
+    signupTitle: "Ready to start training?",
+    signupDesc: "Leave your number — a manager will suggest the category, branch and nearest group.",
     callbackLabel: "Callback",
     footerDesc: "Driving courses, practice, exam preparation and category consultation.",
     footerPrivacy: "Privacy",
@@ -499,8 +497,6 @@ export default async function HomePage({
   const navItems = copy.navItems.map((item) => ({ ...item, href: withLocale(item.href, activeLocale) }));
   const heroHighlights = copy.heroHighlights;
   const telegram = socialLinks.find((item) => item.id === "telegram");
-  const whatsapp = socialLinks.find((item) => item.id === "whatsapp");
-  const primaryPhoneHref = siteBrand.phoneLabel.replace(/\s+/g, "");
 
   return (
     <>
@@ -527,16 +523,6 @@ export default async function HomePage({
 
           <div className="hidden items-center gap-3 lg:flex">
             <LanguageSwitcher activeLocale={activeLocale} />
-            {telegram ? (
-              <a
-                href={telegram.href}
-                target="_blank"
-                rel="noreferrer"
-                className="tap-target rounded-full border border-lider-line px-4 py-3 text-sm font-black text-lider-graphite transition hover:border-lider-red hover:text-lider-red"
-              >
-                {copy.headerCta}
-              </a>
-            ) : null}
             <a
               href="#signup"
               className="tap-target red-cta rounded-full px-5 py-3 text-sm font-black"
@@ -550,7 +536,7 @@ export default async function HomePage({
       </header>
 
       <main className="overflow-hidden bg-white pb-24 text-lider-graphite md:pb-0">
-        <section className="motion-section relative border-b border-lider-line bg-[linear-gradient(180deg,#ffffff_0%,#f6f8f7_100%)]">
+        <section className="motion-section relative border-b border-lider-line bg-[linear-gradient(180deg,#ffffff_0%,#fff8f8_100%)]">
           <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-[1.02fr_0.98fr] lg:items-center lg:py-16">
             <div className="space-y-6">
               <StatusPill tone="success">{copy.heroBadge}</StatusPill>
@@ -610,37 +596,10 @@ export default async function HomePage({
                 ))}
               </div>
 
-              <div className="hidden flex-wrap gap-3 sm:flex">
-                {telegram ? (
-                  <a
-                    href={telegram.href}
-                    className="tap-target inline-flex items-center gap-2 rounded-full bg-[#229ED9] px-4 py-3 text-sm font-black text-white"
-                  >
-                    <Send className="h-4 w-4" aria-hidden />
-                    Telegram
-                  </a>
-                ) : null}
-                {whatsapp ? (
-                  <a
-                    href={whatsapp.href}
-                    className="tap-target inline-flex items-center gap-2 rounded-full bg-[#25D366] px-4 py-3 text-sm font-black text-white"
-                  >
-                    <MessageCircle className="h-4 w-4" aria-hidden />
-                    WhatsApp
-                  </a>
-                ) : null}
-                <a
-                  href="#branches"
-                  className="tap-target inline-flex items-center gap-2 rounded-full bg-lider-graphite px-4 py-3 text-sm font-black text-white"
-                >
-                  <MapPinned className="h-4 w-4" aria-hidden />
-                  {sc.nearestBranch}
-                </a>
-              </div>
             </div>
 
             <div className="relative hidden lg:block">
-              <div className="absolute -right-8 top-10 h-44 w-44 rounded-full bg-[#0b5c4a]/12 blur-3xl" />
+              <div className="absolute -right-8 top-10 h-44 w-44 rounded-full bg-lider-red/16 blur-3xl" />
               <div className="relative overflow-hidden rounded-[30px] border border-white bg-lider-graphite shadow-[0_30px_90px_rgba(26,26,26,0.22)]">
                 <Image
                   src="/images/lesson-premium.png"
@@ -677,38 +636,6 @@ export default async function HomePage({
             {socialProofStats.map((stat) => (
               <MetricCard key={stat.value} value={stat.value} label={stat.label} detail={stat.detail} />
             ))}
-          </div>
-        </section>
-
-        <section className="motion-section hidden bg-lider-background py-10 sm:py-14 md:block">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6">
-            <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-              <SectionHeader
-                eyebrow="Ми поруч"
-                title={sc.contactTitle}
-                description={sc.contactDesc}
-              />
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {socialLinks.map((social) => (
-                  <a
-                    key={social.id}
-                    href={social.href}
-                    aria-label={`Відкрити ${social.label} автошколи Лідер`}
-                    target={social.href.startsWith("http") ? "_blank" : undefined}
-                    rel={social.href.startsWith("http") ? "noreferrer" : undefined}
-                    className="group rounded-3xl border border-white bg-white p-4 shadow-soft transition hover:-translate-y-1 hover:shadow-premium"
-                  >
-                    <SocialIcon id={social.id} label={social.label} />
-                    <span className="mt-4 block text-sm font-black text-lider-graphite">
-                      {social.label}
-                    </span>
-                    <span className="mt-1 block text-xs font-semibold text-lider-muted">
-                      перейти
-                    </span>
-                  </a>
-                ))}
-              </div>
-            </div>
           </div>
         </section>
 
@@ -1148,39 +1075,60 @@ export default async function HomePage({
           </div>
         </section>
 
-        <section id="signup" className="motion-section bg-white pb-28 pt-12 sm:py-16 lg:py-20">
-          <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
-            <div id="contacts" className="space-y-6">
-              <StatusPill tone="success">{sc.signupEyebrow}</StatusPill>
-              <h2 className="text-4xl font-black leading-tight text-lider-graphite sm:text-5xl">
-                {sc.signupTitle}
-              </h2>
-              <p className="text-base font-semibold leading-7 text-lider-muted">
-                {sc.signupDesc}
-              </p>
-              <div className="grid gap-3 sm:grid-cols-3">
+        <section id="signup" className="motion-section bg-white pb-20 pt-12 sm:py-16 lg:py-20">
+          <div className="mx-auto max-w-5xl px-4 sm:px-6">
+            <div id="contacts" className="overflow-hidden rounded-[30px] border border-lider-line bg-lider-graphite p-6 text-white shadow-[0_28px_90px_rgba(26,26,26,0.18)] sm:p-8 lg:p-10">
+              <StatusPill tone="warning">{sc.signupEyebrow}</StatusPill>
+              <div className="mt-5 grid gap-6 lg:grid-cols-[1fr_auto] lg:items-end">
+                <div>
+                  <h2 className="max-w-2xl text-4xl font-black leading-tight sm:text-5xl">
+                    {sc.signupTitle}
+                  </h2>
+                  <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-white/70">
+                    {sc.signupDesc}
+                  </p>
+                </div>
                 <a
                   href="#signup"
-                  className="tap-target rounded-2xl bg-lider-graphite p-4 text-white"
+                  className="red-cta tap-target w-full rounded-2xl px-6 py-4 text-base font-black sm:w-auto"
                 >
-                  <MessageCircle className="h-6 w-6" aria-hidden />
-                  <span className="mt-3 block text-sm font-black">{sc.callbackLabel}</span>
+                  {copy.primaryCta}
+                  <ArrowRight className="h-5 w-5" aria-hidden />
                 </a>
-                {telegram ? (
-                  <a href={telegram.href} className="tap-target rounded-2xl bg-[#229ED9] p-4 text-white">
-                    <Send className="h-6 w-6" aria-hidden />
-                    <span className="mt-3 block text-sm font-black">Telegram</span>
-                  </a>
-                ) : null}
-                {whatsapp ? (
-                  <a href={whatsapp.href} className="tap-target rounded-2xl bg-[#25D366] p-4 text-white">
-                    <MessageCircle className="h-6 w-6" aria-hidden />
-                    <span className="mt-3 block text-sm font-black">WhatsApp</span>
-                  </a>
-                ) : null}
               </div>
             </div>
-            <LeadForm locale={activeLocale} />
+          </div>
+        </section>
+
+        <section className="motion-section bg-lider-background py-10 sm:py-14">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6">
+            <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+              <SectionHeader
+                eyebrow="Ми поруч"
+                title={sc.contactTitle}
+                description={sc.contactDesc}
+              />
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {socialLinks.map((social) => (
+                  <a
+                    key={social.id}
+                    href={social.href}
+                    aria-label={`Відкрити ${social.label} автошколи Лідер`}
+                    target={social.href.startsWith("http") ? "_blank" : undefined}
+                    rel={social.href.startsWith("http") ? "noreferrer" : undefined}
+                    className="group rounded-3xl border border-white bg-white p-4 shadow-soft transition hover:-translate-y-1 hover:shadow-premium"
+                  >
+                    <SocialIcon id={social.id} label={social.label} />
+                    <span className="mt-4 block text-sm font-black text-lider-graphite">
+                      {social.label}
+                    </span>
+                    <span className="mt-1 block text-xs font-semibold text-lider-muted">
+                      перейти
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
       </main>

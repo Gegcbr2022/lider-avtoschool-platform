@@ -2,7 +2,7 @@
 
 import type { Locale } from "@lider/shared";
 import { AnimatePresence, motion } from "framer-motion";
-import { MessageCircle, ShieldCheck, X } from "lucide-react";
+import { PhoneCall, ShieldCheck, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { trackEvent } from "../lib/analytics";
 import { LeadForm } from "./lead-form";
@@ -27,23 +27,23 @@ const popupCopy: Record<
   }
 > = {
   uk: {
-    title: "Залиште телефон",
-    text: "Менеджер коротко підкаже ціну, документи та найближчий старт. Без довгої анкети.",
-    note: "Тільки для консультації щодо навчання.",
+    title: "Залиште номер",
+    text: "Ми передзвонимо, підкажемо категорію і найближчий набір.",
+    note: "Телефон потрібен тільки для консультації щодо навчання.",
     submit: "Залишити заявку",
     close: "Закрити форму"
   },
   ru: {
-    title: "Оставьте телефон",
-    text: "Менеджер коротко подскажет цену, документы и ближайший старт. Без длинной анкеты.",
-    note: "Только для консультации по обучению.",
+    title: "Оставьте номер",
+    text: "Мы перезвоним, подскажем категорию и ближайший набор.",
+    note: "Телефон нужен только для консультации по обучению.",
     submit: "Оставить заявку",
     close: "Закрыть форму"
   },
   en: {
-    title: "Leave your phone",
-    text: "A manager will quickly explain price, documents and the nearest start. No long form.",
-    note: "Only for a training consultation.",
+    title: "Leave your number",
+    text: "We will call back, suggest a category and the nearest group.",
+    note: "Your phone is used only for a training consultation.",
     submit: "Apply now",
     close: "Close form"
   }
@@ -59,7 +59,6 @@ export function LeadPopup({
   reopenAfterMs?: number;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isAiOpen, setIsAiOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const triggerRef = useRef<PopupTrigger>("timer");
   const viewedSectionsRef = useRef(new Set<string>());
@@ -78,11 +77,6 @@ export function LeadPopup({
       tryOpen("manual", true, customEvent.detail?.source);
     }
 
-    function onAiState(event: Event) {
-      const customEvent = event as CustomEvent<{ open?: boolean }>;
-      setIsAiOpen(Boolean(customEvent.detail?.open));
-    }
-
     function onMenuState(event: Event) {
       const customEvent = event as CustomEvent<{ open?: boolean }>;
       const isMobileMenuOpen = Boolean(customEvent.detail?.open);
@@ -96,7 +90,6 @@ export function LeadPopup({
 
     window.addEventListener("lider-lead-created", onLeadCreated);
     window.addEventListener("lider-open-lead-popup", onOpenRequest);
-    window.addEventListener("lider-ai-chat-state", onAiState);
     window.addEventListener("lider-mobile-menu-state", onMenuState);
 
     return () => {
@@ -104,10 +97,9 @@ export function LeadPopup({
       window.clearInterval(repeatTimer);
       window.removeEventListener("lider-lead-created", onLeadCreated);
       window.removeEventListener("lider-open-lead-popup", onOpenRequest);
-      window.removeEventListener("lider-ai-chat-state", onAiState);
       window.removeEventListener("lider-mobile-menu-state", onMenuState);
     };
-  }, [delayMs, reopenAfterMs, isAiOpen, isMenuOpen, isOpen]);
+  }, [delayMs, reopenAfterMs, isMenuOpen, isOpen]);
 
   useEffect(() => {
     function onScroll() {
@@ -140,7 +132,7 @@ export function LeadPopup({
       window.removeEventListener("scroll", onScroll);
       document.removeEventListener("mouseleave", onMouseLeave);
     };
-  }, [isAiOpen, isMenuOpen, isOpen]);
+  }, [isMenuOpen, isOpen]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -165,7 +157,7 @@ export function LeadPopup({
   }, [isOpen]);
 
   function tryOpen(trigger: PopupTrigger, force = false, source?: string) {
-    if (isOpen || isAiOpen || isMenuOpen || (!force && hasSubmittedLead())) {
+    if (isOpen || isMenuOpen || (!force && hasSubmittedLead())) {
       return;
     }
 
@@ -227,8 +219,8 @@ export function LeadPopup({
             >
               <div className="flex items-start justify-between gap-4 px-5 pb-2 pt-5">
                 <div>
-                  <div className="inline-flex h-10 w-10 items-center justify-center rounded-[14px] bg-[#e6f4ef] text-[#0b5c4a]">
-                    <MessageCircle size={20} aria-hidden />
+                  <div className="inline-flex h-10 w-10 items-center justify-center rounded-[14px] bg-[#fff1f1] text-lider-red">
+                    <PhoneCall size={20} aria-hidden />
                   </div>
                   <h2 id="lead-popup-title" className="mt-4 text-3xl font-black tracking-[-0.03em] text-lider-graphite">
                     {copy.title}
@@ -246,7 +238,7 @@ export function LeadPopup({
               </div>
 
               <div className="px-5 pb-5">
-                <div className="mb-4 flex items-center gap-2 rounded-[16px] bg-[#f1f7f4] px-4 py-3 text-sm font-semibold text-[#315d50]">
+                <div className="mb-4 flex items-center gap-2 rounded-[16px] bg-lider-background px-4 py-3 text-sm font-semibold text-lider-muted">
                   <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden />
                   {copy.note}
                 </div>

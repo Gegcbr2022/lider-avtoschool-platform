@@ -1,7 +1,6 @@
 "use client";
 
 import { defaultLocale, type Locale } from "@lider/shared";
-import { Send } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -47,15 +46,6 @@ export function MobileQuickActions({ activeLocale = defaultLocale }: { activeLoc
         >
           {label}
         </Link>
-        <a
-          href="https://t.me/LiderDriveBot?start=AYYUTE"
-          target="_blank"
-          rel="noreferrer"
-          aria-label="Telegram"
-          className="tap-target inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-[#229ED9] text-white"
-        >
-          <Send size={18} aria-hidden />
-        </a>
       </div>
     </div>
   );

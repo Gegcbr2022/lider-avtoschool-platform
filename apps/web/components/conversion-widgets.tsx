@@ -2,7 +2,8 @@
 
 import type { Locale } from "@lider/shared";
 import { useEffect } from "react";
-import { AiChatWidget } from "./ai-chat-widget";
+import { openLeadPopup } from "../lib/open-lead-popup";
+import { FloatingPhoneButton } from "./floating-phone-button";
 import { LeadPopup } from "./lead-popup";
 import { MobileQuickActions } from "./mobile-quick-actions";
 
@@ -29,11 +30,7 @@ export function ConversionWidgets({
       }
 
       event.preventDefault();
-      window.dispatchEvent(
-        new CustomEvent("lider-open-lead-popup", {
-          detail: { source: target.dataset.leadSource ?? "cta-link" }
-        })
-      );
+      openLeadPopup(target.dataset.leadSource ?? "cta-link");
     }
 
     document.addEventListener("click", onClick);
@@ -43,7 +40,7 @@ export function ConversionWidgets({
   return (
     <>
       <LeadPopup locale={activeLocale} delayMs={leadPopupDelayMs} reopenAfterMs={reopenAfterMs} />
-      <AiChatWidget />
+      <FloatingPhoneButton locale={activeLocale} />
       <MobileQuickActions activeLocale={activeLocale} />
     </>
   );

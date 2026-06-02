@@ -36,9 +36,9 @@ const requestTypes: Array<{ value: LeadFormValues["requestType"]; label: string 
   { value: "category-picker", label: "Обрати категорію" }
 ];
 const contactMethods: Array<{ value: LeadFormValues["contactMethod"]; label: string }> = [
+  { value: "phone", label: "Зворотний дзвінок" },
   { value: "telegram", label: "Telegram" },
   { value: "whatsapp", label: "WhatsApp" },
-  { value: "phone", label: "Зворотний дзвінок" },
   { value: "email", label: "Email" },
   { value: "any", label: "Як зручно менеджеру" }
 ];
@@ -197,8 +197,8 @@ export function LeadForm({
       category: "B",
       branchId: "kyiv",
       requestType: "application",
-      contactMethod: "telegram",
-      preferredContactMethod: "telegram",
+      contactMethod: "phone",
+      preferredContactMethod: "phone",
       documentFiles: [],
       documents: [],
       language: locale,
@@ -288,8 +288,8 @@ export function LeadForm({
       category: "B",
       branchId: "kyiv",
       requestType: "application",
-      contactMethod: "telegram",
-      preferredContactMethod: "telegram",
+      contactMethod: "phone",
+      preferredContactMethod: "phone",
       documentFiles: [],
       documents: [],
       name: "",
@@ -342,7 +342,7 @@ export function LeadForm({
         </label>
         <select
           id={`${formId}-requestType`}
-          className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-[#0b5c4a] focus:ring-4 focus:ring-[#0b5c4a]/10"
+          className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-lider-red focus:ring-4 focus:ring-lider-red/10"
           {...register("requestType")}
         >
           {requestTypes.map((item) => (
@@ -363,7 +363,7 @@ export function LeadForm({
         </label>
         <input
           id={`${formId}-name`}
-          className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-[#0b5c4a] focus:ring-4 focus:ring-[#0b5c4a]/10"
+          className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-lider-red focus:ring-4 focus:ring-lider-red/10"
           placeholder={copy.namePlaceholder}
           {...register("name")}
         />
@@ -376,7 +376,7 @@ export function LeadForm({
           </label>
           <input
             id={`${formId}-phone`}
-            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-[#0b5c4a] focus:ring-4 focus:ring-[#0b5c4a]/10"
+            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-lider-red focus:ring-4 focus:ring-lider-red/10"
             placeholder="050 000 00 00"
             {...register("phone")}
           />
@@ -389,7 +389,7 @@ export function LeadForm({
           <input
             id={`${formId}-email`}
             type="email"
-            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-[#0b5c4a] focus:ring-4 focus:ring-[#0b5c4a]/10"
+            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-lider-red focus:ring-4 focus:ring-lider-red/10"
             placeholder="name@example.com"
             {...register("email")}
           />
@@ -401,7 +401,7 @@ export function LeadForm({
           </label>
           <input
             id={`${formId}-city`}
-            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-[#0b5c4a] focus:ring-4 focus:ring-[#0b5c4a]/10"
+            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-lider-red focus:ring-4 focus:ring-lider-red/10"
             placeholder={copy.cityPlaceholder}
             {...register("city")}
           />
@@ -415,7 +415,7 @@ export function LeadForm({
           </label>
           <select
             id={`${formId}-category`}
-            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-[#0b5c4a] focus:ring-4 focus:ring-[#0b5c4a]/10"
+            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-lider-red focus:ring-4 focus:ring-lider-red/10"
             {...register("category")}
           >
             {categoryOptions.map((category) => (
@@ -431,7 +431,7 @@ export function LeadForm({
           </label>
           <select
             id={`${formId}-branchId`}
-            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-[#0b5c4a] focus:ring-4 focus:ring-[#0b5c4a]/10"
+            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-lider-red focus:ring-4 focus:ring-lider-red/10"
             {...register("branchId")}
           >
             {branches.map((branch) => (
@@ -448,7 +448,7 @@ export function LeadForm({
         </label>
         <select
           id={`${formId}-contactMethod`}
-          className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-[#0b5c4a] focus:ring-4 focus:ring-[#0b5c4a]/10"
+          className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-lider-red focus:ring-4 focus:ring-lider-red/10"
           {...register("contactMethod")}
         >
           {contactMethods.map((item) => (
@@ -458,7 +458,7 @@ export function LeadForm({
           ))}
         </select>
       </div>
-      <div className={cn("rounded-[16px] border border-dashed border-[#b9d8ce] bg-[#f1f7f4] p-4", isPopup && "hidden")}>
+      <div className={cn("rounded-[16px] border border-dashed border-lider-line bg-lider-background p-4", isPopup && "hidden")}>
         <label
           className="flex cursor-pointer flex-col gap-3 text-sm font-semibold text-lider-graphite sm:flex-row sm:items-center sm:justify-between"
           htmlFor={`${formId}-documents`}
@@ -501,8 +501,8 @@ export function LeadForm({
         <textarea
           id={`${formId}-message`}
           className={cn(
-            "mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-[#0b5c4a]",
-            "transition focus:ring-4 focus:ring-[#0b5c4a]/10",
+            "mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-red",
+            "transition focus:ring-4 focus:ring-lider-red/10",
             isPopup ? "min-h-20" : "min-h-24"
           )}
           placeholder={copy.messagePlaceholder}
@@ -512,7 +512,7 @@ export function LeadForm({
       <label className="flex items-start gap-3 rounded-[16px] bg-lider-background p-4 text-sm font-semibold leading-6 text-lider-muted">
         <input
           type="checkbox"
-          className="mt-1 h-4 w-4 rounded border-lider-line accent-[#0b5c4a] focus:ring-[#0b5c4a]"
+          className="mt-1 h-4 w-4 rounded border-lider-line accent-lider-red focus:ring-lider-red"
           {...register("consentAccepted")}
         />
         <span>{copy.consent}</span>

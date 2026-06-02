@@ -6,9 +6,9 @@ const config: Config = {
     extend: {
       colors: {
         lider: {
-          red: "#0b5c4a",
-          redDark: "#084737",
-          green: "#0b5c4a",
+          red: "#ff1e1e",
+          redDark: "#d81414",
+          green: "#004d40",
           yellow: "#ffd600",
           graphite: "#1a1a1a",
           muted: "#666666",

@@ -2,7 +2,7 @@
 
 import { branches } from "@lider/shared";
 import { AnimatePresence, motion } from "framer-motion";
-import { Clock3, MapPinned, MessageCircle, Route, Send } from "lucide-react";
+import { Clock3, MapPinned, Route, Send } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -19,8 +19,8 @@ export function BranchSelector() {
             Оберіть місто, а ми покажемо адресу, карту і контакт
           </h2>
           <p className="mt-5 max-w-xl text-lg leading-8 text-white/68">
-            Найближчу філію можна знайти за кілька секунд: адреса, графік, маршрут і запис на консультацію
-            зібрані в одному місці.
+            Адреса, графік і маршрут зібрані в одному місці. Для запису залиште заявку, а менеджер
+            підкаже найближчий старт.
           </p>
           <div className="mt-8 grid gap-2 sm:grid-cols-2">
             {branches.map((branch) => (
@@ -30,7 +30,7 @@ export function BranchSelector() {
                 onClick={() => setActiveId(branch.id)}
                 className={`tap-target rounded-[18px] border px-4 py-3 text-left text-sm font-bold transition ${
                   activeId === branch.id
-                    ? "border-[#0b5c4a] bg-[#0b5c4a] text-white shadow-[0_16px_42px_rgba(11,92,74,0.2)]"
+                    ? "border-lider-red bg-lider-red text-white shadow-[0_16px_42px_rgba(255,30,30,0.22)]"
                     : "border-white/12 bg-white/8 text-white/78 hover:border-white/30"
                 }`}
               >
@@ -58,18 +58,19 @@ export function BranchSelector() {
               />
               <div className="grid gap-4 p-3 md:grid-cols-[1fr_auto] md:items-end md:p-5">
                 <div>
-                  <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.13em] text-[#0b5c4a]">
+                  <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.13em] text-lider-red">
                     <MapPinned size={14} />
                     Обрана філія
                   </p>
                   <h3 className="mt-3 text-3xl font-black tracking-[-0.03em]">{activeBranch.city}</h3>
                   <p className="mt-2 text-sm leading-6 text-lider-muted">{activeBranch.address}</p>
                   <p className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-lider-graphite">
-                    <Clock3 size={16} className="text-[#0b5c4a]" />
+                    <Clock3 size={16} className="text-lider-red" />
                     {activeBranch.workingHours}
                   </p>
+                  <p className="mt-2 text-sm font-bold text-lider-muted">{activeBranch.phone}</p>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-3 md:min-w-[360px]">
+                <div className="grid gap-2 sm:grid-cols-[0.9fr_1.1fr] md:min-w-[300px]">
                   <a
                     href={activeBranch.routeUrl}
                     target="_blank"
@@ -79,15 +80,8 @@ export function BranchSelector() {
                     <Route size={17} />
                     Маршрут
                   </a>
-                  <Link
-                    href="#signup"
-                    className="tap-target inline-flex items-center justify-center gap-2 rounded-[16px] bg-[#1a1a1a] px-4 py-3 text-sm font-bold text-white"
-                  >
-                    <MessageCircle size={17} />
-                    Зворотний зв'язок
-                  </Link>
                   <Link href="#signup" className="red-cta tap-target px-4 py-3 text-sm">
-                    Запис
+                    Залишити заявку
                     <Send size={16} />
                   </Link>
                 </div>

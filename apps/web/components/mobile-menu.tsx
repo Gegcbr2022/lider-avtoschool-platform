@@ -1,8 +1,8 @@
 "use client";
 
-import { socialLinks, type Locale } from "@lider/shared";
+import type { Locale } from "@lider/shared";
 import { AnimatePresence, motion } from "framer-motion";
-import { Languages, Menu, MessageCircle, Send, X } from "lucide-react";
+import { Languages, Menu, Send, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -14,18 +14,16 @@ type NavItem = {
   label: string;
 };
 
-const menuCopy: Record<Locale, { quickNav: string; apply: string; callback: string; language: string; close: string; open: string }> = {
-  uk: { quickNav: "Швидка навігація", apply: "Залишити заявку", callback: "Зворотний дзвінок", language: "Мова", close: "Закрити меню", open: "Відкрити меню" },
-  ru: { quickNav: "Быстрая навигация", apply: "Оставить заявку", callback: "Обратный звонок", language: "Язык", close: "Закрыть меню", open: "Открыть меню" },
-  en: { quickNav: "Navigation", apply: "Send request", callback: "Callback", language: "Language", close: "Close menu", open: "Open menu" }
+const menuCopy: Record<Locale, { quickNav: string; apply: string; language: string; close: string; open: string }> = {
+  uk: { quickNav: "Швидка навігація", apply: "Залишити заявку", language: "Мова", close: "Закрити меню", open: "Відкрити меню" },
+  ru: { quickNav: "Быстрая навигация", apply: "Оставить заявку", language: "Язык", close: "Закрыть меню", open: "Открыть меню" },
+  en: { quickNav: "Navigation", apply: "Send request", language: "Language", close: "Close menu", open: "Open menu" }
 };
 
 export function MobileMenu({ navItems, activeLocale }: { navItems: readonly NavItem[]; activeLocale: Locale }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const telegram = socialLinks.find((item) => item.id === "telegram");
   const mc = menuCopy[activeLocale] ?? menuCopy.uk;
-  const whatsapp = socialLinks.find((item) => item.id === "whatsapp");
 
   useEffect(() => {
     setIsMounted(true);
@@ -100,7 +98,7 @@ export function MobileMenu({ navItems, activeLocale }: { navItems: readonly NavI
                             key={item.href}
                             href={item.href}
                             onClick={close}
-                            className="tap-target rounded-[18px] border border-lider-line bg-white px-4 py-4 text-base font-black text-lider-graphite transition hover:border-lider-red hover:bg-[#e6f4ef]"
+                            className="tap-target rounded-[18px] border border-lider-line bg-white px-4 py-4 text-base font-black text-lider-graphite transition hover:border-lider-red hover:bg-[#fff1f1]"
                           >
                             {item.label}
                           </Link>
@@ -111,38 +109,6 @@ export function MobileMenu({ navItems, activeLocale }: { navItems: readonly NavI
                           {mc.apply}
                           <Send size={18} />
                         </Link>
-                        <a
-                          href="#signup"
-                          onClick={close}
-                          className="tap-target inline-flex items-center justify-center gap-2 rounded-[16px] bg-[#1a1a1a] px-5 py-3 text-sm font-black text-white transition hover:bg-[#2a2a2a]"
-                        >
-                          <MessageCircle size={18} />
-                          {mc.callback}
-                        </a>
-                        <div className="grid grid-cols-2 gap-2">
-                          {telegram ? (
-                            <a
-                              href={telegram.href}
-                              target="_blank"
-                              rel="noreferrer"
-                              onClick={close}
-                              className="tap-target inline-flex items-center justify-center gap-2 rounded-[16px] bg-[#229ED9] px-4 py-3 text-sm font-black text-white transition hover:brightness-105"
-                            >
-                              <Send size={18} />
-                              Telegram
-                            </a>
-                          ) : null}
-                          {whatsapp ? (
-                            <a
-                              href={whatsapp.href}
-                              onClick={close}
-                              className="tap-target inline-flex items-center justify-center gap-2 rounded-[16px] bg-[#25D366] px-4 py-3 text-sm font-black text-white transition hover:brightness-105"
-                            >
-                              <MessageCircle size={18} />
-                              WhatsApp
-                            </a>
-                          ) : null}
-                        </div>
                         <div className="rounded-[18px] border border-lider-line bg-lider-background p-3">
                           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-lider-muted">
                             <Languages size={16} aria-hidden />

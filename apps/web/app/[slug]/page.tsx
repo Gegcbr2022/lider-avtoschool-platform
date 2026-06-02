@@ -110,7 +110,7 @@ export default async function ContentPage({ params, searchParams }: PageProps) {
               </Link>
               <Link
                 href={`/?lang=${activeLocale}`}
-                className="inline-flex items-center justify-center gap-2 rounded-[12px] bg-white px-5 py-3 text-sm font-semibold text-lider-red transition hover:bg-[#e6f4ef]"
+                className="inline-flex items-center justify-center gap-2 rounded-[12px] bg-white px-5 py-3 text-sm font-semibold text-lider-red transition hover:bg-[#fff1f1]"
               >
                 {activeLocale === "en" ? "Home" : activeLocale === "ru" ? "На главную" : "На головну"} <ArrowRight size={16} />
               </Link>
@@ -251,7 +251,7 @@ function SpecializedPageSection({ slug, locale }: { slug: string; locale: Locale
                     </span>
                   ))}
                 </div>
-                {service.condition ? <p className="mt-4 rounded-2xl bg-[#f1f7f4] p-4 text-xs font-bold leading-5 text-lider-muted">{service.condition}</p> : null}
+                {service.condition ? <p className="mt-4 rounded-2xl bg-lider-background p-4 text-xs font-bold leading-5 text-lider-muted">{service.condition}</p> : null}
               </article>
             ))}
           </div>
@@ -601,7 +601,7 @@ function LegalSection({ slug, locale }: { slug: LegalSlug; locale: Locale }) {
   return (
     <section className="bg-white px-5 py-16 lg:px-8">
       <div className="mx-auto max-w-3xl">
-        <div className="mb-8 rounded-2xl border border-lider-red/20 bg-[#f1f7f4] px-5 py-4 text-sm font-semibold leading-6 text-lider-muted">
+        <div className="mb-8 rounded-2xl border border-lider-red/20 bg-lider-background px-5 py-4 text-sm font-semibold leading-6 text-lider-muted">
           ⚠ {content.disclaimer}
         </div>
         <div className="space-y-8">
