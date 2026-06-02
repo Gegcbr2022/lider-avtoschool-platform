@@ -74,6 +74,38 @@ app.get("/health/email", (_request, response) => {
   response.json({ ready, cfg, issues, provider: hasResend ? "resend" : hasSmtp ? "smtp" : "none" });
 });
 
+app.get("/health/email/send-test", async (_request, response) => {
+  const transport = createMailTransport();
+
+  if (!transport) {
+    response.status(503).json({ ok: false, error: "No transport configured (RESEND_API_KEY or SMTP_*)" });
+    return;
+  }
+
+  const to = process.env.LEAD_EMAIL_TO;
+  const from = process.env.LEAD_EMAIL_FROM ?? to;
+
+  if (!to) {
+    response.status(503).json({ ok: false, error: "LEAD_EMAIL_TO is not set" });
+    return;
+  }
+
+  try {
+    const info = await transport.sendMail({
+      from,
+      to,
+      subject: "🧪 Test email from Лідер API",
+      html: "<p>Если видишь это письмо — email работает ✅</p><p><small>lider.bdslab.net</small></p>"
+    });
+    response.json({ ok: true, messageId: (info as { messageId?: string }).messageId, to, from });
+  } catch (error) {
+    response.status(500).json({
+      ok: false,
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+});
+
 app.post("/leads", async (request, response) => {
   const parsed = createLeadSchema.safeParse(enrichLeadPayload(request));
 
