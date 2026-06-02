@@ -115,7 +115,7 @@ export function GraduateShowcase() {
 
       {!visibleStories.length ? (
         <div className="mt-8 rounded-[18px] border border-dashed border-lider-line bg-white p-8 text-center text-sm text-lider-muted">
-          Для цього фільтра ще немає історій. Структура готова для підключення реальних фото і нових випускників.
+          Для обраного фільтра поки немає випускників. Спробуйте інше місто або категорію.
         </div>
       ) : null}
     </div>

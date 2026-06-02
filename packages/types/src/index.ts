@@ -1,4 +1,4 @@
-export type UserRole = "admin" | "manager" | "student";
+export type UserRole = "admin" | "manager" | "instructor" | "student";
 
 export type TrainingCategory = "A" | "A1" | "B" | "C" | "CE";
 
@@ -25,19 +25,120 @@ export type ServiceCard = {
   outcomes: string[];
 };
 
-export type LeadStatus = "new" | "contacted" | "consultation" | "contract" | "paid" | "learning" | "completed";
+export type LeadStatus =
+  | "new"
+  | "contacted"
+  | "consultation"
+  | "documents_pending"
+  | "enrolled"
+  | "training"
+  | "exam_ready"
+  | "passed"
+  | "lost"
+  | "spam";
+
+export type LeadSource =
+  | "website"
+  | "popup"
+  | "telegram"
+  | "referral"
+  | "walk-in"
+  | "mobile"
+  | "ai-chat"
+  | "admin"
+  | "category-page"
+  | "documents-page"
+  | "contacts-page";
+
+export type PreferredContactMethod = "telegram" | "phone" | "whatsapp" | "email" | "any";
+
+export type LeadDocument = {
+  name: string;
+  type?: string;
+  size?: number;
+  url?: string;
+  status?: "uploaded" | "pending_upload" | "verified" | "rejected";
+};
 
 export type Lead = {
   id: string;
+  createdAt: string;
+  updatedAt?: string;
+  source: LeadSource;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  utmTerm?: string;
+  referralCode?: string;
+  telegramStartParam?: string;
   name: string;
   phone: string;
+  email?: string;
   city: string;
+  branchId?: string;
+  branch?: string;
   category: TrainingCategory;
+  preferredContactMethod?: PreferredContactMethod;
+  message?: string;
   status: LeadStatus;
-  source: "website" | "telegram" | "referral" | "walk-in" | "mobile";
-  createdAt: string;
+  assignedTo?: string;
+  notes?: string;
+  documents?: LeadDocument[];
+  consentAccepted?: boolean;
+  language?: "uk" | "ru" | "en";
+  page?: string;
+  device?: string;
+  ipHash?: string;
+  userAgent?: string;
   manager: string;
   nextAction: string;
+};
+
+export type StudentStatus = "active" | "paused" | "completed" | "passed" | "lost";
+
+export type ExamStatus = "not_ready" | "theory_ready" | "practice_ready" | "exam_ready" | "passed" | "failed";
+
+export type Student = {
+  id: string;
+  leadId?: string;
+  createdAt: string;
+  updatedAt?: string;
+  name: string;
+  phone: string;
+  email?: string;
+  city: string;
+  branchId?: string;
+  branch?: string;
+  category: TrainingCategory;
+  status: StudentStatus;
+  trainingStartDate?: string;
+  trainingEndDate?: string;
+  theoryProgress: number;
+  practiceProgress: number;
+  examStatus: ExamStatus;
+  paymentStatus: PaymentStatus;
+  referrerId?: string;
+  referredBy?: string;
+  discount?: number;
+  documentsStatus: "missing" | "pending" | "verified" | "rejected";
+  managerId?: string;
+  instructorId?: string;
+  notes?: string;
+};
+
+export type KpiSnapshot = {
+  totalLeads: number;
+  leadsBySource: Record<string, number>;
+  leadToStudentConversion: number;
+  studentToLicenseConversion: number;
+  popularCategories: Record<TrainingCategory, number>;
+  leadsByCity: Record<string, number>;
+  telegramLeads: number;
+  popupLeads: number;
+  formLeads: number;
+  referralLeads: number;
+  averageLeadResponseHours?: number;
 };
 
 export type BookingSlot = {

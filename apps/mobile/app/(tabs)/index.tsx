@@ -1,20 +1,20 @@
 import { View, Text, StyleSheet } from "react-native";
 import {
   Card,
-  EmptyState,
   InsightCard,
   Label,
+  Pill,
   PrimaryButton,
   ProgressBar,
   Row,
-  Screen,
-  SkeletonBlock
+  Screen
 } from "../../components/mobile-ui";
 import {
   courseProgress,
   notifications,
   onboardingSteps,
   quickActions,
+  retentionSignals,
   retentionRoadmap,
   student,
   upcomingSlot
@@ -88,12 +88,17 @@ export default function HomeTab() {
         ))}
       </Card>
 
-      <SkeletonBlock />
-
-      <EmptyState
-        title="Нових бронювань поки немає"
-        detail="Коли інструктор підтвердить наступний слот, він з'явиться у календарі і push-нагадуваннях."
-      />
+      <Card>
+        <Label>Утримання і повернення</Label>
+        {retentionSignals.map((item) => (
+          <Row
+            key={item.title}
+            title={item.title}
+            detail={item.detail}
+            right={<Pill tone={item.tone}>{item.status}</Pill>}
+          />
+        ))}
+      </Card>
 
       <PrimaryButton>Записатися на практику</PrimaryButton>
     </Screen>

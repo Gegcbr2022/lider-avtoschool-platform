@@ -5,7 +5,8 @@ export const student = {
   initials: "МК",
   category: "B",
   manager: "Олена",
-  phone: "050 321 44 80"
+  phone: "050 321 44 80",
+  referralCode: "LIDER-MK-2026"
 } as const;
 
 export const courseProgress = sampleProgress;
@@ -77,6 +78,27 @@ export const quickActions = [
   {
     title: "Чек-лист водія",
     detail: "Що перевірити перед першою самостійною поїздкою"
+  }
+] as const;
+
+export const retentionSignals = [
+  {
+    title: "ПДР-повторення",
+    detail: "3 короткі сесії цього тижня підтримують готовність до іспиту",
+    status: "сьогодні",
+    tone: "success"
+  },
+  {
+    title: "Реферальний код",
+    detail: `${student.referralCode} для друзів, які хочуть отримати права без хаосу`,
+    status: "активний",
+    tone: "success"
+  },
+  {
+    title: "Документи",
+    detail: "Медична довідка ще потрібна для повного комплекту",
+    status: "увага",
+    tone: "warning"
   }
 ] as const;
 

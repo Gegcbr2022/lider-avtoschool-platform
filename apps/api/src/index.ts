@@ -3,7 +3,13 @@ import express from "express";
 import { getApps, initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { onRequest } from "firebase-functions/v2/https";
-import { bookingRequestSchema, leadFormSchema, paymentIntentSchema } from "../../../packages/shared/src/index";
+import {
+  bookingRequestSchema,
+  branches,
+  createLeadSchema,
+  paymentIntentSchema,
+  sampleKpiSnapshot
+} from "../../../packages/shared/src/index";
 import {
   aiChatSchema,
   aiConsultationSchema,
@@ -37,26 +43,49 @@ app.get("/health", (_request, response) => {
 });
 
 app.post("/leads", async (request, response) => {
-  const parsed = leadFormSchema.safeParse(request.body);
+  const parsed = createLeadSchema.safeParse(enrichLeadPayload(request));
 
   if (!parsed.success) {
     response.status(422).json({ error: "Invalid lead payload", issues: parsed.error.flatten() });
     return;
   }
 
+  const createdAt = parsed.data.createdAt ?? new Date().toISOString();
   const lead = {
     ...parsed.data,
-    status: "new",
-    source: "website",
-    createdAt: new Date().toISOString()
+    status: parsed.data.status ?? "new",
+    source: parsed.data.source ?? "website",
+    preferredContactMethod: parsed.data.preferredContactMethod ?? parsed.data.contactMethod,
+    createdAt,
+    updatedAt: parsed.data.updatedAt ?? createdAt
   };
 
   const persistence = await persist("leads", lead);
+  await persist("auditLogs", {
+    entityType: "lead",
+    entityId: persistence.id,
+    action: "created",
+    actor: "public-form",
+    source: lead.source,
+    createdAt
+  }).catch((error: unknown) => {
+    console.error("Lead audit log failed", error);
+  });
   await sendLeadToTelegram(lead, persistence.id).catch((error: unknown) => {
     // Telegram logging is optional and must not break lead intake.
     console.error("Telegram lead logging failed", error);
   });
   response.status(201).json({ id: persistence.id, persistence: persistence.mode, lead });
+});
+
+app.get("/kpi/summary", async (_request, response) => {
+  try {
+    const snapshot = await buildKpiSnapshot();
+    response.json({ mode: "firestore", snapshot });
+  } catch (error) {
+    console.error("KPI summary fallback used", error);
+    response.json({ mode: "sample", snapshot: sampleKpiSnapshot });
+  }
 });
 
 app.post("/bookings", async (request, response) => {
@@ -149,18 +178,36 @@ app.post("/ai/leads", async (request, response) => {
     return;
   }
 
-  const aiLead = {
-    ...parsed.data,
-    status: parsed.data.status ?? "new",
-    createdAt: parsed.data.createdAt ?? new Date().toISOString()
-  };
-  const persistence = await persist("aiLeads", aiLead);
+  const leadPayload = createLeadFromAiPayload(parsed.data, request);
+  const validatedLead = createLeadSchema.safeParse(leadPayload);
 
-  await sendLeadToTelegram({ ...aiLead, source: "ai-chat" }, persistence.id).catch((error: unknown) => {
+  if (!validatedLead.success) {
+    response.status(422).json({ error: "Invalid normalized AI lead payload", issues: validatedLead.error.flatten() });
+    return;
+  }
+
+  const lead = {
+    ...validatedLead.data,
+    source: "ai-chat",
+    preferredContactMethod: validatedLead.data.preferredContactMethod ?? validatedLead.data.contactMethod
+  };
+  const persistence = await persist("leads", lead);
+  await persist("auditLogs", {
+    entityType: "lead",
+    entityId: persistence.id,
+    action: "created",
+    actor: "ai-chat",
+    source: lead.source,
+    createdAt: lead.createdAt
+  }).catch((error: unknown) => {
+    console.error("AI lead audit log failed", error);
+  });
+
+  await sendLeadToTelegram(lead, persistence.id).catch((error: unknown) => {
     console.error("Telegram AI lead logging failed", error);
   });
 
-  response.status(201).json({ id: persistence.id, persistence: persistence.mode, aiLead });
+  response.status(201).json({ id: persistence.id, persistence: persistence.mode, lead });
 });
 
 async function persist(collection: string, payload: Record<string, unknown>) {
@@ -174,6 +221,147 @@ async function persist(collection: string, payload: Record<string, unknown>) {
 
     return { id: `local-${Date.now()}`, mode: "local-dev-fallback" as const };
   }
+}
+
+function enrichLeadPayload(request: express.Request) {
+  const payload = typeof request.body === "object" && request.body !== null ? request.body : {};
+  const rawIp = request.ip ?? request.header("x-forwarded-for")?.split(",")[0]?.trim();
+
+  return {
+    ...payload,
+    userAgent: payload.userAgent ?? request.header("user-agent"),
+    ipHash: payload.ipHash ?? hashIp(rawIp),
+    source: payload.source ?? "website",
+    preferredContactMethod: payload.preferredContactMethod ?? payload.contactMethod,
+    updatedAt: payload.updatedAt ?? new Date().toISOString()
+  };
+}
+
+const leadCategories = ["A", "A1", "B", "C", "CE"] as const;
+
+function createLeadFromAiPayload(payload: Record<string, unknown>, request: express.Request) {
+  const city = normalizeText(payload.city) || "Київ";
+  const phone = normalizeText(payload.phone) || normalizeText(payload.telegram);
+  const createdAt = normalizeDate(payload.createdAt);
+  const contactMethod = normalizeText(payload.telegram) ? "telegram" : "phone";
+  const rawIp = request.ip ?? request.header("x-forwarded-for")?.split(",")[0]?.trim();
+
+  return {
+    name: normalizeText(payload.name) || "AI chat lead",
+    phone,
+    city,
+    category: normalizeCategory(payload.category),
+    branchId: inferBranchId(city),
+    requestType: "consultation",
+    contactMethod,
+    preferredContactMethod: contactMethod,
+    message: [normalizeText(payload.comment), normalizeText(payload.question)].filter(Boolean).join("\n"),
+    source: "ai-chat",
+    consentAccepted: payload.consentAccepted === true,
+    status: "new",
+    language: inferLanguage(request),
+    page: "/ai-chat",
+    createdAt,
+    updatedAt: createdAt,
+    ipHash: hashIp(rawIp),
+    userAgent: request.header("user-agent")
+  };
+}
+
+function normalizeText(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeCategory(value: unknown) {
+  return leadCategories.includes(value as (typeof leadCategories)[number])
+    ? (value as (typeof leadCategories)[number])
+    : "B";
+}
+
+function normalizeDate(value: unknown) {
+  const text = normalizeText(value);
+
+  if (text && !Number.isNaN(Date.parse(text))) {
+    return new Date(text).toISOString();
+  }
+
+  return new Date().toISOString();
+}
+
+function inferBranchId(city: string) {
+  const normalizedCity = city.toLowerCase();
+  const branch = branches.find((item) => item.city.toLowerCase().includes(normalizedCity));
+
+  return branch?.id ?? branches[0]?.id ?? "kyiv";
+}
+
+function inferLanguage(request: express.Request) {
+  const header = request.header("accept-language")?.toLowerCase() ?? "";
+
+  if (header.startsWith("ru")) {
+    return "ru";
+  }
+
+  if (header.startsWith("en")) {
+    return "en";
+  }
+
+  return "uk";
+}
+
+async function buildKpiSnapshot() {
+  const [leadsSnapshot, studentsSnapshot] = await Promise.all([
+    db.collection("leads").limit(1000).get(),
+    db.collection("students").limit(1000).get()
+  ]);
+  const leads = leadsSnapshot.docs.map((document) => document.data());
+  const students = studentsSnapshot.docs.map((document) => document.data());
+  const leadsBySource: Record<string, number> = {};
+  const leadsByCity: Record<string, number> = {};
+  const popularCategories = { A: 0, A1: 0, B: 0, C: 0, CE: 0 };
+
+  for (const lead of leads) {
+    const source = String(lead.source ?? "website");
+    const city = String(lead.city ?? "-");
+    const category = String(lead.category ?? "B") as keyof typeof popularCategories;
+
+    leadsBySource[source] = (leadsBySource[source] ?? 0) + 1;
+    leadsByCity[city] = (leadsByCity[city] ?? 0) + 1;
+
+    if (category in popularCategories) {
+      popularCategories[category] += 1;
+    }
+  }
+
+  return {
+    totalLeads: leads.length,
+    leadsBySource,
+    leadToStudentConversion: leads.length ? Math.round((students.length / leads.length) * 100) : 0,
+    studentToLicenseConversion: students.length
+      ? Math.round((students.filter((student) => student.examStatus === "passed").length / students.length) * 100)
+      : 0,
+    popularCategories,
+    leadsByCity,
+    telegramLeads: leads.filter((lead) => lead.source === "telegram").length,
+    popupLeads: leads.filter((lead) => lead.source === "popup").length,
+    formLeads: leads.filter((lead) => lead.source === "website").length,
+    referralLeads: leads.filter((lead) => Boolean(lead.referralCode)).length
+  };
+}
+
+function hashIp(value: string | undefined) {
+  if (!value) {
+    return undefined;
+  }
+
+  let hash = 0;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(index);
+    hash |= 0;
+  }
+
+  return `ip_${Math.abs(hash).toString(36)}`;
 }
 
 function rateLimit(request: express.Request, response: express.Response, next: express.NextFunction) {

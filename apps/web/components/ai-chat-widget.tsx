@@ -17,6 +17,7 @@ type LeadDraft = {
   city: string;
   category: "A" | "A1" | "B" | "C" | "CE";
   comment: string;
+  consentAccepted: boolean;
 };
 
 const starterMessages: ChatMessage[] = [
@@ -49,7 +50,8 @@ export function AiChatWidget() {
     telegram: "",
     city: "",
     category: "B",
-    comment: ""
+    comment: "",
+    consentAccepted: false
   });
   const unreadPulse = useMemo(() => !isOpen && messages.length === 1, [isOpen, messages.length]);
 
@@ -347,9 +349,21 @@ export function AiChatWidget() {
                       placeholder="Коментар або зручний час"
                       className="rounded-[12px] border border-lider-line px-3 py-2 text-sm outline-none focus:border-lider-red"
                     />
+                    <label className="flex items-start gap-2 rounded-[12px] border border-lider-line bg-white px-3 py-2 text-xs font-semibold leading-5 text-lider-muted">
+                      <input
+                        type="checkbox"
+                        required
+                        checked={leadDraft.consentAccepted}
+                        onChange={(event) =>
+                          setLeadDraft((current) => ({ ...current, consentAccepted: event.target.checked }))
+                        }
+                        className="mt-1 h-4 w-4 accent-lider-red"
+                      />
+                      <span>Погоджуюсь на обробку персональних даних і передачу заявки менеджеру.</span>
+                    </label>
                     <button
                       type="submit"
-                      disabled={leadStatus === "saving"}
+                      disabled={leadStatus === "saving" || !leadDraft.consentAccepted}
                       className="rounded-[12px] bg-lider-red px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-lider-redDark"
                     >
                       {leadStatus === "saving" ? "Передаємо..." : "Передати менеджеру"}

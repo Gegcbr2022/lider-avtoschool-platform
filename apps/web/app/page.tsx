@@ -64,12 +64,12 @@ const homeCopy: Record<
 > = {
   uk: {
     navItems: [
-      { href: "#services", label: "Категорії" },
-      { href: "#documents", label: "Документи" },
-      { href: "#pride", label: "Гордість" },
-      { href: "#branches", label: "Філіали" },
-      { href: "#faq", label: "FAQ" },
-      { href: "#contacts", label: "Контакти" }
+      { href: "/categories", label: "Категорії" },
+      { href: "/documents", label: "Документи" },
+      { href: "/pride", label: "Гордість" },
+      { href: "/branches", label: "Філіали" },
+      { href: "/faq", label: "FAQ" },
+      { href: "/contacts", label: "Контакти" }
     ],
     heroBadge: "Підготовка до прав A, A1, B, C, CE",
     heroTitle: "Права без хаосу: чесний маршрут від заявки до посвідчення",
@@ -82,12 +82,12 @@ const homeCopy: Record<
   },
   ru: {
     navItems: [
-      { href: "#services", label: "Категории" },
-      { href: "#documents", label: "Документы" },
-      { href: "#pride", label: "Гордость" },
-      { href: "#branches", label: "Филиалы" },
-      { href: "#faq", label: "FAQ" },
-      { href: "#contacts", label: "Контакты" }
+      { href: "/categories", label: "Категории" },
+      { href: "/documents", label: "Документы" },
+      { href: "/pride", label: "Гордость" },
+      { href: "/branches", label: "Филиалы" },
+      { href: "/faq", label: "FAQ" },
+      { href: "/contacts", label: "Контакты" }
     ],
     heroBadge: "Подготовка к правам A, A1, B, C, CE",
     heroTitle: "Права без хаоса: понятный путь от заявки до удостоверения",
@@ -100,12 +100,12 @@ const homeCopy: Record<
   },
   en: {
     navItems: [
-      { href: "#services", label: "Categories" },
-      { href: "#documents", label: "Documents" },
-      { href: "#pride", label: "Pride" },
-      { href: "#branches", label: "Branches" },
-      { href: "#faq", label: "FAQ" },
-      { href: "#contacts", label: "Contacts" }
+      { href: "/categories", label: "Categories" },
+      { href: "/documents", label: "Documents" },
+      { href: "/pride", label: "Pride" },
+      { href: "/branches", label: "Branches" },
+      { href: "/faq", label: "FAQ" },
+      { href: "/contacts", label: "Contacts" }
     ],
     heroBadge: "Driving licence training A, A1, B, C, CE",
     heroTitle: "A clear route from request to driving licence",
@@ -202,13 +202,15 @@ const learningGallery = [
   },
 ];
 
+const SITE_URL = "https://lider.bdslab.net";
+
 const jsonLd = {
   "@context": "https://schema.org",
   "@graph": [
     {
       "@type": "DrivingSchool",
       name: siteBrand.name,
-      url: "https://lider-avtoschool-platform.vercel.app",
+      url: SITE_URL,
       telephone: siteBrand.phoneLabel,
       areaServed: branches.map((branch) => branch.city),
       sameAs: socialLinks.map((link) => link.href),
@@ -238,7 +240,7 @@ const jsonLd = {
         "@type": "ListItem",
         position: index + 1,
         name: page.title,
-        item: `https://lider-avtoschool-platform.vercel.app/${page.slug}`,
+        item: `${SITE_URL}/${page.slug}`,
       })),
     },
   ],
@@ -249,6 +251,10 @@ function normalizeLocale(value: string | string[] | undefined): Locale {
   return locales.includes(nextValue as Locale) ? (nextValue as Locale) : defaultLocale;
 }
 
+function withLocale(href: string, locale: Locale) {
+  return href.startsWith("/") ? `${href}?lang=${locale}` : href;
+}
+
 export default async function HomePage({
   searchParams
 }: {
@@ -257,7 +263,7 @@ export default async function HomePage({
   const params = searchParams ? await searchParams : {};
   const activeLocale = normalizeLocale(params.lang);
   const copy = homeCopy[activeLocale];
-  const navItems = copy.navItems;
+  const navItems = copy.navItems.map((item) => ({ ...item, href: withLocale(item.href, activeLocale) }));
   const heroHighlights = copy.heroHighlights;
   const telegram = socialLinks.find((item) => item.id === "telegram");
   const whatsapp = socialLinks.find((item) => item.id === "whatsapp");
@@ -360,7 +366,7 @@ export default async function HomePage({
                 ) : null}
               </div>
 
-              <div className="hidden grid-cols-3 gap-2 sm:grid sm:max-w-2xl sm:gap-3">
+              <div className="grid grid-cols-3 gap-2 sm:max-w-2xl sm:gap-3">
                 {heroHighlights.map((item) => (
                   <div
                     key={item}
@@ -815,7 +821,7 @@ export default async function HomePage({
               <SectionHeader
                 eyebrow="Гордість Лідера"
                 title="Реальні випускники з правами, а не красиві слова"
-                description="Фото з папки Images_with_prava використані як живий доказ результату. Без вигаданих імен: тільки нейтральні підписи й повага до людей у кадрі."
+                description="Щороку сотні учнів проходять шлях від першого заняття до посвідчення водія. Ось їхні обличчя й категорії — живий доказ, що маршрут справді спрацьовує."
               />
               <div className="rounded-[24px] bg-lider-background p-5">
                 <p className="text-sm font-black uppercase tracking-[0.14em] text-lider-red">Наша гордість</p>
@@ -823,10 +829,17 @@ export default async function HomePage({
                   Кожне посвідчення - це не «кейс», а чийсь новий рівень свободи: робота, родина, подорожі,
                   перша самостійна дорога.
                 </p>
+                <a
+                  href={`/pride?lang=${activeLocale}`}
+                  className="mt-4 inline-flex items-center gap-2 text-sm font-black text-lider-red"
+                >
+                  Вся галерея
+                  <ArrowRight className="h-4 w-4" aria-hidden />
+                </a>
               </div>
             </div>
             <div className="pride-rail mt-8 flex snap-x gap-4 overflow-x-auto pb-4 lg:grid lg:grid-cols-4 lg:overflow-visible lg:pb-0">
-              {pridePhotos.map((photo) => (
+              {pridePhotos.slice(0, 8).map((photo) => (
                 <article
                   key={photo.src}
                   className="group min-w-[76vw] snap-start overflow-hidden rounded-[24px] border border-lider-line bg-white shadow-soft transition hover:-translate-y-1 hover:shadow-premium sm:min-w-[340px] lg:min-w-0"
@@ -958,7 +971,7 @@ export default async function HomePage({
                 ) : null}
               </div>
             </div>
-            <LeadForm />
+            <LeadForm locale={activeLocale} />
           </div>
         </section>
       </main>
@@ -971,6 +984,26 @@ export default async function HomePage({
               Курси водіння, практика, підготовка до іспиту та консультація щодо
               вибору категорії.
             </p>
+            <nav aria-label="Правова інформація" className="mt-5 flex flex-wrap gap-3">
+              <a
+                href={withLocale("/privacy", activeLocale)}
+                className="text-xs font-semibold text-white/45 transition hover:text-white/80"
+              >
+                Конфіденційність
+              </a>
+              <a
+                href={withLocale("/terms", activeLocale)}
+                className="text-xs font-semibold text-white/45 transition hover:text-white/80"
+              >
+                Умови
+              </a>
+              <a
+                href={`mailto:${siteBrand.email}`}
+                className="text-xs font-semibold text-white/45 transition hover:text-white/80"
+              >
+                {siteBrand.email}
+              </a>
+            </nav>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {navItems.map((item) => (
@@ -998,9 +1031,15 @@ export default async function HomePage({
             </a>
           </div>
         </div>
+        <div className="border-t border-white/10 px-4 py-4 sm:px-6">
+          <p className="mx-auto max-w-7xl text-center text-xs font-semibold text-white/35">
+            © {new Date().getFullYear()} {siteBrand.name}. Всі права захищено.
+          </p>
+        </div>
       </footer>
 
       <ConversionWidgets
+        activeLocale={activeLocale}
         leadPopupDelayMs={process.env.NODE_ENV === "production" ? 25000 : 1500}
         reopenAfterMs={35000}
       />

@@ -1,5 +1,6 @@
 "use client";
 
+import type { Locale } from "@lider/shared";
 import { AnimatePresence, motion } from "framer-motion";
 import { BrainCircuit, CalendarCheck, HelpCircle, Sparkles, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -56,9 +57,11 @@ const popupVariants = [
 type PopupTrigger = "timer" | "section-depth" | "middle-scroll" | "exit-intent" | "repeat";
 
 export function LeadPopup({
+  locale,
   delayMs = DEFAULT_DELAY_MS,
   reopenAfterMs = DEFAULT_REOPEN_MS
 }: {
+  locale: Locale;
   delayMs?: number;
   reopenAfterMs?: number;
 }) {
@@ -282,6 +285,7 @@ export function LeadPopup({
                 <LeadForm
                   variant="popup"
                   analyticsSource="popup"
+                  locale={locale}
                   title="Залиште заявку"
                   description="Контакти потрібні тільки для консультації щодо навчання. Після заявки форма більше не турбуватиме."
                   submitLabel={variant.submitLabel}

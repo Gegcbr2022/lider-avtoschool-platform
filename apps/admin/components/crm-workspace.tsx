@@ -1,6 +1,15 @@
 "use client";
 
-import { branches, sampleLeads, samplePayments, sampleSlots } from "@lider/shared";
+import {
+  branches,
+  leadStatusLabels,
+  leadStatuses,
+  sampleKpiSnapshot,
+  sampleLeads,
+  samplePayments,
+  sampleSlots,
+  sampleStudents
+} from "@lider/shared";
 import { StatusPill } from "@lider/ui";
 import type { LeadStatus } from "@lider/types";
 import {
@@ -16,17 +25,7 @@ import {
 import Image from "next/image";
 import { useMemo, useState } from "react";
 
-const stages: LeadStatus[] = ["new", "contacted", "consultation", "contract", "paid", "learning", "completed"];
-
-const stageLabels: Record<LeadStatus, string> = {
-  new: "Нові",
-  contacted: "Контакт",
-  consultation: "Консультація",
-  contract: "Договір",
-  paid: "Оплата",
-  learning: "Навчання",
-  completed: "Завершено"
-};
+const stages: LeadStatus[] = leadStatuses.filter((stage) => stage !== "spam");
 
 export function CrmWorkspace() {
   const [query, setQuery] = useState("");
@@ -35,10 +34,13 @@ export function CrmWorkspace() {
   const filteredLeads = useMemo(() => {
     return sampleLeads.filter((lead) => {
       const matchesStatus = status === "all" || lead.status === status;
-      const text = `${lead.name} ${lead.phone} ${lead.city} ${lead.manager}`.toLowerCase();
+      const text = `${lead.name} ${lead.phone} ${lead.city} ${lead.manager} ${lead.source} ${lead.referralCode ?? ""}`.toLowerCase();
       return matchesStatus && text.includes(query.toLowerCase());
     });
   }, [query, status]);
+
+  const activeStudents = sampleStudents.filter((student) => student.status === "active").length;
+  const verifiedDocuments = sampleStudents.filter((student) => student.documentsStatus === "verified").length;
 
   return (
     <div className="min-h-screen bg-[#eef6f3]">
@@ -92,10 +94,10 @@ export function CrmWorkspace() {
 
         <div className="space-y-6 px-5 py-6 lg:px-8">
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <DashboardMetric icon={UsersRound} label="Активні ліди" value="128" detail="+14 за тиждень" />
-            <DashboardMetric icon={Gauge} label="Конверсія" value="34%" detail="з заявки в оплату" />
+            <DashboardMetric icon={UsersRound} label="Активні ліди" value={String(sampleKpiSnapshot.totalLeads)} detail={`${sampleKpiSnapshot.referralLeads} з рефералкою`} />
+            <DashboardMetric icon={Gauge} label="Конверсія" value={`${sampleKpiSnapshot.leadToStudentConversion}%`} detail="лід → учень" />
             <DashboardMetric icon={CircleDollarSign} label="Оплати" value="184k грн" detail="LiqPay, Fondy, Mono" />
-            <DashboardMetric icon={CheckCircle2} label="Завершення LMS" value="76%" detail="середній прогрес" />
+            <DashboardMetric icon={CheckCircle2} label="Учні" value={String(activeStudents)} detail={`${verifiedDocuments} з перевіреними документами`} />
           </section>
 
           <section className="rounded-[18px] border border-[#dce7e3] bg-white p-4 shadow-sm">
@@ -105,21 +107,22 @@ export function CrmWorkspace() {
               </FilterButton>
               {stages.map((stage) => (
                 <FilterButton key={stage} active={status === stage} onClick={() => setStatus(stage)}>
-                  {stageLabels[stage]}
+                  {leadStatusLabels[stage]}
                 </FilterButton>
               ))}
             </div>
             <div className="mt-4 overflow-x-auto">
-              <table className="w-full min-w-[860px] border-collapse text-sm">
+              <table className="w-full min-w-[1040px] border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-[#dce7e3] text-left text-xs uppercase tracking-[0.08em] text-[#5f6f6a]">
                     <th className="py-3 pr-4">Клієнт</th>
                     <th className="py-3 pr-4">Місто</th>
                     <th className="py-3 pr-4">Категорія</th>
                     <th className="py-3 pr-4">Статус</th>
-                    <th className="py-3 pr-4">Джерело</th>
-                    <th className="py-3 pr-4">Менеджер</th>
-                    <th className="py-3">Наступна дія</th>
+                      <th className="py-3 pr-4">Джерело</th>
+                      <th className="py-3 pr-4">Referral / UTM</th>
+                      <th className="py-3 pr-4">Менеджер</th>
+                      <th className="py-3">Наступна дія</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -133,12 +136,16 @@ export function CrmWorkspace() {
                       <td className="py-4 pr-4 font-semibold">{lead.category}</td>
                       <td className="py-4 pr-4">
                         <StatusPill
-                          tone={lead.status === "paid" ? "success" : lead.status === "new" ? "warning" : "neutral"}
+                          tone={lead.status === "passed" || lead.status === "enrolled" ? "success" : lead.status === "new" ? "warning" : "neutral"}
                         >
-                          {stageLabels[lead.status]}
+                          {leadStatusLabels[lead.status]}
                         </StatusPill>
                       </td>
                       <td className="py-4 pr-4">{lead.source}</td>
+                      <td className="py-4 pr-4">
+                        <p className="font-semibold">{lead.referralCode ?? lead.utmSource ?? "-"}</p>
+                        <p className="text-xs text-[#5f6f6a]">{lead.telegramStartParam ? `TG: ${lead.telegramStartParam}` : lead.page ?? "-"}</p>
+                      </td>
                       <td className="py-4 pr-4">{lead.manager}</td>
                       <td className="py-4">{lead.nextAction}</td>
                     </tr>

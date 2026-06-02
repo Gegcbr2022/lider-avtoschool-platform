@@ -1,11 +1,12 @@
 import type { TrainingCategory } from "@lider/types";
+import type { Locale } from "@lider/shared";
 
 export type ContentPage = {
   slug: string;
   title: string;
   summary: string;
   eyebrow?: string;
-  kind?: "standard" | "city" | "category";
+  kind?: "standard" | "city" | "category" | "documents" | "pride" | "app" | "contacts" | "legal";
   branchId?: string;
   category?: TrainingCategory;
   highlights?: readonly string[];
@@ -51,6 +52,7 @@ export const contentPages: readonly ContentPage[] = [
     title: "Документи",
     summary: "Перелік документів, завантаження файлів і перевірка менеджером.",
     eyebrow: "Підготовка до старту",
+    kind: "documents",
     highlights: ["Паспорт", "ІПН", "Медична довідка"],
     checklist: ["Підготуйте копії", "Завантажте файли", "Дочекайтесь перевірки"]
   },
@@ -67,8 +69,19 @@ export const contentPages: readonly ContentPage[] = [
     title: "Контакти",
     summary: "Телефони філій, email, Telegram і форма зворотного зв'язку.",
     eyebrow: "Зв'язок",
+    kind: "contacts",
     highlights: ["Телефон", "Email", "Онлайн-заявка"],
     checklist: ["Оберіть філію", "Напишіть або залиште заявку", "Отримайте консультацію"]
+  },
+  {
+    slug: "pride",
+    title: "Гордість Лідера",
+    summary: "Реальні випускники з правами: нейтральні підписи, живі фото і повага до людей у кадрі.",
+    eyebrow: "Наша гордість",
+    kind: "pride",
+    highlights: ["Реальні фото", "Без вигаданих імен", "Адаптивна галерея"],
+    checklist: ["Подивіться результати", "Оберіть категорію", "Залиште заявку"],
+    cta: "Стати наступним випускником"
   },
   {
     slug: "news",
@@ -112,10 +125,21 @@ export const contentPages: readonly ContentPage[] = [
     checklist: ["Стежте за уроками", "Записуйтесь на практику", "Перевіряйте платежі"]
   },
   {
+    slug: "app",
+    title: "Застосунок і клуб учня",
+    summary: "Майбутній мобільний кабінет не закінчується після заявки: прогрес, ПДР, реферали, клуб випускників і корисні підказки.",
+    eyebrow: "Мобільний формат",
+    kind: "app",
+    highlights: ["ПДР щодня", "Referral бонуси", "Клуб випускників"],
+    checklist: ["Слідкуйте за прогресом", "Запрошуйте друзів", "Повертайтесь за підказками"],
+    cta: "Дізнатися про застосунок"
+  },
+  {
     slug: "privacy",
     title: "Політика конфіденційності",
     summary: "Правила обробки персональних даних студентів і клієнтів.",
     eyebrow: "Дані і приватність",
+    kind: "legal",
     highlights: ["Персональні дані", "Контактні дані", "Заявки"],
     checklist: ["Читайте правила", "Не передавайте паролі", "Звертайтесь для видалення даних"]
   },
@@ -132,6 +156,7 @@ export const contentPages: readonly ContentPage[] = [
     title: "Умови використання",
     summary: "Правила використання сайту, кабінету учня та мобільного застосунку.",
     eyebrow: "Правила платформи",
+    kind: "legal",
     highlights: ["Сайт", "Кабінет", "Мобільний застосунок"],
     checklist: ["Користуйтесь сервісом коректно", "Захищайте доступ", "Повідомляйте про помилки"]
   },
@@ -237,3 +262,125 @@ export const contentPages: readonly ContentPage[] = [
 ] as const;
 
 export type ContentPageSlug = (typeof contentPages)[number]["slug"];
+
+type LocalizedPageFields = Partial<Pick<ContentPage, "title" | "summary" | "eyebrow" | "highlights" | "checklist" | "cta">>;
+
+const localizedPages: Partial<Record<Locale, Record<string, LocalizedPageFields>>> = {
+  ru: {
+    categories: {
+      title: "Категории",
+      summary: "Программы для A, A1, B, C, CE и переподготовки: сроки, цены, возраст и условия.",
+      eyebrow: "Программы обучения",
+      highlights: ["A, A1, B, C, CE", "Переподготовка", "ПДР-тренажер"],
+      checklist: ["Сравните категории", "Уточните практику", "Оставьте заявку"]
+    },
+    documents: {
+      title: "Документы",
+      summary: "Список документов для поступления, онлайн-подача файлов и проверка менеджером.",
+      eyebrow: "Подготовка к старту",
+      highlights: ["Паспорт", "ИНН", "Медицинская справка"],
+      checklist: ["Подготовьте копии", "Загрузите файлы", "Дождитесь проверки"]
+    },
+    pride: {
+      title: "Гордость Лидера",
+      summary: "Реальные выпускники с правами: нейтральные подписи, живые фото и уважение к людям в кадре.",
+      eyebrow: "Наша гордость",
+      highlights: ["Реальные фото", "Без выдуманных имен", "Адаптивная галерея"],
+      checklist: ["Посмотрите результаты", "Выберите категорию", "Оставьте заявку"],
+      cta: "Стать следующим выпускником"
+    },
+    contacts: {
+      title: "Контакты",
+      summary: "Филиалы, Telegram-бот, форма заявки, обратная связь и удобный канал для консультации.",
+      eyebrow: "Связь",
+      highlights: ["Telegram", "Email", "Онлайн-заявка"],
+      checklist: ["Выберите филиал", "Напишите или оставьте заявку", "Получите консультацию"]
+    },
+    app: {
+      title: "Приложение и клуб ученика",
+      summary: "Мобильный кабинет не заканчивается после заявки: прогресс, ПДР, рефералы, клуб выпускников и полезные подсказки.",
+      eyebrow: "Мобильный формат",
+      highlights: ["ПДР каждый день", "Referral-бонусы", "Клуб выпускников"],
+      checklist: ["Следите за прогрессом", "Приглашайте друзей", "Возвращайтесь за подсказками"]
+    },
+    privacy: {
+      title: "Политика конфиденциальности",
+      summary: "Как автошкола обрабатывает контактные данные, заявки, документы и обращения.",
+      eyebrow: "Данные и приватность"
+    },
+    terms: {
+      title: "Условия использования",
+      summary: "Правила использования сайта, форм заявки, кабинета ученика и будущего мобильного приложения.",
+      eyebrow: "Правила платформы"
+    },
+    faq: {
+      title: "FAQ",
+      summary: "Ответы на частые вопросы об обучении, документах, экзаменах, практике и оплате."
+    }
+  },
+  en: {
+    categories: {
+      title: "Categories",
+      summary: "Programs for A, A1, B, C, CE and retraining: duration, prices, age and conditions.",
+      eyebrow: "Training programs",
+      highlights: ["A, A1, B, C, CE", "Retraining", "Road rules practice"],
+      checklist: ["Compare categories", "Clarify practice", "Send a request"]
+    },
+    documents: {
+      title: "Documents",
+      summary: "Admission document list, online file submission and manager verification.",
+      eyebrow: "Start preparation",
+      highlights: ["Passport or ID", "Tax number", "Medical certificate"],
+      checklist: ["Prepare copies", "Upload files", "Wait for verification"]
+    },
+    pride: {
+      title: "Leader Pride",
+      summary: "Real graduates with driving licences: neutral captions, live photos and respect for people in frame.",
+      eyebrow: "Our pride",
+      highlights: ["Real photos", "No invented names", "Responsive gallery"],
+      checklist: ["See results", "Choose a category", "Send a request"],
+      cta: "Become the next graduate"
+    },
+    contacts: {
+      title: "Contacts",
+      summary: "Branches, Telegram bot, request form, callback and a convenient consultation channel.",
+      eyebrow: "Contact",
+      highlights: ["Telegram", "Email", "Online request"],
+      checklist: ["Choose a branch", "Message us or send a request", "Get consultation"]
+    },
+    app: {
+      title: "Student App and Club",
+      summary: "The mobile cabinet does not end after the request: progress, road rules, referrals, graduate club and useful reminders.",
+      eyebrow: "Mobile format",
+      highlights: ["Daily road rules", "Referral bonuses", "Graduate club"],
+      checklist: ["Track progress", "Invite friends", "Return for useful tips"]
+    },
+    privacy: {
+      title: "Privacy Policy",
+      summary: "How the driving school processes contact data, requests, documents and messages.",
+      eyebrow: "Data and privacy"
+    },
+    terms: {
+      title: "Terms of Use",
+      summary: "Rules for using the website, request forms, student cabinet and future mobile app.",
+      eyebrow: "Platform rules"
+    },
+    faq: {
+      title: "FAQ",
+      summary: "Answers to common questions about training, documents, exams, practice and payment."
+    }
+  }
+};
+
+export function getLocalizedContentPage(slug: string, locale: Locale) {
+  const page = contentPages.find((item) => item.slug === slug);
+
+  if (!page) {
+    return undefined;
+  }
+
+  return {
+    ...page,
+    ...(localizedPages[locale]?.[slug] ?? {})
+  };
+}

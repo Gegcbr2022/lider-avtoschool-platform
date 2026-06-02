@@ -1,4 +1,4 @@
-import { aiChatRequestSchema } from "@lider/shared";
+import { aiChatRequestSchema, branches } from "@lider/shared";
 import { NextResponse } from "next/server";
 import { createAiAnswer } from "../../../../lib/ai-assistant";
 
@@ -54,12 +54,15 @@ function allowRequest(ip: string) {
 }
 
 async function persistAiLead(lead: Record<string, unknown>, latestQuestion?: string) {
-  const payload = {
-    ...lead,
-    question: lead.question ?? latestQuestion,
-    status: "new",
-    createdAt: new Date().toISOString()
-  };
+  const payload = buildCreateLeadPayload(lead, latestQuestion);
+
+  if (!payload) {
+    return { mode: "missing-required-fields", id: null };
+  }
+
+  if (!payload.consentAccepted) {
+    return { mode: "missing-consent", id: null };
+  }
 
   const apiUrl = process.env.API_URL?.replace(/\/$/, "");
 
@@ -68,7 +71,7 @@ async function persistAiLead(lead: Record<string, unknown>, latestQuestion?: str
   }
 
   try {
-    const response = await fetch(`${apiUrl}/ai/leads`, {
+    const response = await fetch(`${apiUrl}/leads`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -84,4 +87,55 @@ async function persistAiLead(lead: Record<string, unknown>, latestQuestion?: str
     console.error("AI lead persistence request failed", error);
     return { mode: "api-error", id: null };
   }
+}
+
+const leadCategories = ["A", "A1", "B", "C", "CE"] as const;
+
+function buildCreateLeadPayload(lead: Record<string, unknown>, latestQuestion?: string) {
+  const name = normalizeText(lead.name) || "AI chat lead";
+  const phone = normalizeText(lead.phone) || normalizeText(lead.telegram);
+  const city = normalizeText(lead.city) || "Київ";
+
+  if (!phone) {
+    return null;
+  }
+
+  const question = normalizeText(lead.question) || latestQuestion;
+  const comment = normalizeText(lead.comment);
+  const createdAt = new Date().toISOString();
+  const contactMethod = normalizeText(lead.telegram) ? "telegram" : "phone";
+
+  return {
+    name,
+    phone,
+    city,
+    category: normalizeCategory(lead.category),
+    branchId: inferBranchId(city),
+    requestType: "consultation",
+    contactMethod,
+    preferredContactMethod: contactMethod,
+    message: [comment, question].filter(Boolean).join("\n"),
+    source: "ai-chat",
+    consentAccepted: lead.consentAccepted === true,
+    status: "new",
+    language: "uk",
+    page: "/ai-chat",
+    createdAt,
+    updatedAt: createdAt
+  };
+}
+
+function normalizeText(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeCategory(value: unknown) {
+  return leadCategories.includes(value as (typeof leadCategories)[number]) ? value : "B";
+}
+
+function inferBranchId(city: string) {
+  const normalizedCity = city.toLowerCase();
+  const branch = branches.find((item) => item.city.toLowerCase().includes(normalizedCity));
+
+  return branch?.id ?? branches[0]?.id ?? "kyiv";
 }

@@ -1,5 +1,17 @@
 import { z } from "zod";
-import type { BookingSlot, Branch, Lead, LessonProgress, Payment, ServiceCard } from "@lider/types";
+import type {
+  BookingSlot,
+  Branch,
+  KpiSnapshot,
+  Lead,
+  LeadSource,
+  LeadStatus,
+  LessonProgress,
+  Payment,
+  PreferredContactMethod,
+  ServiceCard,
+  Student
+} from "@lider/types";
 
 export * from "./i18n";
 
@@ -10,6 +22,48 @@ export const siteBrand = {
   defaultLocale: "uk-UA",
   phoneLabel: "050 738 30 33"
 } as const;
+
+export const leadStatuses: LeadStatus[] = [
+  "new",
+  "contacted",
+  "consultation",
+  "documents_pending",
+  "enrolled",
+  "training",
+  "exam_ready",
+  "passed",
+  "lost",
+  "spam"
+];
+
+export const leadStatusLabels: Record<LeadStatus, string> = {
+  new: "Нові",
+  contacted: "Контакт",
+  consultation: "Консультація",
+  documents_pending: "Документи",
+  enrolled: "Зараховано",
+  training: "Навчання",
+  exam_ready: "Готовий до іспиту",
+  passed: "Права отримано",
+  lost: "Втрачено",
+  spam: "Спам"
+};
+
+export const leadSources: LeadSource[] = [
+  "website",
+  "popup",
+  "telegram",
+  "referral",
+  "walk-in",
+  "mobile",
+  "ai-chat",
+  "admin",
+  "category-page",
+  "documents-page",
+  "contacts-page"
+];
+
+export const preferredContactMethods: PreferredContactMethod[] = ["telegram", "phone", "whatsapp", "email", "any"];
 
 export const branches: Branch[] = [
   {
@@ -219,6 +273,46 @@ export const pridePhotos = [
     src: "/images/pride/pride-christmas-card.jpg",
     title: "Права отримано",
     caption: "Маленька картка, яка відкриває багато нових маршрутів."
+  },
+  {
+    src: "/images/pride/pride-road-smile.jpg",
+    title: "Наш випускник",
+    caption: "Ще один реальний результат навчання без вигаданих персональних історій."
+  },
+  {
+    src: "/images/pride/pride-car-hood.jpg",
+    title: "Права отримано",
+    caption: "Фінальний крок навчання, який видно краще за будь-яку обіцянку."
+  },
+  {
+    src: "/images/pride/pride-license-office.jpg",
+    title: "Вітаємо з новим етапом",
+    caption: "Посвідчення в руках, а попереду - перші самостійні маршрути."
+  },
+  {
+    src: "/images/pride/pride-happy-card.jpg",
+    title: "Ще один крок до свободи",
+    caption: "Нейтральна підпис без особистих даних і з повагою до людей у кадрі."
+  },
+  {
+    src: "/images/pride/pride-group-street.jpg",
+    title: "Гордість Лідера",
+    caption: "Живі фото випускників допомагають відчути масштаб роботи автошколи."
+  },
+  {
+    src: "/images/pride/pride-driver-second.jpg",
+    title: "Перші права",
+    caption: "Результат, заради якого проходять теорію, практику і підготовку до іспиту."
+  },
+  {
+    src: "/images/pride/pride-result-card.jpg",
+    title: "Свій результат",
+    caption: "Кожна така світлина - ще один підтверджений фініш навчання."
+  },
+  {
+    src: "/images/pride/pride-new-stage.jpg",
+    title: "Новий етап",
+    caption: "Права отримано, а автошкола залишається поруч із корисними підказками."
   }
 ] as const;
 
@@ -232,8 +326,16 @@ export const sampleLeads: Lead[] = [
     status: "consultation",
     source: "website",
     createdAt: "2026-05-30T09:20:00.000Z",
+    updatedAt: "2026-05-30T10:05:00.000Z",
+    preferredContactMethod: "telegram",
+    utmSource: "google",
+    utmMedium: "organic",
+    page: "/",
+    consentAccepted: true,
+    language: "uk",
     manager: "Олена",
-    nextAction: "Дзвінок о 16:00"
+    assignedTo: "Олена",
+    nextAction: "Написати у Telegram о 16:00"
   },
   {
     id: "L-1047",
@@ -241,10 +343,18 @@ export const sampleLeads: Lead[] = [
     phone: "050 118 20 42",
     city: "Дніпро",
     category: "C",
-    status: "paid",
+    status: "documents_pending",
     source: "telegram",
     createdAt: "2026-05-29T13:45:00.000Z",
+    updatedAt: "2026-05-29T15:42:00.000Z",
+    preferredContactMethod: "telegram",
+    telegramStartParam: "AYYUTE",
+    referralCode: "AYYUTE",
+    page: "https://t.me/LiderDriveBot?start=AYYUTE",
+    consentAccepted: true,
+    language: "uk",
     manager: "Ігор",
+    assignedTo: "Ігор",
     nextAction: "Підтвердити документи"
   },
   {
@@ -256,8 +366,102 @@ export const sampleLeads: Lead[] = [
     status: "new",
     source: "mobile",
     createdAt: "2026-05-29T08:10:00.000Z",
+    updatedAt: "2026-05-29T08:10:00.000Z",
+    preferredContactMethod: "whatsapp",
+    page: "mobile://home",
+    consentAccepted: true,
+    language: "uk",
     manager: "Світлана",
+    assignedTo: "Світлана",
     nextAction: "Призначити менеджера"
+  },
+  {
+    id: "L-1045",
+    name: "Сергій Данилюк",
+    phone: "050 330 19 11",
+    city: "Слов'янськ",
+    category: "CE",
+    status: "enrolled",
+    source: "referral",
+    createdAt: "2026-05-28T11:30:00.000Z",
+    updatedAt: "2026-05-30T12:40:00.000Z",
+    preferredContactMethod: "phone",
+    referralCode: "FAMILY-25",
+    page: "/categories",
+    consentAccepted: true,
+    language: "uk",
+    manager: "Олена",
+    assignedTo: "Олена",
+    nextAction: "Додати у групу CE"
+  }
+];
+
+export const sampleStudents: Student[] = [
+  {
+    id: "S-2041",
+    leadId: "L-1047",
+    createdAt: "2026-05-29T16:10:00.000Z",
+    updatedAt: "2026-06-01T09:00:00.000Z",
+    name: "Андрій Шевченко",
+    phone: "050 118 20 42",
+    city: "Дніпро",
+    branchId: "dnipro",
+    branch: "Дніпро",
+    category: "C",
+    status: "active",
+    trainingStartDate: "2026-06-03",
+    theoryProgress: 28,
+    practiceProgress: 10,
+    examStatus: "not_ready",
+    paymentStatus: "processing",
+    documentsStatus: "pending",
+    managerId: "igor",
+    instructorId: "instructor-ce"
+  },
+  {
+    id: "S-2040",
+    leadId: "L-1045",
+    createdAt: "2026-05-28T13:00:00.000Z",
+    updatedAt: "2026-06-01T12:30:00.000Z",
+    name: "Сергій Данилюк",
+    phone: "050 330 19 11",
+    city: "Слов'янськ",
+    branchId: "sloviansk",
+    branch: "Слов'янськ",
+    category: "CE",
+    status: "active",
+    trainingStartDate: "2026-06-05",
+    theoryProgress: 12,
+    practiceProgress: 0,
+    examStatus: "not_ready",
+    paymentStatus: "paid",
+    referrerId: "S-1990",
+    discount: 500,
+    documentsStatus: "verified",
+    managerId: "olena",
+    instructorId: "instructor-ce"
+  },
+  {
+    id: "S-2038",
+    leadId: "L-1038",
+    createdAt: "2026-04-12T09:20:00.000Z",
+    updatedAt: "2026-05-27T18:20:00.000Z",
+    name: "Анна Мельник",
+    phone: "050 611 44 20",
+    city: "Добропілля",
+    branchId: "dobropillia",
+    branch: "Добропілля",
+    category: "B",
+    status: "passed",
+    trainingStartDate: "2026-04-15",
+    trainingEndDate: "2026-05-27",
+    theoryProgress: 100,
+    practiceProgress: 100,
+    examStatus: "passed",
+    paymentStatus: "paid",
+    documentsStatus: "verified",
+    managerId: "svitlana",
+    instructorId: "instructor-b"
   }
 ];
 
@@ -300,6 +504,34 @@ export const samplePayments: Payment[] = [
     createdAt: "2026-05-29T15:42:00.000Z"
   }
 ];
+
+export const sampleKpiSnapshot: KpiSnapshot = {
+  totalLeads: sampleLeads.length,
+  leadsBySource: sampleLeads.reduce<Record<string, number>>((accumulator, lead) => {
+    accumulator[lead.source] = (accumulator[lead.source] ?? 0) + 1;
+    return accumulator;
+  }, {}),
+  leadToStudentConversion: Math.round((sampleStudents.length / sampleLeads.length) * 100),
+  studentToLicenseConversion: Math.round(
+    (sampleStudents.filter((student) => student.examStatus === "passed").length / sampleStudents.length) * 100
+  ),
+  popularCategories: sampleLeads.reduce<KpiSnapshot["popularCategories"]>(
+    (accumulator, lead) => {
+      accumulator[lead.category] = (accumulator[lead.category] ?? 0) + 1;
+      return accumulator;
+    },
+    { A: 0, A1: 0, B: 0, C: 0, CE: 0 }
+  ),
+  leadsByCity: sampleLeads.reduce<Record<string, number>>((accumulator, lead) => {
+    accumulator[lead.city] = (accumulator[lead.city] ?? 0) + 1;
+    return accumulator;
+  }, {}),
+  telegramLeads: sampleLeads.filter((lead) => lead.source === "telegram").length,
+  popupLeads: sampleLeads.filter((lead) => lead.source === "popup").length,
+  formLeads: sampleLeads.filter((lead) => lead.source === "website").length,
+  referralLeads: sampleLeads.filter((lead) => Boolean(lead.referralCode)).length,
+  averageLeadResponseHours: 2.4
+};
 
 export const sampleProgress: LessonProgress = {
   courseId: "course-b",
@@ -587,18 +819,80 @@ export const homeFaq = [
   }
 ] as const;
 
+export const leadDocumentSchema = z.object({
+  name: z.string().min(1).max(160),
+  type: z.string().max(80).optional(),
+  size: z.number().nonnegative().optional(),
+  url: z.string().url().optional(),
+  status: z.enum(["uploaded", "pending_upload", "verified", "rejected"]).default("pending_upload")
+});
+
+const optionalTrackingField = z.string().trim().max(180).optional();
+
 export const leadFormSchema = z.object({
-  name: z.string().min(2),
-  phone: z.string().min(9),
-  city: z.string().min(2),
+  name: z.string().trim().min(2).max(80),
+  phone: z.string().trim().min(9).max(30),
+  email: z.union([z.string().trim().email(), z.literal("")]).optional(),
+  city: z.string().trim().min(2).max(80),
   category: z.enum(["A", "A1", "B", "C", "CE"]),
-  branchId: z.string().min(2),
+  branchId: z.string().trim().min(2).max(80),
   requestType: z
     .enum(["application", "callback", "consultation", "documents", "category-picker"])
     .default("application"),
-  contactMethod: z.enum(["telegram", "phone", "whatsapp", "any"]).default("telegram"),
+  contactMethod: z.enum(["telegram", "phone", "whatsapp", "email", "any"]).default("telegram"),
+  preferredContactMethod: z.enum(["telegram", "phone", "whatsapp", "email", "any"]).optional(),
   documentFiles: z.array(z.string().max(160)).max(8).optional(),
-  message: z.string().max(1400).optional()
+  documents: z.array(leadDocumentSchema).max(8).optional(),
+  message: z.string().trim().max(1400).optional(),
+  source: z
+    .enum([
+      "website",
+      "popup",
+      "telegram",
+      "referral",
+      "walk-in",
+      "mobile",
+      "ai-chat",
+      "admin",
+      "category-page",
+      "documents-page",
+      "contacts-page"
+    ])
+    .default("website"),
+  utmSource: optionalTrackingField,
+  utmMedium: optionalTrackingField,
+  utmCampaign: optionalTrackingField,
+  utmContent: optionalTrackingField,
+  utmTerm: optionalTrackingField,
+  referralCode: optionalTrackingField,
+  telegramStartParam: optionalTrackingField,
+  language: z.enum(["uk", "ru", "en"]).default("uk"),
+  page: z.string().trim().max(260).optional(),
+  device: z.string().trim().max(80).optional(),
+  consentAccepted: z.boolean().refine((value) => value, "consent_required")
+});
+
+export const createLeadSchema = leadFormSchema.extend({
+  status: z
+    .enum([
+      "new",
+      "contacted",
+      "consultation",
+      "documents_pending",
+      "enrolled",
+      "training",
+      "exam_ready",
+      "passed",
+      "lost",
+      "spam"
+    ])
+    .default("new"),
+  assignedTo: z.string().trim().max(80).optional(),
+  notes: z.string().trim().max(2000).optional(),
+  createdAt: z.string().datetime().optional(),
+  updatedAt: z.string().datetime().optional(),
+  ipHash: z.string().max(128).optional(),
+  userAgent: z.string().max(260).optional()
 });
 
 export const bookingRequestSchema = z.object({
@@ -624,6 +918,7 @@ export const aiLeadSchema = z.object({
   category: z.enum(["A", "A1", "B", "C", "CE"]).optional(),
   question: z.string().max(1000).optional(),
   comment: z.string().max(1000).optional(),
+  consentAccepted: z.boolean().optional(),
   source: z.string().max(60).default("ai-chat")
 });
 

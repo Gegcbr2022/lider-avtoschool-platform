@@ -1,45 +1,84 @@
 # Missing For Production
 
-Список вещей, которые нельзя считать полностью закрытыми без внешних доступов, бизнес-решений или отдельной реализации.
+Актуальний стан: що закрито в коді, а що потребує зовнішніх доступів або бізнес-рішень.
 
-## Web
+---
 
-- Полный перевод всех секций на `uk`, `ru`, `en`. Сейчас переключатель языка работает для ключевых зон главной страницы и URL-состояния, но большая часть контента остается украинской.
-- Реальная загрузка фото документов в Firebase Storage или другой защищенный storage. Сейчас форма передает только имена выбранных файлов.
-- Финальные тексты политики конфиденциальности, обработки персональных данных и согласия на связь.
-- Production-аналитика: GA4/Meta/TikTok Pixel/конверсии, если они нужны бизнесу.
-- A/B-измерение Telegram CTA, popup и формы заявки.
+## Закрито в коді
 
-## API И Данные
+- Єдина lead-модель і `createLeadSchema` для сайту, popup, AI-чату та API.
+- Окремі сторінки `/categories`, `/documents`, `/pride`, `/contacts`, `/faq`, `/app`, `/privacy`, `/terms` зі збереженням мови через `?lang=`.
+- Розширена галерея «Гордість Лідера».
+- Базовий KPI snapshot: джерела лідів, конверсія lead/student, популярні категорії, міста, Telegram/popup/referral.
+- Firestore rules/indexes для публічного створення лідів і KPI read-only.
+- Мобільний кабінет з retention-сигналами.
+- Виправлено JSON-LD URL (тепер `lider.bdslab.net`).
+- Hero highlights показуються і на мобільних.
+- Footer містить посилання на `/privacy`, `/terms` і email.
+- Storage rules: додано шлях `lead-documents/{leadId}` для анонімного upload документів заявки.
+- Файл `DEPLOY.md` з повними інструкціями деплою.
 
-- Production Firebase project, service account, Firestore indexes/rules deploy и Storage rules deploy.
-- Защищенное хранение лидов, файлов документов и audit log.
-- Проверка Telegram bot token/chat id в production окружении.
-- Антиспам для публичных форм: CAPTCHA, Turnstile или rate limit на edge/API уровне.
-- Реальный платежный провайдер, если планируется онлайн-оплата.
+---
 
-## Admin
+## Потребує зовнішніх доступів або ENV
 
-- Роли и права доступа для менеджеров, администраторов и инструкторов.
-- Реальные CRUD-сценарии поверх production Firestore, а не только демо-данные.
-- Экспорт заявок/учеников и история изменений.
+### Firebase / API
 
-## Mobile
+| Пункт | Що потрібно |
+|---|---|
+| Production Firebase project | Доступ до Firebase Console, налаштований `.firebaserc` |
+| Service account | JSON-ключ для server-side читання Firestore |
+| Firestore indexes deploy | `firebase deploy --only firestore:indexes` після логіну |
+| Storage rules deploy | `firebase deploy --only storage` |
+| Telegram bot | `TELEGRAM_BOT_TOKEN` і `TELEGRAM_LOG_CHAT_ID` в ENV |
+| CAPTCHA (anti-spam) | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` |
+| Real payments | LiqPay / Fondy / Monobank keys в ENV |
 
-- Production EAS credentials для Android/iOS.
-- Проверка Android APK/AAB на реальном устройстве и в Google Play Console.
-- Проверка iOS сборки на macOS/Xcode и App Store Connect.
-- Push-уведомления, deep links и авторизация ученика.
-- Реальная синхронизация расписания, оплат и прогресса с backend.
+### Vercel (Web)
 
-## Legal И Бизнес
+| Пункт | Що потрібно |
+|---|---|
+| ENV у Vercel dashboard | `NEXT_PUBLIC_SITE_URL=https://lider.bdslab.net` та решта (див. `DEPLOY.md`) |
+| Custom domain | Прив'язати `lider.bdslab.net` у Vercel → Domains |
+| OpenAI API key | `OPENAI_API_KEY` для AI-чату |
+| Analytics | `NEXT_PUBLIC_GA4_ID`, `NEXT_PUBLIC_META_PIXEL_ID` |
 
-- Финальное подтверждение цен, сроков, условий CE во время военного положения и документов для поступления.
-- Проверка формулировок по «Дія», сроку действия теоретической подготовки 2 года и медицинским документам.
-- Актуальные адреса филиалов, графики работы и контактные каналы.
+---
 
-## Deploy
+## Потребує коду (можна зробити без зовнішніх доступів)
 
-- Проверить, что все нужные production ENV заданы в Vercel/Firebase/Expo.
-- После каждого production deploy пройти smoke QA на `https://lider.bdslab.net/`.
-- Хранить `design-references/` и `Images_with_prava/` вне production-артефакта, кроме выбранных оптимизированных файлов в `apps/web/public/images/pride/`.
+### Web
+
+- **Повні переклади:** переключатель мови працює, але більша частина контенту залишається українською. Потрібно перекласти секції categories, documents, pride, FAQ, форму і success/error стани для `ru` та `en`.
+- **Реальна завантажування файлів:** форма передає лише імена файлів. Потрібно підключити Firebase Storage upload (шлях `lead-documents/{leadId}`).
+- **Privacy / Terms сторінки:** сторінки існують у роутингу, але потребують фінальних юридичних текстів.
+
+### Admin
+
+- **Реальні CRUD поверх Firestore:** зараз тільки sample data.
+- **Авторизація менеджерів:** Firebase Auth + custom claims (`role: "manager"` / `"admin"`).
+- **Експорт заявок:** CSV/XLSX для менеджерів.
+- **Ролі:** розмежування прав між admin і manager.
+
+### Mobile
+
+- **EAS credentials:** потрібні акаунти Google Play / App Store Connect і підписи.
+- **Push-повідомлення:** `expo-notifications` + FCM token registration.
+- **Deep links:** schema `lider://` налаштована в `app.config.ts`, потребує тесту.
+- **Реальна синхронізація:** розклад, оплати, прогрес з production Firestore.
+
+---
+
+## Legal та бізнес
+
+- Фінальне підтвердження цін, строків і умов CE під час воєнного стану.
+- Актуальні адреси філіалів, графіки роботи і контактні канали.
+- Тексти privacy policy та terms of use (юридичні, не технічні).
+
+---
+
+## Smoke QA після деплою
+
+Деталі в `DEPLOY.md` → розділ 5.
+
+Production URL: **https://lider.bdslab.net/**

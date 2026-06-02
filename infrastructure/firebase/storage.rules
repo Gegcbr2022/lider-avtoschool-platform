@@ -10,18 +10,36 @@ service firebase.storage {
       return signedIn() && (request.auth.token.role == "admin" || request.auth.token.role == "manager");
     }
 
+    function isImageOrPdf() {
+      return request.resource.contentType.matches("application/pdf|image/.*");
+    }
+
+    function underSizeLimit() {
+      return request.resource.size < 10 * 1024 * 1024;
+    }
+
+    // Документы, загруженные учеником в своём кабинете
     match /student-documents/{studentId}/{fileName} {
       allow read: if staff() || (signedIn() && request.auth.uid == studentId);
       allow write: if (staff() || (signedIn() && request.auth.uid == studentId))
-        && request.resource.size < 10 * 1024 * 1024
-        && request.resource.contentType.matches("application/pdf|image/.*");
+        && underSizeLimit()
+        && isImageOrPdf();
     }
 
+    // Документы, приложенные к публичным заявкам (анонимный upload)
+    // Путь содержит leadId, сгенерированный на бэкенде, — случайный UUID, не угадываемый
+    match /lead-documents/{leadId}/{fileName} {
+      allow create: if underSizeLimit() && isImageOrPdf();
+      allow read, update, delete: if staff();
+    }
+
+    // Публичные ассеты (логотипы, фото для CMS)
     match /public/{fileName} {
       allow read: if true;
       allow write: if staff();
     }
 
+    // Запрещаем всё остальное
     match /{allPaths=**} {
       allow read, write: if false;
     }
