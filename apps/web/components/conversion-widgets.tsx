@@ -18,7 +18,7 @@ export function ConversionWidgets({
     <>
       <LeadPopup locale={activeLocale} delayMs={leadPopupDelayMs} reopenAfterMs={reopenAfterMs} />
       <AiChatWidget />
-      <MobileQuickActions />
+      <MobileQuickActions activeLocale={activeLocale} />
     </>
   );
 }

@@ -4,6 +4,7 @@ import { getApps, initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { onRequest } from "firebase-functions/v2/https";
+import nodemailer from "nodemailer";
 import {
   bookingRequestSchema,
   branches,
@@ -73,8 +74,10 @@ app.post("/leads", async (request, response) => {
     console.error("Lead audit log failed", error);
   });
   await sendLeadToTelegram(lead, persistence.id).catch((error: unknown) => {
-    // Telegram logging is optional and must not break lead intake.
     console.error("Telegram lead logging failed", error);
+  });
+  await sendLeadEmail(lead, persistence.id).catch((error: unknown) => {
+    console.error("Lead email failed", error);
   });
   response.status(201).json({ id: persistence.id, persistence: persistence.mode, lead });
 });
@@ -516,9 +519,10 @@ async function sendDocumentsToTelegram(
   let bucket: ReturnType<ReturnType<typeof getStorage>["bucket"]>;
 
   try {
-    bucket = getStorage().bucket();
-  } catch {
-    console.warn("Firebase Storage not available, skipping document upload to Telegram");
+    const bucketName = process.env.FIREBASE_STORAGE_BUCKET;
+    bucket = getStorage().bucket(bucketName);
+  } catch (err) {
+    console.warn("Firebase Storage not available, skipping document upload to Telegram:", err);
     return;
   }
 
@@ -547,6 +551,119 @@ async function sendDocumentsToTelegram(
     } catch (error) {
       console.error(`Failed to send ${doc.storagePath} to Telegram`, error);
     }
+  }
+}
+
+function createMailTransport() {
+  if (process.env.RESEND_API_KEY) {
+    return nodemailer.createTransport({
+      host: "smtp.resend.com",
+      port: 465,
+      secure: true,
+      auth: {
+        user: "resend",
+        pass: process.env.RESEND_API_KEY
+      }
+    });
+  }
+
+  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    return nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT ?? 587),
+      secure: process.env.SMTP_PORT === "465",
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+      }
+    });
+  }
+
+  return null;
+}
+
+async function sendLeadEmail(lead: Record<string, unknown>, leadId: string) {
+  if (process.env.LEAD_EMAIL_ENABLED !== "true") {
+    return;
+  }
+
+  const transport = createMailTransport();
+
+  if (!transport) {
+    console.warn("Email skipped: no RESEND_API_KEY or SMTP_HOST/USER/PASS configured");
+    return;
+  }
+
+  const toBase = process.env.LEAD_EMAIL_TO;
+
+  if (!toBase) {
+    console.warn("Email skipped: LEAD_EMAIL_TO is not set");
+    return;
+  }
+
+  const branchId = String(lead.branchId ?? "");
+  const branchEmail =
+    (branchId === "kyiv" ? process.env.LEAD_EMAIL_TO_KYIV : undefined) ??
+    (branchId === "sloviansk" ? process.env.LEAD_EMAIL_TO_SLOVIANSK : undefined) ??
+    (branchId === "kramatorsk" ? process.env.LEAD_EMAIL_TO_KRAMATORSK : undefined) ??
+    (branchId === "dnipro" ? process.env.LEAD_EMAIL_TO_DNIPRO : undefined) ??
+    (branchId === "dobropillia" ? process.env.LEAD_EMAIL_TO_DOBROPILLIA : undefined);
+
+  const to = branchEmail ?? toBase;
+  const cc = process.env.LEAD_EMAIL_CC;
+  const from = process.env.LEAD_EMAIL_FROM ?? `"Лідер CRM" <${toBase.split(",")[0].trim()}>`;
+
+  const referral = lead.referralCode ?? lead.telegramStartParam ?? lead.utmSource;
+  const documents = Array.isArray(lead.documents) ? lead.documents : [];
+  const docList = documents.length
+    ? documents
+        .map((d: unknown) => {
+          const doc = d as Record<string, unknown>;
+          return `<li>${String(doc.originalName ?? doc.name ?? "-")} (${String(doc.storagePath ?? doc.status ?? "-")})</li>`;
+        })
+        .join("")
+    : "<li>Немає прикріплених файлів</li>";
+
+  const html = `
+<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
+  <h2 style="color:#ff1e1e;border-bottom:2px solid #ff1e1e;padding-bottom:8px">
+    🚘 Нова заявка — Автошкола «Лідер»
+  </h2>
+  <table style="width:100%;border-collapse:collapse;font-size:14px">
+    <tr><td style="padding:6px 0;color:#666;width:140px">ID заявки</td><td style="padding:6px 0;font-weight:bold">${leadId}</td></tr>
+    <tr><td style="padding:6px 0;color:#666">Ім'я</td><td style="padding:6px 0;font-weight:bold">${String(lead.name ?? "-")}</td></tr>
+    <tr><td style="padding:6px 0;color:#666">Телефон</td><td style="padding:6px 0"><a href="tel:${String(lead.phone ?? "").replace(/\D/g, "")}">${String(lead.phone ?? "-")}</a></td></tr>
+    ${lead.email ? `<tr><td style="padding:6px 0;color:#666">Email</td><td style="padding:6px 0">${String(lead.email)}</td></tr>` : ""}
+    <tr><td style="padding:6px 0;color:#666">Місто</td><td style="padding:6px 0">${String(lead.city ?? "-")}</td></tr>
+    <tr><td style="padding:6px 0;color:#666">Філія</td><td style="padding:6px 0">${String(lead.branchId ?? "-")}</td></tr>
+    <tr><td style="padding:6px 0;color:#666">Категорія</td><td style="padding:6px 0;font-weight:bold">${String(lead.category ?? "-")}</td></tr>
+    <tr><td style="padding:6px 0;color:#666">Спосіб зв'язку</td><td style="padding:6px 0">${String(lead.preferredContactMethod ?? lead.contactMethod ?? "-")}</td></tr>
+    <tr><td style="padding:6px 0;color:#666">Джерело</td><td style="padding:6px 0">${String(lead.source ?? "-")}</td></tr>
+    ${referral ? `<tr><td style="padding:6px 0;color:#666">Реферал</td><td style="padding:6px 0">${String(referral)}</td></tr>` : ""}
+    ${lead.utmSource ? `<tr><td style="padding:6px 0;color:#666">UTM Source</td><td style="padding:6px 0">${String(lead.utmSource)}</td></tr>` : ""}
+    ${lead.page ? `<tr><td style="padding:6px 0;color:#666">Сторінка</td><td style="padding:6px 0">${String(lead.page)}</td></tr>` : ""}
+    <tr><td style="padding:6px 0;color:#666">Мова</td><td style="padding:6px 0">${String(lead.language ?? "uk")}</td></tr>
+    <tr><td style="padding:6px 0;color:#666">Дата</td><td style="padding:6px 0">${new Date(String(lead.createdAt ?? "")).toLocaleString("uk-UA", { timeZone: "Europe/Kyiv" })}</td></tr>
+  </table>
+  ${lead.message ? `<div style="margin-top:16px;padding:12px;background:#f4f4f4;border-radius:8px"><p style="color:#666;font-size:12px;margin:0 0 4px">Коментар</p><p style="margin:0;font-size:14px">${String(lead.message)}</p></div>` : ""}
+  <div style="margin-top:16px">
+    <p style="color:#666;font-size:12px;margin:0 0 6px">Документи</p>
+    <ul style="margin:0;padding-left:20px;font-size:13px">${docList}</ul>
+  </div>
+  <p style="margin-top:24px;font-size:12px;color:#aaa">Автошкола «Лідер» · lider.bdslab.net</p>
+</div>`.trim();
+
+  try {
+    await transport.sendMail({
+      from,
+      to,
+      cc,
+      subject: `Нова заявка з сайту Лідер — ${String(lead.name ?? "-")}, ${String(lead.category ?? "-")}, ${String(lead.city ?? "-")}`,
+      html
+    });
+    console.log(`Lead email sent for ${leadId} to ${to}`);
+  } catch (error) {
+    console.error("Lead email send failed:", error);
   }
 }
 

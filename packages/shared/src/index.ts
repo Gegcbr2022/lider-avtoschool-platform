@@ -20,7 +20,11 @@ export const siteBrand = {
   shortName: "Лідер",
   email: "lideravtoshkola@gmail.com",
   defaultLocale: "uk-UA",
-  phoneLabel: "050 738 30 33"
+  phoneLabel: "050 738 30 33",
+  phoneKyiv: "0507383033",
+  phoneSloviansk: "0508050838",
+  phoneKramatorsk: "0504233022",
+  phoneDnipro: "0504229202"
 } as const;
 
 export const leadStatuses: LeadStatus[] = [
@@ -69,38 +73,38 @@ export const branches: Branch[] = [
   {
     id: "kyiv",
     city: "Київ",
-    address: "вул. Борщагівська, 154А, ТРК Аркадія",
+    address: "вул. Борщагівська, 154А, ТРК «Аркадія», 2-й поверх",
     phone: "0507383033",
-    mapQuery: "Київ Борщагівська 154А ТРК Аркадія",
+    mapQuery: "Київ вул. Борщагівська 154А ТРК Аркадія",
     workingHours: "Пн-Сб 09:00-18:00",
-    routeUrl: "https://maps.google.com/?q=Київ Борщагівська 154А ТРК Аркадія"
+    routeUrl: "https://maps.google.com/?q=Київ+Борщагівська+154А+ТРК+Аркадія"
   },
   {
     id: "sloviansk",
     city: "Слов'янськ",
-    address: "вул. Центральна, 39",
+    address: "вул. Центральна, 39 (Дім Побуту, 1-й поверх)",
     phone: "0508050838",
-    mapQuery: "Слов'янськ Центральна 39",
+    mapQuery: "Слов'янськ вул. Центральна 39",
     workingHours: "Пн-Сб 09:00-18:00",
-    routeUrl: "https://maps.google.com/?q=Слов'янськ Центральна 39"
+    routeUrl: "https://maps.google.com/?q=Слов'янськ+Центральна+39"
   },
   {
     id: "kramatorsk",
     city: "Краматорськ",
-    address: "вул. Ювілейна, 56",
+    address: "вул. Ювілейна, буд. 56",
     phone: "0504233022",
-    mapQuery: "Краматорськ Ювілейна 56",
+    mapQuery: "Краматорськ вул. Ювілейна 56",
     workingHours: "Пн-Сб 09:00-18:00",
-    routeUrl: "https://maps.google.com/?q=Краматорськ Ювілейна 56"
+    routeUrl: "https://maps.google.com/?q=Краматорськ+Ювілейна+56"
   },
   {
     id: "dnipro",
     city: "Дніпро",
-    address: "вул. Олександра Поля, 82Г",
+    address: "вул. Олександра Поля, 82Г, 3-й поверх, кім. 11",
     phone: "0504229202",
-    mapQuery: "Дніпро Олександра Поля 82Г",
+    mapQuery: "Дніпро вул. Олександра Поля 82Г",
     workingHours: "Пн-Сб 09:00-18:00",
-    routeUrl: "https://maps.google.com/?q=Дніпро Олександра Поля 82Г"
+    routeUrl: "https://maps.google.com/?q=Дніпро+Олександра+Поля+82Г"
   },
   {
     id: "dobropillia",
@@ -109,7 +113,7 @@ export const branches: Branch[] = [
     phone: "0504233032",
     mapQuery: "Добропілля проспект Шевченка 1А",
     workingHours: "Пн-Сб 09:00-18:00",
-    routeUrl: "https://maps.google.com/?q=Добропілля проспект Шевченка 1А"
+    routeUrl: "https://maps.google.com/?q=Добропілля+проспект+Шевченка+1А"
   }
 ];
 

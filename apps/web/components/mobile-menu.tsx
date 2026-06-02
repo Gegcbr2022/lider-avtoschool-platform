@@ -14,10 +14,17 @@ type NavItem = {
   label: string;
 };
 
+const menuCopy: Record<Locale, { quickNav: string; apply: string; callback: string; language: string; close: string; open: string }> = {
+  uk: { quickNav: "Швидка навігація", apply: "Залишити заявку", callback: "Зворотний дзвінок", language: "Мова", close: "Закрити меню", open: "Відкрити меню" },
+  ru: { quickNav: "Быстрая навигация", apply: "Оставить заявку", callback: "Обратный звонок", language: "Язык", close: "Закрыть меню", open: "Открыть меню" },
+  en: { quickNav: "Navigation", apply: "Send request", callback: "Callback", language: "Language", close: "Close menu", open: "Open menu" }
+};
+
 export function MobileMenu({ navItems, activeLocale }: { navItems: readonly NavItem[]; activeLocale: Locale }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const telegram = socialLinks.find((item) => item.id === "telegram");
+  const mc = menuCopy[activeLocale] ?? menuCopy.uk;
   const whatsapp = socialLinks.find((item) => item.id === "whatsapp");
 
   useEffect(() => {
@@ -44,7 +51,7 @@ export function MobileMenu({ navItems, activeLocale }: { navItems: readonly NavI
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        aria-label="Відкрити меню"
+        aria-label={mc.open}
         className="inline-flex h-12 w-12 items-center justify-center rounded-[16px] border border-lider-line bg-white text-lider-graphite shadow-sm transition hover:border-lider-red hover:text-lider-red lg:hidden"
       >
         <Menu size={22} />
@@ -77,7 +84,7 @@ export function MobileMenu({ navItems, activeLocale }: { navItems: readonly NavI
                       <button
                         type="button"
                         onClick={close}
-                        aria-label="Закрити меню"
+                        aria-label={mc.close}
                         className="tap-target inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f4f4f4] text-lider-graphite transition hover:bg-lider-graphite hover:text-white"
                       >
                         <X size={20} />
@@ -85,7 +92,7 @@ export function MobileMenu({ navItems, activeLocale }: { navItems: readonly NavI
                     </div>
                     <div className="flex-1 overflow-y-auto p-4">
                       <p className="mb-3 text-xs font-black uppercase tracking-[0.16em] text-lider-muted">
-                        Швидка навігація
+                        {mc.quickNav}
                       </p>
                       <div className="grid gap-2">
                         {navItems.map((item) => (
@@ -101,7 +108,7 @@ export function MobileMenu({ navItems, activeLocale }: { navItems: readonly NavI
                       </div>
                       <div className="mt-5 grid gap-3">
                         <Link href="#signup" onClick={close} className="red-cta tap-target px-5 py-4 text-base">
-                          Залишити заявку
+                          {mc.apply}
                           <Send size={18} />
                         </Link>
                         <a
@@ -110,7 +117,7 @@ export function MobileMenu({ navItems, activeLocale }: { navItems: readonly NavI
                           className="tap-target inline-flex items-center justify-center gap-2 rounded-[16px] bg-[#1a1a1a] px-5 py-3 text-sm font-black text-white transition hover:bg-[#2a2a2a]"
                         >
                           <MessageCircle size={18} />
-                          Зворотний дзвінок
+                          {mc.callback}
                         </a>
                         <div className="grid grid-cols-2 gap-2">
                           {telegram ? (
@@ -139,7 +146,7 @@ export function MobileMenu({ navItems, activeLocale }: { navItems: readonly NavI
                         <div className="rounded-[18px] border border-lider-line bg-lider-background p-3">
                           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-lider-muted">
                             <Languages size={16} aria-hidden />
-                            Мова
+                            {mc.language}
                           </div>
                           <div className="mt-3">
                             <LanguageSwitcher activeLocale={activeLocale} compact />

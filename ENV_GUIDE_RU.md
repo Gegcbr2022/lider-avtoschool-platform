@@ -29,6 +29,11 @@
 | `NEXT_PUBLIC_TIKTOK_PIXEL_ID` | TikTok Ads Manager | Vercel | Нет | Без него нет TikTok пикселя |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Cloudflare Dashboard | Vercel | Нет | Без него нет CAPTCHA |
 | `TURNSTILE_SECRET_KEY` | Cloudflare Dashboard | Vercel + Firebase | **ДА** | Без него CAPTCHA не валидируется |
+| `LEAD_EMAIL_ENABLED` | Вручную | Firebase Functions | Нет | `false` → email выключен |
+| `LEAD_EMAIL_TO` | Ваш email | Firebase Functions | Нет | Без него email не отправится |
+| `RESEND_API_KEY` | resend.com | Firebase Functions | **ДА** | Нужен если PROVIDER=resend |
+| `SMTP_HOST` | Хостинг / Gmail | Firebase Functions | Нет | Нужен если PROVIDER=smtp |
+| `SMTP_USER` / `SMTP_PASS` | Хостинг / Gmail | Firebase Functions | **ДА** | Нужны если PROVIDER=smtp |
 
 ---
 
@@ -321,6 +326,87 @@ firebase functions:secrets:access TELEGRAM_BOT_TOKEN
 
 ---
 
+## Email-уведомления о заявках
+
+Новые заявки могут приходить не только в Telegram, но и на email.
+
+### Вариант 1 — Resend (рекомендуется, бесплатный tier до 3000/мес)
+
+1. Зарегистрируйся на [resend.com](https://resend.com/)
+2. Создай API Key → скопируй
+3. Добавь в Firebase Functions:
+
+```bash
+firebase functions:secrets:set RESEND_API_KEY
+```
+
+4. Установи переменные в Firebase Functions env:
+
+```bash
+firebase functions:config:set \
+  lead_email.enabled=true \
+  lead_email.to=owner@example.com \
+  lead_email.from="Лідер CRM <noreply@yourdomain.com>"
+```
+
+Или добавь в `.env` локально и в Firebase через `functions:secrets:set`:
+
+```env
+LEAD_EMAIL_ENABLED=true
+LEAD_EMAIL_TO=owner@example.com
+LEAD_EMAIL_FROM=noreply@yourdomain.com
+RESEND_API_KEY=re_xxxx
+```
+
+### Вариант 2 — SMTP (Gmail, собственный хостинг)
+
+Для Gmail нужно App Password (двухфакторная аутентификация):
+1. myaccount.google.com → Security → App passwords → Mail
+2. Скопируй пароль приложения
+
+```env
+LEAD_EMAIL_ENABLED=true
+LEAD_EMAIL_TO=owner@gmail.com
+LEAD_EMAIL_FROM="Лідер CRM <your@gmail.com>"
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_USER=your@gmail.com
+SMTP_PASS=xxxx xxxx xxxx xxxx
+```
+
+### Адреса получателей по филиалам
+
+Можно задать разный email для каждого филиала:
+
+```env
+LEAD_EMAIL_TO=general@example.com       # общий fallback
+LEAD_EMAIL_TO_KYIV=kyiv@example.com
+LEAD_EMAIL_TO_SLOVIANSK=sloviansk@example.com
+LEAD_EMAIL_TO_KRAMATORSK=kramatorsk@example.com
+LEAD_EMAIL_TO_DNIPRO=dnipro@example.com
+```
+
+Если филиальный email не задан — заявка приходит на `LEAD_EMAIL_TO`.
+
+### Как добавить email ENV в Firebase Functions
+
+```bash
+firebase functions:secrets:set RESEND_API_KEY
+# или
+firebase functions:secrets:set SMTP_PASS
+
+# Обычные (несекретные) переменные — через environment config:
+firebase functions:config:set \
+  lead_email.enabled=true \
+  lead_email.to="owner@example.com" \
+  lead_email.from="noreply@yourdomain.com"
+```
+
+Но проще — добавить всё как env переменные напрямую в Functions в Firebase Console:
+Firebase Console → Functions → `api` → Configuration → Add variable.
+
+---
+
 ## Минимум для запуска в production
 
 ```env
@@ -336,4 +422,9 @@ OPENAI_API_KEY=...
 TELEGRAM_BOT_TOKEN=...
 TELEGRAM_LOG_CHAT_ID=...
 TELEGRAM_DEFAULT_START_PARAM=AYYUTE
+
+# Firebase Functions (дополнительно к Telegram)
+LEAD_EMAIL_ENABLED=true
+LEAD_EMAIL_TO=owner@example.com
+RESEND_API_KEY=...
 ```

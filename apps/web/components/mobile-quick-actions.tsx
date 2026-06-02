@@ -1,10 +1,17 @@
 "use client";
 
-import { FileUp, MapPinned, MessageCircle } from "lucide-react";
+import { defaultLocale, type Locale } from "@lider/shared";
+import { Send } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-export function MobileQuickActions() {
+const ctaLabel: Record<Locale, string> = {
+  uk: "Залишити заявку",
+  ru: "Оставить заявку",
+  en: "Apply now"
+};
+
+export function MobileQuickActions({ activeLocale = defaultLocale }: { activeLocale?: Locale }) {
   const [isSignupVisible, setIsSignupVisible] = useState(false);
 
   useEffect(() => {
@@ -16,7 +23,7 @@ export function MobileQuickActions() {
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        setIsSignupVisible(entry.isIntersecting && entry.intersectionRatio > 0.16);
+        setIsSignupVisible(Boolean(entry?.isIntersecting && (entry.intersectionRatio ?? 0) > 0.16));
       },
       { threshold: [0, 0.16, 0.36] }
     );
@@ -25,48 +32,30 @@ export function MobileQuickActions() {
     return () => observer.disconnect();
   }, []);
 
+  const label = ctaLabel[activeLocale] ?? ctaLabel.uk;
+
   return (
     <div
-      className={`fixed inset-x-3 bottom-3 z-40 rounded-[22px] border border-white/70 bg-white/94 p-2 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl transition duration-200 md:hidden ${
+      className={`safe-bottom fixed inset-x-3 bottom-3 z-40 rounded-[20px] border border-white/70 bg-white/95 p-2 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl transition duration-200 md:hidden ${
         isSignupVisible ? "pointer-events-none translate-y-4 opacity-0" : "translate-y-0 opacity-100"
       }`}
     >
-      <div className="grid grid-cols-5 gap-1.5">
+      <div className="flex items-center gap-2">
         <Link
           href="#signup"
-          className="tap-target inline-flex flex-col items-center justify-center gap-1 rounded-[15px] bg-[#1a1a1a] px-1 py-2 text-[10px] font-bold text-white"
+          className="tap-target red-cta flex flex-1 items-center justify-center gap-2 rounded-[14px] px-4 py-3 text-sm font-black"
         >
-          <MessageCircle size={17} />
-          Callback
+          {label}
         </Link>
         <a
           href="https://t.me/LiderDriveBot?start=AYYUTE"
-          className="tap-target inline-flex flex-col items-center justify-center gap-1 rounded-[15px] bg-[#229ED9] px-1 py-2 text-[10px] font-bold text-white"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Telegram"
+          className="tap-target inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-[#229ED9] text-white"
         >
-          <MessageCircle size={17} />
-          TG
+          <Send size={18} aria-hidden />
         </a>
-        <a
-          href="whatsapp://send/?phone=380504233022"
-          className="tap-target inline-flex flex-col items-center justify-center gap-1 rounded-[15px] bg-[#25D366] px-1 py-2 text-[10px] font-bold text-white"
-        >
-          <MessageCircle size={17} />
-          WA
-        </a>
-        <Link
-          href="#branches"
-          className="tap-target inline-flex flex-col items-center justify-center gap-1 rounded-[15px] bg-[#f4f4f4] px-1 py-2 text-[10px] font-bold text-lider-graphite"
-        >
-          <MapPinned size={17} />
-          Філіал
-        </Link>
-        <Link
-          href="#documents"
-          className="tap-target inline-flex flex-col items-center justify-center gap-1 rounded-[15px] bg-lider-red px-1 py-2 text-[10px] font-bold text-white"
-        >
-          <FileUp size={17} />
-          Докум.
-        </Link>
       </div>
     </div>
   );

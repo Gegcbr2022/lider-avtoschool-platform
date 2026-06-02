@@ -173,6 +173,8 @@ const sectionCopy: Record<
     footerPrivacy: string;
     footerTerms: string;
     nearestBranch: string;
+    servicesViewAll: string;
+    servicesViewAllHint: string;
   }
 > = {
   uk: {
@@ -228,7 +230,9 @@ const sectionCopy: Record<
     footerDesc: "Курси водіння, практика, підготовка до іспиту та консультація щодо вибору категорії.",
     footerPrivacy: "Конфіденційність",
     footerTerms: "Умови",
-    nearestBranch: "Найближчий філіал"
+    nearestBranch: "Найближчий філіал",
+    servicesViewAll: "Усі категорії та ціни",
+    servicesViewAllHint: "Детальні програми, строки і умови перепідготовки"
   },
   ru: {
     contactTitle: "Быстрый контакт там, где вам удобно",
@@ -283,7 +287,9 @@ const sectionCopy: Record<
     footerDesc: "Курсы вождения, практика, подготовка к экзамену и консультация по выбору категории.",
     footerPrivacy: "Конфиденциальность",
     footerTerms: "Условия",
-    nearestBranch: "Ближайший филиал"
+    nearestBranch: "Ближайший филиал",
+    servicesViewAll: "Все категории и цены",
+    servicesViewAllHint: "Подробные программы, сроки и условия переподготовки"
   },
   en: {
     contactTitle: "Quick contact wherever it's convenient",
@@ -338,7 +344,9 @@ const sectionCopy: Record<
     footerDesc: "Driving courses, practice, exam preparation and category consultation.",
     footerPrivacy: "Privacy",
     footerTerms: "Terms",
-    nearestBranch: "Nearest branch"
+    nearestBranch: "Nearest branch",
+    servicesViewAll: "All categories & prices",
+    servicesViewAllHint: "Full programmes, duration and retraining conditions"
   }
 };
 
@@ -706,86 +714,69 @@ export default async function HomePage({
 
         <section id="services" className="motion-section bg-white py-12 sm:py-16 lg:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
-            <SectionHeader
-              eyebrow={sc.servicesEyebrow}
-              title={sc.servicesTitle}
-              description={sc.servicesDesc}
-            />
-            <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {services.map((service) => (
+            <div className="flex flex-wrap items-end justify-between gap-4">
+              <SectionHeader
+                eyebrow={sc.servicesEyebrow}
+                title={sc.servicesTitle}
+                description={sc.servicesDesc}
+              />
+              <a
+                href={withLocale("/categories", activeLocale)}
+                className="hidden shrink-0 items-center gap-2 rounded-full border border-lider-line px-5 py-3 text-sm font-black text-lider-graphite transition hover:border-lider-red hover:text-lider-red lg:inline-flex"
+              >
+                {sc.servicesViewAll}
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </a>
+            </div>
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {services.filter((s) => !s.retraining).slice(0, 4).map((service) => (
                 <article
                   key={service.id}
-                  className="group flex min-h-[260px] flex-col justify-between rounded-[24px] border border-lider-line bg-white p-5 shadow-soft transition hover:-translate-y-1 hover:border-lider-red/40 hover:shadow-premium sm:p-6"
+                  className="flex flex-col justify-between rounded-[24px] border border-lider-line bg-white p-5 shadow-soft transition hover:-translate-y-1 hover:border-lider-red/40 hover:shadow-premium"
                 >
-                  <div className="space-y-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-black uppercase tracking-[0.18em] text-lider-red">
-                          {service.category}
-                        </p>
-                        <h3 className="mt-2 text-2xl font-black text-lider-graphite">
-                          {service.title}
-                        </h3>
-                      </div>
-                      <span className="rounded-2xl bg-lider-background px-3 py-2 text-sm font-black text-lider-red">
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-sm font-black uppercase tracking-[0.18em] text-lider-red">
+                        {service.category}
+                      </p>
+                      <span className="rounded-full bg-lider-background px-2.5 py-1 text-xs font-black text-lider-graphite">
                         {service.duration}
                       </span>
                     </div>
-                    <p className="text-sm font-semibold leading-6 text-lider-muted">
+                    <h3 className="mt-2 text-xl font-black text-lider-graphite">{service.title}</h3>
+                    <p className="mt-3 text-sm font-semibold leading-6 text-lider-muted line-clamp-3">
                       {service.summary}
                     </p>
-                    <div className="grid gap-2">
-                      {service.outcomes.map((item) => (
-                        <span
-                          key={item}
-                          className="inline-flex items-center gap-2 rounded-full bg-lider-background px-3 py-2 text-xs font-black text-lider-graphite"
-                        >
-                          <CheckCircle2 className="h-4 w-4 text-lider-red" aria-hidden />
-                          {item}
-                        </span>
-                      ))}
-                    </div>
-                    {service.condition ? (
-                      <p className="rounded-2xl border border-lider-red/20 bg-[#fff7f7] px-4 py-3 text-xs font-bold leading-5 text-lider-muted">
-                        {service.condition}
-                      </p>
-                    ) : null}
                   </div>
-                  <div className="mt-6 space-y-4">
-                    <div className="flex items-end justify-between gap-3">
-                      <div>
-                        <p className="text-xs font-black uppercase tracking-[0.16em] text-lider-muted">
-                          {sc.priceLabel}
-                        </p>
-                        <p className="text-3xl font-black text-lider-graphite">
-                          від {service.priceFrom.toLocaleString("uk-UA")} грн
-                        </p>
-                      </div>
-                      <Star className="h-6 w-6 fill-lider-red text-lider-red" aria-hidden />
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <a
-                        href="#signup"
-                        className="tap-target red-cta inline-flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-black"
-                      >
-                        {sc.serviceCta}
-                      </a>
-                      <a
-                        href={telegram?.href ?? "#signup"}
-                        target={telegram ? "_blank" : undefined}
-                        rel={telegram ? "noreferrer" : undefined}
-                        className="tap-target inline-flex items-center justify-center rounded-2xl border border-lider-line px-4 py-3 text-sm font-black text-lider-graphite transition hover:border-lider-red hover:text-lider-red"
-                      >
-                        Telegram
-                      </a>
-                    </div>
+                  <div className="mt-5">
+                    <p className="text-xs font-black uppercase tracking-[0.14em] text-lider-muted">
+                      {sc.priceLabel}
+                    </p>
+                    <p className="mt-1 text-2xl font-black text-lider-graphite">
+                      від {service.priceFrom.toLocaleString("uk-UA")} грн
+                    </p>
+                    <a
+                      href="#signup"
+                      className="tap-target red-cta mt-4 flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-black"
+                    >
+                      {sc.serviceCta}
+                    </a>
                   </div>
                 </article>
               ))}
             </div>
-            <p className="mt-5 rounded-2xl bg-lider-background px-4 py-3 text-sm font-semibold leading-6 text-lider-muted">
-              * {priceFootnote}
-            </p>
+            <div className="mt-6 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-semibold leading-6 text-lider-muted">
+                * {priceFootnote}
+              </p>
+              <a
+                href={withLocale("/categories", activeLocale)}
+                className="tap-target inline-flex items-center justify-center gap-2 rounded-2xl border border-lider-line bg-lider-background px-5 py-3 text-sm font-black text-lider-graphite transition hover:border-lider-red hover:text-lider-red"
+              >
+                {sc.servicesViewAll}
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </a>
+            </div>
           </div>
         </section>
 
@@ -1086,9 +1077,9 @@ export default async function HomePage({
         <section id="graduates" className="motion-section bg-lider-background py-12 sm:py-16 lg:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <SectionHeader
-              eyebrow="Відгуки"
-              title="Учні довіряють не обіцянкам, а спокійному процесу"
-              description="Що найчастіше цінують ті, хто пройшов навчання: зрозумілий план, підтримка менеджера, адекватний інструктор і жодного хаосу з документами."
+              eyebrow={sc.graduatesEyebrow}
+              title={sc.graduatesTitle}
+              description={sc.graduatesDesc}
             />
             <div className="mt-8">
               <ReviewsCarousel />
@@ -1234,17 +1225,22 @@ export default async function HomePage({
             ))}
           </div>
           <div className="space-y-3">
-            <a
-              href={`tel:${primaryPhoneHref}`}
-              className="tap-target flex items-center justify-center rounded-2xl bg-white px-4 py-3 text-sm font-black text-lider-graphite"
-            >
-              {siteBrand.phoneLabel}
-            </a>
+            {telegram ? (
+              <a
+                href={telegram.href}
+                target="_blank"
+                rel="noreferrer"
+                className="tap-target flex items-center justify-center gap-2 rounded-2xl bg-[#229ED9] px-4 py-3 text-sm font-black text-white"
+              >
+                <Send className="h-4 w-4" aria-hidden />
+                Telegram
+              </a>
+            ) : null}
             <a
               href="#signup"
               className="tap-target red-cta flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-black"
             >
-              Записатися
+              {copy.primaryCta}
             </a>
           </div>
         </div>
