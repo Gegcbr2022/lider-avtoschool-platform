@@ -23,7 +23,10 @@ const config: ExpoConfig = {
     typedRoutes: true
   },
   extra: {
-    apiUrl: process.env.API_URL ?? "http://localhost:5001/lider-avtoschool-dev/europe-west1/api"
+    apiUrl: process.env.API_URL ?? "http://localhost:5001/lider-avtoschool-dev/europe-west1/api",
+    eas: {
+      projectId: "74bb8f9a-fc35-4016-b110-a17da4dcd31c"
+    }
   }
 };
 
