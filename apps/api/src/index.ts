@@ -50,6 +50,7 @@ app.get("/health/email", (_request, response) => {
     LEAD_EMAIL_TO: process.env.LEAD_EMAIL_TO ? "✓ set" : "(not set)",
     LEAD_EMAIL_FROM: process.env.LEAD_EMAIL_FROM ? "✓ set" : "(not set)",
     LEAD_EMAIL_CC: process.env.LEAD_EMAIL_CC ? "✓ set" : "(empty — ok)",
+    STORAGE_BUCKET: process.env.STORAGE_BUCKET ?? "(not set)",
     RESEND_API_KEY: process.env.RESEND_API_KEY ? "✓ set" : "(not set)",
     SMTP_HOST: process.env.SMTP_HOST ?? "(not set)",
     SMTP_PORT: process.env.SMTP_PORT ?? "(not set)",
@@ -548,7 +549,7 @@ async function sendDocumentsToTelegram(
   let bucket: ReturnType<ReturnType<typeof getStorage>["bucket"]>;
 
   try {
-    const bucketName = process.env.FIREBASE_STORAGE_BUCKET;
+    const bucketName = process.env.STORAGE_BUCKET;
     bucket = getStorage().bucket(bucketName);
   } catch (err) {
     console.warn("Firebase Storage not available, skipping document upload to Telegram:", err);
