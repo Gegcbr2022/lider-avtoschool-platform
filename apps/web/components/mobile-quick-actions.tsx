@@ -2,10 +2,35 @@
 
 import { MapPinned, MessageCircle, PhoneCall, Send } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 export function MobileQuickActions() {
+  const [isSignupVisible, setIsSignupVisible] = useState(false);
+
+  useEffect(() => {
+    const signupSection = document.querySelector("#signup");
+
+    if (!signupSection) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsSignupVisible(entry.isIntersecting && entry.intersectionRatio > 0.16);
+      },
+      { threshold: [0, 0.16, 0.36] }
+    );
+
+    observer.observe(signupSection);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div className="fixed inset-x-3 bottom-3 z-40 rounded-[22px] border border-white/70 bg-white/94 p-2 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl md:hidden">
+    <div
+      className={`fixed inset-x-3 bottom-3 z-40 rounded-[22px] border border-white/70 bg-white/94 p-2 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl transition duration-200 md:hidden ${
+        isSignupVisible ? "pointer-events-none translate-y-4 opacity-0" : "translate-y-0 opacity-100"
+      }`}
+    >
       <div className="grid grid-cols-5 gap-1.5">
         <a
           href="tel:0507383033"

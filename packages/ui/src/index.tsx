@@ -45,9 +45,9 @@ export function Button({
 
 export function MetricCard({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
-    <article className="rounded-[22px] border border-[#e5e5e5] bg-white p-5 shadow-sm">
+    <article className="metric-card rounded-[22px] border border-[#e5e5e5] bg-white p-5 shadow-sm">
       <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#666666]">{label}</p>
-      <strong className="mt-2 block text-2xl font-semibold text-[#171b1a]">{value}</strong>
+      <strong className="metric-value mt-2 block text-2xl font-semibold text-[#171b1a]">{value}</strong>
       <span className="mt-1 block text-sm text-[#666666]">{detail}</span>
     </article>
   );

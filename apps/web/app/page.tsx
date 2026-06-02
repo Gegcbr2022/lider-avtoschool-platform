@@ -28,10 +28,9 @@ import {
   Smartphone,
   Star,
   Trophy,
-  UsersRound,
 } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
+import { BrandLogo } from "../components/brand-logo";
 import { BranchSelector } from "../components/branch-selector";
 import { ConversionWidgets } from "../components/conversion-widgets";
 import { FaqAccordion } from "../components/faq-accordion";
@@ -39,6 +38,7 @@ import { GraduateShowcase } from "../components/graduate-showcase";
 import { LeadForm } from "../components/lead-form";
 import { MobileMenu } from "../components/mobile-menu";
 import { ReviewsCarousel } from "../components/reviews-carousel";
+import { SocialIcon } from "../components/social-icon";
 import { contentPages } from "../lib/site-pages";
 
 const navItems = [
@@ -107,13 +107,38 @@ const storyPhotos = [
   },
 ];
 
-const socialVisuals: Record<string, string> = {
-  facebook: "bg-[#1877F2]",
-  instagram: "bg-gradient-to-br from-[#f58529] via-[#dd2a7b] to-[#515bd4]",
-  youtube: "bg-[#FF0000]",
-  telegram: "bg-[#229ED9]",
-  whatsapp: "bg-[#25D366]",
-};
+const learningGallery = [
+  {
+    src: "/images/car-interior-lesson.png",
+    title: "Практика в салоні",
+    text: "Інструктор показує дії на панелі й допомагає учню відчути автомобіль до виїзду в місто.",
+  },
+  {
+    src: "/images/exam-road-signs.png",
+    title: "Знаки та іспит",
+    text: "Пояснюємо дорожні знаки, вправи на майданчику й типові питання без зайвого тиску.",
+  },
+  {
+    src: "/images/license-success.png",
+    title: "Посвідчення в руках",
+    text: "Фінальна мета навчання - впевнено скласти іспит і отримати водійське посвідчення.",
+  },
+  {
+    src: "/images/hero-driving-school.png",
+    title: "Перший виїзд",
+    text: "Поступовий старт для новачків: маршрут, посадка, дзеркала, базові маневри й спокій.",
+  },
+  {
+    src: "/images/practice-ground-premium.png",
+    title: "Навчальний майданчик",
+    text: "Відпрацьовуємо паркування, габарити, старт і впевненість перед міським рухом.",
+  },
+  {
+    src: "/images/graduates-premium.png",
+    title: "Щасливі випускники",
+    text: "Після навчання важлива не тільки оцінка, а й відчуття готовності самостійно їхати.",
+  },
+];
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -171,19 +196,7 @@ export default function HomePage() {
 
       <header className="sticky top-0 z-40 border-b border-lider-line bg-white/95 backdrop-blur-xl">
         <div className="mx-auto flex min-h-[72px] max-w-7xl items-center justify-between px-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-3" aria-label="На головну">
-            <span className="grid h-11 w-11 place-items-center rounded-2xl bg-lider-red text-lg font-black text-white shadow-[0_18px_45px_rgba(255,30,30,0.22)]">
-              Л
-            </span>
-            <span className="leading-tight">
-              <span className="block text-base font-black uppercase tracking-wide text-lider-graphite">
-                Лідер
-              </span>
-              <span className="block text-xs font-semibold text-lider-muted">
-                автошкола у вашому місті
-              </span>
-            </span>
-          </Link>
+          <BrandLogo priority />
 
           <nav className="hidden items-center gap-1 lg:flex" aria-label="Основна навігація">
             {navItems.map((item) => (
@@ -217,7 +230,7 @@ export default function HomePage() {
       </header>
 
       <main className="overflow-hidden bg-white pb-24 text-lider-graphite md:pb-0">
-        <section className="relative border-b border-lider-line bg-[radial-gradient(circle_at_top_right,rgba(255,30,30,0.13),transparent_30%),linear-gradient(180deg,#ffffff_0%,#f5f5f5_100%)]">
+        <section className="motion-section relative border-b border-lider-line bg-[radial-gradient(circle_at_top_right,rgba(255,30,30,0.13),transparent_30%),linear-gradient(180deg,#ffffff_0%,#f5f5f5_100%)]">
           <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-[1.02fr_0.98fr] lg:items-center lg:py-16">
             <div className="space-y-6">
               <StatusPill tone="success">Підготовка до прав A, B, C, D, E</StatusPill>
@@ -228,6 +241,7 @@ export default function HomePage() {
                   width={900}
                   height={650}
                   priority
+                  sizes="100vw"
                   className="aspect-[16/10] w-full object-cover"
                 />
                 <div className="absolute bottom-3 left-3 rounded-2xl bg-white px-4 py-3 shadow-soft">
@@ -312,6 +326,7 @@ export default function HomePage() {
                   width={1200}
                   height={900}
                   priority
+                  sizes="48vw"
                   className="aspect-[4/3] w-full object-cover"
                 />
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/72 to-transparent p-4 sm:p-6">
@@ -335,7 +350,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="border-b border-lider-line bg-white py-6 sm:py-8">
+        <section className="motion-section border-b border-lider-line bg-white py-6 sm:py-8">
           <div className="mx-auto grid max-w-7xl gap-3 px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
             {socialProofStats.map((stat) => (
               <MetricCard key={stat.value} value={stat.value} label={stat.label} detail={stat.detail} />
@@ -343,7 +358,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="bg-lider-background py-10 sm:py-14">
+        <section className="motion-section bg-lider-background py-10 sm:py-14">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <div className="grid gap-4 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
               <SectionHeader
@@ -356,23 +371,12 @@ export default function HomePage() {
                   <a
                     key={social.id}
                     href={social.href}
+                    aria-label={`Відкрити ${social.label} автошколи Лідер`}
+                    target={social.href.startsWith("http") ? "_blank" : undefined}
+                    rel={social.href.startsWith("http") ? "noreferrer" : undefined}
                     className="group rounded-3xl border border-white bg-white p-4 shadow-soft transition hover:-translate-y-1 hover:shadow-premium"
                   >
-                    <span
-                      className={`grid h-12 w-12 place-items-center rounded-2xl text-white shadow-lg ${
-                        socialVisuals[social.id] ?? "bg-lider-graphite"
-                      }`}
-                    >
-                      {social.id === "youtube" ? (
-                        <ArrowRight className="h-5 w-5 fill-current" aria-hidden />
-                      ) : social.id === "facebook" || social.id === "instagram" ? (
-                        <UsersRound className="h-5 w-5" aria-hidden />
-                      ) : social.id === "telegram" ? (
-                        <Send className="h-5 w-5" aria-hidden />
-                      ) : (
-                        <MessageCircle className="h-5 w-5" aria-hidden />
-                      )}
-                    </span>
+                    <SocialIcon id={social.id} label={social.label} />
                     <span className="mt-4 block text-sm font-black text-lider-graphite">
                       {social.label}
                     </span>
@@ -386,7 +390,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="services" className="bg-white py-12 sm:py-16 lg:py-20">
+        <section id="services" className="motion-section bg-white py-12 sm:py-16 lg:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <SectionHeader
               eyebrow="Категорії та ціни"
@@ -450,7 +454,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="benefits" className="bg-lider-graphite py-12 text-white sm:py-16 lg:py-20">
+        <section id="benefits" className="motion-section bg-lider-graphite py-12 text-white sm:py-16 lg:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <div className="grid gap-8 lg:grid-cols-[0.75fr_1.25fr] lg:items-start">
               <div className="space-y-5">
@@ -488,7 +492,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="bg-white py-12 sm:py-16 lg:py-20">
+        <section className="motion-section bg-white py-12 sm:py-16 lg:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <SectionHeader
               eyebrow="Як проходить навчання"
@@ -506,6 +510,7 @@ export default function HomePage() {
                     alt={photo.title}
                     width={900}
                     height={700}
+                    sizes="(max-width: 1024px) 100vw, 33vw"
                     className="aspect-[4/3] w-full object-cover"
                   />
                   <div className="p-5">
@@ -520,7 +525,45 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="bg-lider-background py-12 sm:py-16 lg:py-20">
+        <section className="motion-section bg-lider-background py-12 sm:py-16 lg:py-20">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6">
+            <SectionHeader
+              eyebrow="Візуально про шлях"
+              title="Кожен етап навчання видно, а не тільки описано"
+              description="Більше реальних сцен для довіри: салон авто, знаки, практичний майданчик, посвідчення, онлайн-формат і щасливий фінал."
+            />
+            <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {learningGallery.map((photo, index) => (
+                <article
+                  key={photo.title}
+                  className={`group overflow-hidden rounded-[24px] border border-lider-line bg-white shadow-soft transition duration-300 hover:-translate-y-1 hover:border-lider-red/35 hover:shadow-premium ${
+                    index === 0 ? "md:col-span-2 xl:col-span-1" : ""
+                  }`}
+                >
+                  <div className="relative overflow-hidden bg-lider-graphite">
+                    <Image
+                      src={photo.src}
+                      alt={photo.title}
+                      width={1100}
+                      height={760}
+                      sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                      className="aspect-[4/3] w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                    />
+                    <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/55 to-transparent opacity-80" />
+                  </div>
+                  <div className="p-5">
+                    <h3 className="text-xl font-black text-lider-graphite">{photo.title}</h3>
+                    <p className="mt-2 text-sm font-semibold leading-6 text-lider-muted">
+                      {photo.text}
+                    </p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="motion-section bg-lider-background py-12 sm:py-16 lg:py-20">
           <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
             <div className="space-y-6">
               <StatusPill tone="success">Мобільний формат</StatusPill>
@@ -598,7 +641,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="graduates" className="bg-white py-12 sm:py-16 lg:py-20">
+        <section id="graduates" className="motion-section bg-white py-12 sm:py-16 lg:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <SectionHeader
               eyebrow="Соціальний доказ"
@@ -612,7 +655,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="bg-lider-graphite py-12 text-white sm:py-16 lg:py-20">
+        <section className="motion-section bg-lider-graphite py-12 text-white sm:py-16 lg:py-20">
           <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
             <div className="overflow-hidden rounded-[28px] border border-white/10 shadow-[0_30px_90px_rgba(0,0,0,0.25)]">
               <Image
@@ -620,6 +663,7 @@ export default function HomePage() {
                 alt="Практичний майданчик автошколи Лідер"
                 width={1100}
                 height={850}
+                sizes="(max-width: 1024px) 100vw, 52vw"
                 className="aspect-[4/3] w-full object-cover"
               />
             </div>
@@ -649,7 +693,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="branches" className="bg-white py-12 sm:py-16 lg:py-20">
+        <section id="branches" className="motion-section bg-white py-12 sm:py-16 lg:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <SectionHeader
               eyebrow="Філіали"
@@ -662,7 +706,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="faq" className="bg-lider-background py-12 sm:py-16 lg:py-20">
+        <section id="faq" className="motion-section bg-lider-background py-12 sm:py-16 lg:py-20">
           <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.85fr_1.15fr]">
             <SectionHeader
               eyebrow="FAQ"
@@ -673,7 +717,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="signup" className="bg-white py-12 sm:py-16 lg:py-20">
+        <section id="signup" className="motion-section bg-white pb-28 pt-12 sm:py-16 lg:py-20">
           <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
             <div id="contacts" className="space-y-6">
               <StatusPill tone="success">Заявка</StatusPill>

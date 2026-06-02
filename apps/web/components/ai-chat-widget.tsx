@@ -23,7 +23,7 @@ const starterMessages: ChatMessage[] = [
   {
     role: "assistant",
     content:
-      "Вітаю! Я AI-помічник автошколи «Лідер». Запитайте про ціни, категорії, документи, філії, практику або ПДР."
+      "Вітаю! Я онлайн-помічник автошколи «Лідер». Запитайте про ціни, категорії, документи, філії, практику або ПДР."
   }
 ];
 
@@ -42,6 +42,7 @@ export function AiChatWidget() {
   const [leadMode, setLeadMode] = useState(false);
   const [leadStatus, setLeadStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [hasScrolled, setHasScrolled] = useState(false);
+  const [isSignupVisible, setIsSignupVisible] = useState(false);
   const [leadDraft, setLeadDraft] = useState<LeadDraft>({
     name: "",
     phone: "",
@@ -75,6 +76,24 @@ export function AiChatWidget() {
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("lider-ai-chat-state", { detail: { open: isOpen } }));
   }, [isOpen]);
+
+  useEffect(() => {
+    const signupSection = document.querySelector("#signup");
+
+    if (!signupSection) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsSignupVisible(entry.isIntersecting && entry.intersectionRatio > 0.16);
+      },
+      { threshold: [0, 0.16, 0.36] }
+    );
+
+    observer.observe(signupSection);
+    return () => observer.disconnect();
+  }, []);
 
   function openChat(source: string) {
     setIsOpen(true);
@@ -189,7 +208,11 @@ export function AiChatWidget() {
   return (
     <div
       className={`fixed bottom-44 right-4 z-50 flex flex-col items-end gap-3 transition md:bottom-6 md:right-6 ${
-        hasScrolled || isOpen ? "opacity-100" : "pointer-events-none opacity-0 md:pointer-events-auto md:opacity-100"
+        isSignupVisible && !isOpen
+          ? "pointer-events-none opacity-0"
+          : hasScrolled || isOpen
+            ? "opacity-100"
+            : "pointer-events-none opacity-0 md:pointer-events-auto md:opacity-100"
       }`}
     >
       <AnimatePresence>
@@ -200,7 +223,7 @@ export function AiChatWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 18, scale: 0.98 }}
             transition={{ duration: 0.22 }}
-            aria-label="AI-помічник автошколи"
+            aria-label="Онлайн-помічник автошколи"
           >
             <header className="flex items-center justify-between gap-3 bg-lider-graphite px-4 py-4 text-white">
               <div className="flex items-center gap-3">
@@ -209,14 +232,14 @@ export function AiChatWidget() {
                   <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-lider-graphite bg-[#42e785]" />
                 </span>
                 <div>
-                  <p className="text-sm font-semibold">AI-помічник Лідер</p>
+                  <p className="text-sm font-semibold">Онлайн-помічник Лідер</p>
                   <p className="text-xs text-white/70">онлайн, відповідає за кілька секунд</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={closeChat}
-                aria-label="Закрити AI-чат"
+                aria-label="Закрити чат"
                 className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/12 transition hover:bg-white/20"
               >
                 <X size={17} />
@@ -375,7 +398,7 @@ export function AiChatWidget() {
         type="button"
         onClick={() => (isOpen ? closeChat() : openChat("floating-button"))}
         className="ai-chat-launcher group relative inline-flex h-14 w-14 items-center justify-center rounded-[20px] bg-lider-red text-white shadow-[0_16px_45px_rgba(255,30,30,0.32)] transition hover:-translate-y-1 hover:bg-lider-redDark md:h-16 md:w-16 md:rounded-[22px]"
-        aria-label="Відкрити AI-помічника"
+        aria-label="Відкрити онлайн-помічника"
       >
         <span
           className={`absolute inset-0 rounded-[22px] bg-lider-red/30 blur-xl transition group-hover:bg-lider-red/45 ${
@@ -383,8 +406,8 @@ export function AiChatWidget() {
           }`}
         />
         <MessageCircle className="relative" size={28} />
-        <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-white text-[10px] font-black text-lider-red">
-          AI
+        <span className="absolute -right-2 -top-2 flex h-6 min-w-8 items-center justify-center rounded-full border-2 border-white bg-white px-1 text-[10px] font-black text-lider-red">
+          Чат
         </span>
         <span className="absolute -bottom-1 -left-1 h-4 w-4 rounded-full border-2 border-white bg-[#42e785]" />
         <Sparkles className="absolute -left-2 -top-2 h-4 w-4 text-white" />

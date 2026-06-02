@@ -29,7 +29,7 @@ const popupVariants = [
     icon: BrainCircuit,
     title: "Не знаєте, яка категорія потрібна?",
     eyebrow: "Підбір категорії",
-    text: "Менеджер або AI-помічник допоможе обрати між A, A1, B, C і CE за досвідом, метою та містом навчання.",
+    text: "Менеджер або онлайн-помічник допоможе обрати між A, A1, B, C і CE за досвідом, метою та містом навчання.",
     bullets: ["3-5 уточнюючих питань", "Рекомендація категорії", "План старту навчання"],
     submitLabel: "Підібрати категорію"
   },
@@ -45,7 +45,7 @@ const popupVariants = [
   {
     id: "ai-help",
     icon: Sparkles,
-    title: "AI-помічник уже на зв'язку",
+    title: "Онлайн-помічник уже на зв'язку",
     eyebrow: "Швидка відповідь",
     text: "Можете поставити питання про ціну, категорії, філії, документи або ПДР прямо в чаті, а заявку залишити після відповіді.",
     bullets: ["Працює 24/7", "Пояснює простими словами", "Передає заявку менеджеру"],
@@ -64,6 +64,7 @@ export function LeadPopup({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isAiOpen, setIsAiOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const triggerRef = useRef<PopupTrigger>("timer");
   const viewedSectionsRef = useRef(new Set<string>());
   const variant = useMemo(() => popupVariants[getVariantIndex()], []);
@@ -82,16 +83,29 @@ export function LeadPopup({
       setIsAiOpen(Boolean(customEvent.detail?.open));
     }
 
+    function onMenuState(event: Event) {
+      const customEvent = event as CustomEvent<{ open?: boolean }>;
+      const isMobileMenuOpen = Boolean(customEvent.detail?.open);
+
+      setIsMenuOpen(isMobileMenuOpen);
+
+      if (isMobileMenuOpen) {
+        setIsOpen(false);
+      }
+    }
+
     window.addEventListener("lider-lead-created", onLeadCreated);
     window.addEventListener("lider-ai-chat-state", onAiState);
+    window.addEventListener("lider-mobile-menu-state", onMenuState);
 
     return () => {
       window.clearTimeout(timer);
       window.clearInterval(repeatTimer);
       window.removeEventListener("lider-lead-created", onLeadCreated);
       window.removeEventListener("lider-ai-chat-state", onAiState);
+      window.removeEventListener("lider-mobile-menu-state", onMenuState);
     };
-  }, [delayMs, reopenAfterMs]);
+  }, [delayMs, reopenAfterMs, isAiOpen, isMenuOpen, isOpen]);
 
   useEffect(() => {
     function onScroll() {
@@ -128,7 +142,7 @@ export function LeadPopup({
       window.removeEventListener("scroll", onScroll);
       document.removeEventListener("mouseleave", onMouseLeave);
     };
-  }, [isAiOpen]);
+  }, [isAiOpen, isMenuOpen]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -145,13 +159,15 @@ export function LeadPopup({
     window.addEventListener("keydown", onKeyDown);
 
     return () => {
-      document.body.style.overflow = "";
+      if (document.body.dataset.liderMobileMenuOpen !== "true") {
+        document.body.style.overflow = "";
+      }
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [isOpen]);
 
   function tryOpen(trigger: PopupTrigger) {
-    if (isOpen || isAiOpen || hasSubmittedLead()) {
+    if (isOpen || isAiOpen || isMenuOpen || hasSubmittedLead()) {
       return;
     }
 
@@ -259,7 +275,7 @@ export function LeadPopup({
                   onClick={openAiChat}
                   className="mt-5 inline-flex items-center gap-2 text-sm font-black text-white underline decoration-white/30 underline-offset-4 transition hover:decoration-white"
                 >
-                  Запитати AI-помічника
+                  Запитати онлайн-помічника
                 </button>
               </div>
               <div className="p-3 sm:p-5 lg:p-6">

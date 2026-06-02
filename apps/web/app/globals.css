@@ -92,6 +92,28 @@ a {
   animation: reveal-up 0.72s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
+.motion-section {
+  view-timeline-name: --section-reveal;
+  view-timeline-axis: block;
+}
+
+.metric-card {
+  transition:
+    transform 220ms cubic-bezier(0.25, 1, 0.5, 1),
+    border-color 220ms cubic-bezier(0.25, 1, 0.5, 1),
+    box-shadow 220ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.metric-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255, 30, 30, 0.34);
+  box-shadow: 0 18px 45px rgba(26, 26, 26, 0.1);
+}
+
+.metric-value {
+  transform-origin: left bottom;
+}
+
 .float-slow {
   animation: float-slow 7s ease-in-out infinite;
 }
@@ -113,6 +135,18 @@ a {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes metric-value-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -148,6 +182,22 @@ a {
   to {
     opacity: 0;
     transform: translateY(14px) scale(0.98);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .motion-section {
+    animation: reveal-up 0.72s cubic-bezier(0.25, 1, 0.5, 1) both;
+    animation-timeline: --section-reveal;
+    animation-range: entry 8% cover 24%;
+  }
+
+  .metric-value {
+    animation: metric-value-pop 0.52s cubic-bezier(0.25, 1, 0.5, 1) both;
+  }
+
+  .tap-target:active {
+    transform: scale(0.98);
   }
 }
 
