@@ -18,3 +18,7 @@ firestore-debug.log
 *.tsbuildinfo
 
 .vercel
+
+# Local design/source materials. Selected production assets live under apps/web/public.
+design-references/
+Images_with_prava/

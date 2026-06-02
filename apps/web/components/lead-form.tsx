@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { branches, leadFormSchema } from "@lider/shared";
 import { Button, cn } from "@lider/ui";
+import { FileUp } from "lucide-react";
 import { useId, useState } from "react";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
@@ -20,6 +21,19 @@ type LeadFormProps = {
 };
 
 const categoryOptions: LeadFormValues["category"][] = ["A", "A1", "B", "C", "CE"];
+const requestTypes: Array<{ value: LeadFormValues["requestType"]; label: string }> = [
+  { value: "application", label: "Залишити заявку" },
+  { value: "callback", label: "Замовити зворотний дзвінок" },
+  { value: "consultation", label: "Отримати консультацію" },
+  { value: "documents", label: "Подати документи онлайн" },
+  { value: "category-picker", label: "Обрати категорію" }
+];
+const contactMethods: Array<{ value: LeadFormValues["contactMethod"]; label: string }> = [
+  { value: "telegram", label: "Telegram" },
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "phone", label: "Зворотний дзвінок" },
+  { value: "any", label: "Як зручно менеджеру" }
+];
 
 export function LeadForm({
   variant = "page",
@@ -32,27 +46,39 @@ export function LeadForm({
 }: LeadFormProps) {
   const formId = useId();
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [documentFiles, setDocumentFiles] = useState<string[]>([]);
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
     reset
   } = useForm<LeadFormValues>({
     resolver: zodResolver(leadFormSchema),
     defaultValues: {
       category: "B",
-      branchId: "kyiv"
+      branchId: "kyiv",
+      requestType: "application",
+      contactMethod: "telegram",
+      documentFiles: []
     }
   });
 
   async function onSubmit(values: LeadFormValues) {
     setStatus("saving");
+    const payload = {
+      ...values,
+      documentFiles,
+      message: [values.message, documentFiles.length ? `Фото документів: ${documentFiles.join(", ")}` : ""]
+        .filter(Boolean)
+        .join("\n")
+    };
 
     try {
       const response = await fetch("/api/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values)
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
@@ -64,7 +90,18 @@ export function LeadForm({
       return;
     }
 
-    reset({ category: "B", branchId: "kyiv", name: "", phone: "", city: "", message: "" });
+    reset({
+      category: "B",
+      branchId: "kyiv",
+      requestType: "application",
+      contactMethod: "telegram",
+      documentFiles: [],
+      name: "",
+      phone: "",
+      city: "",
+      message: ""
+    });
+    setDocumentFiles([]);
     window.localStorage.setItem("lider-lead-submitted", "true");
     window.dispatchEvent(new CustomEvent("lider-lead-created"));
     trackEvent(analyticsSource === "popup" ? "popup_lead_created" : "lead_created", {
@@ -77,6 +114,15 @@ export function LeadForm({
   }
 
   const isPopup = variant === "popup";
+
+  function onDocumentFilesChange(files: FileList | null) {
+    const names = Array.from(files ?? [])
+      .slice(0, 8)
+      .map((file) => file.name);
+
+    setDocumentFiles(names);
+    setValue("documentFiles", names, { shouldDirty: true, shouldValidate: true });
+  }
 
   return (
     <form
@@ -94,12 +140,28 @@ export function LeadForm({
         </div>
       ) : null}
       <div>
+        <label className="text-sm font-semibold text-lider-graphite" htmlFor={`${formId}-requestType`}>
+          Що потрібно зробити?
+        </label>
+        <select
+          id={`${formId}-requestType`}
+          className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-lider-red focus:ring-4 focus:ring-lider-red/10"
+          {...register("requestType")}
+        >
+          {requestTypes.map((item) => (
+            <option key={item.value} value={item.value}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
         <label className="text-sm font-semibold text-lider-graphite" htmlFor={`${formId}-name`}>
           Ім'я
         </label>
         <input
           id={`${formId}-name`}
-          className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-red"
+          className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-lider-red focus:ring-4 focus:ring-lider-red/10"
           placeholder="Марія"
           {...register("name")}
         />
@@ -112,7 +174,7 @@ export function LeadForm({
           </label>
           <input
             id={`${formId}-phone`}
-            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-red"
+            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-lider-red focus:ring-4 focus:ring-lider-red/10"
             placeholder="050 000 00 00"
             {...register("phone")}
           />
@@ -124,7 +186,7 @@ export function LeadForm({
           </label>
           <input
             id={`${formId}-city`}
-            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-red"
+            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-lider-red focus:ring-4 focus:ring-lider-red/10"
             placeholder="Київ"
             {...register("city")}
           />
@@ -138,7 +200,7 @@ export function LeadForm({
           </label>
           <select
             id={`${formId}-category`}
-            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-red"
+            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-lider-red focus:ring-4 focus:ring-lider-red/10"
             {...register("category")}
           >
             {categoryOptions.map((category) => (
@@ -154,7 +216,7 @@ export function LeadForm({
           </label>
           <select
             id={`${formId}-branchId`}
-            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-red"
+            className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-lider-red focus:ring-4 focus:ring-lider-red/10"
             {...register("branchId")}
           >
             {branches.map((branch) => (
@@ -166,6 +228,58 @@ export function LeadForm({
         </div>
       </div>
       <div>
+        <label className="text-sm font-semibold text-lider-graphite" htmlFor={`${formId}-contactMethod`}>
+          Зручний спосіб зв'язку
+        </label>
+        <select
+          id={`${formId}-contactMethod`}
+          className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-lider-red focus:ring-4 focus:ring-lider-red/10"
+          {...register("contactMethod")}
+        >
+          {contactMethods.map((item) => (
+            <option key={item.value} value={item.value}>
+              {item.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="rounded-[16px] border border-dashed border-lider-red/35 bg-[#fff7f7] p-4">
+        <label
+          className="flex cursor-pointer flex-col gap-3 text-sm font-semibold text-lider-graphite sm:flex-row sm:items-center sm:justify-between"
+          htmlFor={`${formId}-documents`}
+        >
+          <span>
+            <span className="flex items-center gap-2">
+              <FileUp className="h-5 w-5 text-lider-red" aria-hidden />
+              Подати документи онлайн
+            </span>
+            <span className="mt-1 block text-xs font-medium leading-5 text-lider-muted">
+              Можна прикріпити фото паспорта/ID, коду, довідки або написати, що підготуєте їх у Telegram.
+            </span>
+          </span>
+          <span className="rounded-full bg-white px-4 py-2 text-xs font-black text-lider-red shadow-sm">
+            Обрати файли
+          </span>
+        </label>
+        <input
+          id={`${formId}-documents`}
+          type="file"
+          accept="image/*,.pdf"
+          multiple
+          className="sr-only"
+          onChange={(event) => onDocumentFilesChange(event.target.files)}
+        />
+        {documentFiles.length ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {documentFiles.map((file) => (
+              <span key={file} className="rounded-full bg-white px-3 py-1 text-xs font-bold text-lider-muted">
+                {file}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </div>
+      <div>
         <label className="text-sm font-semibold text-lider-graphite" htmlFor={`${formId}-message`}>
           Коментар
         </label>
@@ -173,9 +287,10 @@ export function LeadForm({
           id={`${formId}-message`}
           className={cn(
             "mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none focus:border-lider-red",
+            "transition focus:ring-4 focus:ring-lider-red/10",
             isPopup ? "min-h-20" : "min-h-24"
           )}
-          placeholder="Зручний час для дзвінка"
+          placeholder="Наприклад: хочу записатися через Telegram, уточнити ціну або подати документи"
           {...register("message")}
         />
       </div>

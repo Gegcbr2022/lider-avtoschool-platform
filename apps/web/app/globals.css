@@ -114,6 +114,25 @@ a {
   transform-origin: left bottom;
 }
 
+.pride-rail {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 30, 30, 0.42) rgba(26, 26, 26, 0.08);
+}
+
+.pride-rail::-webkit-scrollbar {
+  height: 8px;
+}
+
+.pride-rail::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(26, 26, 26, 0.08);
+}
+
+.pride-rail::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 30, 30, 0.42);
+}
+
 .float-slow {
   animation: float-slow 7s ease-in-out infinite;
 }

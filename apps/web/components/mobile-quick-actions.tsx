@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPinned, MessageCircle, PhoneCall, Send } from "lucide-react";
+import { FileUp, MapPinned, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -32,13 +32,13 @@ export function MobileQuickActions() {
       }`}
     >
       <div className="grid grid-cols-5 gap-1.5">
-        <a
-          href="tel:0507383033"
+        <Link
+          href="#signup"
           className="tap-target inline-flex flex-col items-center justify-center gap-1 rounded-[15px] bg-[#1a1a1a] px-1 py-2 text-[10px] font-bold text-white"
         >
-          <PhoneCall size={17} />
-          Дзвінок
-        </a>
+          <MessageCircle size={17} />
+          Callback
+        </Link>
         <a
           href="https://t.me/LiderDriveBot?start=AYYUTE"
           className="tap-target inline-flex flex-col items-center justify-center gap-1 rounded-[15px] bg-[#229ED9] px-1 py-2 text-[10px] font-bold text-white"
@@ -61,11 +61,11 @@ export function MobileQuickActions() {
           Філіал
         </Link>
         <Link
-          href="#signup"
+          href="#documents"
           className="tap-target inline-flex flex-col items-center justify-center gap-1 rounded-[15px] bg-lider-red px-1 py-2 text-[10px] font-bold text-white"
         >
-          <Send size={17} />
-          Запис
+          <FileUp size={17} />
+          Докум.
         </Link>
       </div>
     </div>

@@ -7,7 +7,7 @@ const icons = {
   learning: "L",
   practice: "P",
   tests: "T",
-  assistant: "AI",
+  assistant: "П",
   profile: "К"
 } as const;
 
@@ -40,7 +40,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="learning" options={{ title: "Навчання" }} />
       <Tabs.Screen name="practice" options={{ title: "Практика" }} />
       <Tabs.Screen name="tests" options={{ title: "Тести" }} />
-      <Tabs.Screen name="assistant" options={{ title: "AI" }} />
+      <Tabs.Screen name="assistant" options={{ title: "Помічник" }} />
       <Tabs.Screen name="profile" options={{ title: "Кабінет" }} />
     </Tabs>
   );

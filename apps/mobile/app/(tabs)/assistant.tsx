@@ -22,7 +22,7 @@ export default function AssistantTab() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
-      content: "Я AI-помічник автошколи. Запитайте про категорії, документи, ціни, філії або ПДР."
+      content: "Я онлайн-помічник автошколи. Запитайте про категорії, документи, ціни, філії або ПДР."
     }
   ]);
   const [input, setInput] = useState("");
@@ -76,14 +76,14 @@ export default function AssistantTab() {
 
   return (
     <Screen
-      title="AI-помічник"
+      title="Онлайн-помічник"
       subtitle="Консультант для категорій, документів, філій, ПДР-помилок і швидкої заявки менеджеру."
     >
       <Card tone="green">
         <Label inverse>Онлайн</Label>
         <Text style={styles.heroTitle}>Поставте питання без дзвінка</Text>
         <Text style={styles.heroText}>
-          AI відповідає коротко, а контактні дані передає тільки менеджеру автошколи після вашої заявки.
+          Помічник відповідає коротко, а контактні дані передає тільки менеджеру автошколи після вашої заявки.
         </Text>
       </Card>
 
@@ -100,7 +100,7 @@ export default function AssistantTab() {
 
       <Card tone="yellow">
         <Label>Підбір категорії</Label>
-        <Text style={styles.categoryTitle}>AI поставить 3-5 питань і порадить A, A1, B, C або CE</Text>
+        <Text style={styles.categoryTitle}>Помічник поставить 3-5 питань і порадить A, A1, B, C або CE</Text>
         <View style={styles.questionList}>
           {categoryQuestions.map((question, index) => (
             <Text key={question} style={styles.question}>
@@ -126,7 +126,7 @@ export default function AssistantTab() {
               </Text>
             </View>
           ))}
-          {isSending ? <Text style={styles.typing}>AI готує відповідь...</Text> : null}
+          {isSending ? <Text style={styles.typing}>Готуємо відповідь...</Text> : null}
         </View>
         <View style={styles.inputRow}>
           <TextInput

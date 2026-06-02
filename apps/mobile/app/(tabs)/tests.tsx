@@ -37,14 +37,14 @@ export default function TestsTab() {
       </Card>
 
       <Card>
-        <Label>AI пояснення помилки</Label>
+        <Label>Пояснення помічника</Label>
         <Text style={styles.questionTitle}>Приклад: кому потрібно дати дорогу на нерегульованому перехресті?</Text>
         <Text style={styles.body}>
-          Якщо відповідь неправильна, AI пояснює правило простими словами і пропонує тему для повторення.
+          Якщо відповідь неправильна, помічник пояснює правило простими словами і пропонує тему для повторення.
         </Text>
         {showExplanation ? (
           <View style={styles.explanation}>
-            <Text style={styles.explanationTitle}>Пояснення AI</Text>
+            <Text style={styles.explanationTitle}>Пояснення правила</Text>
             <Text style={styles.explanationText}>
               На нерегульованому перехресті діє правило пріоритету: спочатку перевіряємо знаки, потім перешкоду справа.
               Якщо знаків немає, пропустіть транспортний засіб, який наближається справа.
@@ -52,7 +52,7 @@ export default function TestsTab() {
           </View>
         ) : null}
         <Pressable style={styles.aiButton} onPress={() => setShowExplanation((current) => !current)}>
-          <Text style={styles.aiButtonText}>{showExplanation ? "Сховати пояснення" : "Пояснити помилку AI"}</Text>
+          <Text style={styles.aiButtonText}>{showExplanation ? "Сховати пояснення" : "Пояснити помилку"}</Text>
         </Pressable>
       </Card>
 

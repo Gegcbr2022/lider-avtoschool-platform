@@ -1,24 +1,24 @@
 "use client";
 
-import { siteBrand, socialLinks } from "@lider/shared";
+import { socialLinks, type Locale } from "@lider/shared";
 import { AnimatePresence, motion } from "framer-motion";
-import { Languages, Menu, MessageCircle, PhoneCall, Send, X } from "lucide-react";
+import { Languages, Menu, MessageCircle, Send, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { BrandLogo } from "./brand-logo";
+import { LanguageSwitcher } from "./language-switcher";
 
 type NavItem = {
   href: string;
   label: string;
 };
 
-export function MobileMenu({ navItems }: { navItems: readonly NavItem[] }) {
+export function MobileMenu({ navItems, activeLocale }: { navItems: readonly NavItem[]; activeLocale: Locale }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const telegram = socialLinks.find((item) => item.id === "telegram");
   const whatsapp = socialLinks.find((item) => item.id === "whatsapp");
-  const primaryPhoneHref = siteBrand.phoneLabel.replace(/\s+/g, "");
 
   useEffect(() => {
     setIsMounted(true);
@@ -105,12 +105,12 @@ export function MobileMenu({ navItems }: { navItems: readonly NavItem[] }) {
                           <Send size={18} />
                         </Link>
                         <a
-                          href={`tel:${primaryPhoneHref}`}
+                          href="#signup"
                           onClick={close}
                           className="tap-target inline-flex items-center justify-center gap-2 rounded-[16px] bg-[#1a1a1a] px-5 py-3 text-sm font-black text-white transition hover:bg-[#2a2a2a]"
                         >
-                          <PhoneCall size={18} />
-                          Подзвонити
+                          <MessageCircle size={18} />
+                          Зворотний дзвінок
                         </a>
                         <div className="grid grid-cols-2 gap-2">
                           {telegram ? (
@@ -141,21 +141,8 @@ export function MobileMenu({ navItems }: { navItems: readonly NavItem[] }) {
                             <Languages size={16} aria-hidden />
                             Мова
                           </div>
-                          <div className="mt-3 grid grid-cols-3 gap-2">
-                            {["UA", "RU", "EN"].map((lang) => (
-                              <button
-                                key={lang}
-                                type="button"
-                                aria-pressed={lang === "UA"}
-                                className={`tap-target rounded-[14px] px-3 py-2 text-sm font-black transition ${
-                                  lang === "UA"
-                                    ? "bg-lider-red text-white shadow-[0_12px_28px_rgba(255,30,30,0.22)]"
-                                    : "bg-white text-lider-graphite hover:bg-[#fff1f1] hover:text-lider-red"
-                                }`}
-                              >
-                                {lang}
-                              </button>
-                            ))}
+                          <div className="mt-3">
+                            <LanguageSwitcher activeLocale={activeLocale} compact />
                           </div>
                         </div>
                       </div>

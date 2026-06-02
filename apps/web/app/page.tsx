@@ -1,13 +1,21 @@
 import {
+  admissionDocuments,
   appStoreLinks,
   branches,
+  defaultLocale,
   graduateReviews,
   homeFaq,
+  importantStudyNotes,
+  locales,
   mobileAppFeatures,
+  priceFootnote,
+  pridePhotos,
+  retentionFeatures,
   services,
   siteBrand,
   socialLinks,
   socialProofStats,
+  type Locale,
 } from "@lider/shared";
 import { MetricCard, SectionHeader, StatusPill } from "@lider/ui";
 import {
@@ -22,7 +30,6 @@ import {
   GraduationCap,
   MapPinned,
   MessageCircle,
-  PhoneCall,
   Send,
   ShieldCheck,
   Smartphone,
@@ -35,26 +42,81 @@ import { BranchSelector } from "../components/branch-selector";
 import { ConversionWidgets } from "../components/conversion-widgets";
 import { FaqAccordion } from "../components/faq-accordion";
 import { GraduateShowcase } from "../components/graduate-showcase";
+import { LanguageSwitcher } from "../components/language-switcher";
 import { LeadForm } from "../components/lead-form";
 import { MobileMenu } from "../components/mobile-menu";
 import { ReviewsCarousel } from "../components/reviews-carousel";
 import { SocialIcon } from "../components/social-icon";
 import { contentPages } from "../lib/site-pages";
 
-const navItems = [
-  { href: "#services", label: "Категорії" },
-  { href: "#benefits", label: "Переваги" },
-  { href: "#graduates", label: "Випускники" },
-  { href: "#branches", label: "Філіали" },
-  { href: "#faq", label: "FAQ" },
-  { href: "#contacts", label: "Контакти" },
-];
-
-const heroHighlights = [
-  "Запис за 1 хвилину",
-  "Підбір філіалу поруч",
-  "Підтримка до іспиту",
-];
+const homeCopy: Record<
+  Locale,
+  {
+    navItems: Array<{ href: string; label: string }>;
+    heroBadge: string;
+    heroTitle: string;
+    heroText: string;
+    heroHighlights: string[];
+    primaryCta: string;
+    telegramCta: string;
+    headerCta: string;
+  }
+> = {
+  uk: {
+    navItems: [
+      { href: "#services", label: "Категорії" },
+      { href: "#documents", label: "Документи" },
+      { href: "#pride", label: "Гордість" },
+      { href: "#branches", label: "Філіали" },
+      { href: "#faq", label: "FAQ" },
+      { href: "#contacts", label: "Контакти" }
+    ],
+    heroBadge: "Підготовка до прав A, A1, B, C, CE",
+    heroTitle: "Права без хаосу: чесний маршрут від заявки до посвідчення",
+    heroText:
+      "Автошкола «Лідер» допомагає обрати категорію, подати документи, пройти теорію й підготуватися до іспиту без зайвого шуму. Менеджер поруч, Telegram-бот поруч, план навчання зрозумілий.",
+    heroHighlights: ["Заявка за 1 хвилину", "Документи можна подати онлайн", "Підтримка до ТСЦ"],
+    primaryCta: "Залишити заявку",
+    telegramCta: "Запис через Telegram",
+    headerCta: "Запис у Telegram"
+  },
+  ru: {
+    navItems: [
+      { href: "#services", label: "Категории" },
+      { href: "#documents", label: "Документы" },
+      { href: "#pride", label: "Гордость" },
+      { href: "#branches", label: "Филиалы" },
+      { href: "#faq", label: "FAQ" },
+      { href: "#contacts", label: "Контакты" }
+    ],
+    heroBadge: "Подготовка к правам A, A1, B, C, CE",
+    heroTitle: "Права без хаоса: понятный путь от заявки до удостоверения",
+    heroText:
+      "Автошкола «Лидер» помогает выбрать категорию, подать документы, пройти теорию и подготовиться к экзамену без лишней суеты. Менеджер рядом, Telegram-бот рядом, план обучения понятный.",
+    heroHighlights: ["Заявка за 1 минуту", "Документы можно подать онлайн", "Поддержка до сервисного центра"],
+    primaryCta: "Оставить заявку",
+    telegramCta: "Запись через Telegram",
+    headerCta: "Запись в Telegram"
+  },
+  en: {
+    navItems: [
+      { href: "#services", label: "Categories" },
+      { href: "#documents", label: "Documents" },
+      { href: "#pride", label: "Pride" },
+      { href: "#branches", label: "Branches" },
+      { href: "#faq", label: "FAQ" },
+      { href: "#contacts", label: "Contacts" }
+    ],
+    heroBadge: "Driving licence training A, A1, B, C, CE",
+    heroTitle: "A clear route from request to driving licence",
+    heroText:
+      "Leader Driving School helps you choose a category, prepare documents, study theory and get ready for the exam with a clear plan, a real manager and Telegram support.",
+    heroHighlights: ["1-minute request", "Documents can be sent online", "Support until the exam"],
+    primaryCta: "Send request",
+    telegramCta: "Apply via Telegram",
+    headerCta: "Apply in Telegram"
+  }
+};
 
 const premiumBenefits = [
   {
@@ -182,7 +244,21 @@ const jsonLd = {
   ],
 };
 
-export default function HomePage() {
+function normalizeLocale(value: string | string[] | undefined): Locale {
+  const nextValue = Array.isArray(value) ? value[0] : value;
+  return locales.includes(nextValue as Locale) ? (nextValue as Locale) : defaultLocale;
+}
+
+export default async function HomePage({
+  searchParams
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = searchParams ? await searchParams : {};
+  const activeLocale = normalizeLocale(params.lang);
+  const copy = homeCopy[activeLocale];
+  const navItems = copy.navItems;
+  const heroHighlights = copy.heroHighlights;
   const telegram = socialLinks.find((item) => item.id === "telegram");
   const whatsapp = socialLinks.find((item) => item.id === "whatsapp");
   const primaryPhoneHref = siteBrand.phoneLabel.replace(/\s+/g, "");
@@ -211,21 +287,26 @@ export default function HomePage() {
           </nav>
 
           <div className="hidden items-center gap-3 lg:flex">
-            <a
-              href={`tel:${primaryPhoneHref}`}
-              className="tap-target rounded-full border border-lider-line px-4 py-3 text-sm font-black text-lider-graphite transition hover:border-lider-red hover:text-lider-red"
-            >
-              {siteBrand.phoneLabel}
-            </a>
+            <LanguageSwitcher activeLocale={activeLocale} />
+            {telegram ? (
+              <a
+                href={telegram.href}
+                target="_blank"
+                rel="noreferrer"
+                className="tap-target rounded-full border border-lider-line px-4 py-3 text-sm font-black text-lider-graphite transition hover:border-lider-red hover:text-lider-red"
+              >
+                {copy.headerCta}
+              </a>
+            ) : null}
             <a
               href="#signup"
               className="tap-target red-cta rounded-full px-5 py-3 text-sm font-black"
             >
-              Записатися
+              {copy.primaryCta}
             </a>
           </div>
 
-          <MobileMenu navItems={navItems} />
+          <MobileMenu navItems={navItems} activeLocale={activeLocale} />
         </div>
       </header>
 
@@ -233,7 +314,7 @@ export default function HomePage() {
         <section className="motion-section relative border-b border-lider-line bg-[radial-gradient(circle_at_top_right,rgba(255,30,30,0.13),transparent_30%),linear-gradient(180deg,#ffffff_0%,#f5f5f5_100%)]">
           <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-[1.02fr_0.98fr] lg:items-center lg:py-16">
             <div className="space-y-6">
-              <StatusPill tone="success">Підготовка до прав A, B, C, D, E</StatusPill>
+              <StatusPill tone="success">{copy.heroBadge}</StatusPill>
               <div className="relative overflow-hidden rounded-[24px] border border-white bg-lider-graphite shadow-[0_24px_70px_rgba(26,26,26,0.18)] lg:hidden">
                 <Image
                   src="/images/lesson-premium.png"
@@ -251,12 +332,10 @@ export default function HomePage() {
               </div>
               <div className="space-y-4">
                 <h1 className="max-w-3xl text-[2.05rem] font-black leading-[1.02] tracking-normal text-lider-graphite sm:text-6xl lg:text-7xl">
-                  Права без хаосу: навчання, практика і підтримка до іспиту
+                  {copy.heroTitle}
                 </h1>
                 <p className="max-w-2xl text-[0.98rem] font-semibold leading-7 text-lider-muted sm:text-lg">
-                  Автошкола «Лідер» допомагає пройти шлях від першої консультації
-                  до водійського посвідчення: підберемо категорію, філіал, графік
-                  занять і формат зв’язку.
+                  {copy.heroText}
                 </p>
               </div>
 
@@ -265,16 +344,20 @@ export default function HomePage() {
                   href="#signup"
                   className="tap-target red-cta inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-black shadow-premium sm:rounded-full"
                 >
-                  Записатися на навчання
+                  {copy.primaryCta}
                   <ArrowRight className="h-5 w-5" aria-hidden />
                 </a>
+                {telegram ? (
                 <a
-                  href={`tel:${primaryPhoneHref}`}
+                  href={telegram.href}
+                  target="_blank"
+                  rel="noreferrer"
                   className="tap-target hidden items-center justify-center gap-2 rounded-2xl border border-lider-line bg-white px-6 py-4 text-base font-black text-lider-graphite shadow-soft transition hover:border-lider-red hover:text-lider-red sm:inline-flex sm:rounded-full"
                 >
-                  <PhoneCall className="h-5 w-5" aria-hidden />
-                  Швидкий дзвінок
+                  <Send className="h-5 w-5" aria-hidden />
+                  {copy.telegramCta}
                 </a>
+                ) : null}
               </div>
 
               <div className="hidden grid-cols-3 gap-2 sm:grid sm:max-w-2xl sm:gap-3">
@@ -420,6 +503,22 @@ export default function HomePage() {
                     <p className="text-sm font-semibold leading-6 text-lider-muted">
                       {service.summary}
                     </p>
+                    <div className="grid gap-2">
+                      {service.outcomes.map((item) => (
+                        <span
+                          key={item}
+                          className="inline-flex items-center gap-2 rounded-full bg-lider-background px-3 py-2 text-xs font-black text-lider-graphite"
+                        >
+                          <CheckCircle2 className="h-4 w-4 text-lider-red" aria-hidden />
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                    {service.condition ? (
+                      <p className="rounded-2xl border border-lider-red/20 bg-[#fff7f7] px-4 py-3 text-xs font-bold leading-5 text-lider-muted">
+                        {service.condition}
+                      </p>
+                    ) : null}
                   </div>
                   <div className="mt-6 space-y-4">
                     <div className="flex items-end justify-between gap-3">
@@ -438,18 +537,72 @@ export default function HomePage() {
                         href="#signup"
                         className="tap-target red-cta inline-flex items-center justify-center rounded-2xl px-4 py-3 text-sm font-black"
                       >
-                        Записатися
+                        Заявка
                       </a>
                       <a
-                        href={`tel:${primaryPhoneHref}`}
+                        href={telegram?.href ?? "#signup"}
+                        target={telegram ? "_blank" : undefined}
+                        rel={telegram ? "noreferrer" : undefined}
                         className="tap-target inline-flex items-center justify-center rounded-2xl border border-lider-line px-4 py-3 text-sm font-black text-lider-graphite transition hover:border-lider-red hover:text-lider-red"
                       >
-                        Дзвінок
+                        Telegram
                       </a>
                     </div>
                   </div>
                 </article>
               ))}
+            </div>
+            <p className="mt-5 rounded-2xl bg-lider-background px-4 py-3 text-sm font-semibold leading-6 text-lider-muted">
+              * {priceFootnote}
+            </p>
+          </div>
+        </section>
+
+        <section id="documents" className="motion-section bg-lider-background py-12 sm:py-16 lg:py-20">
+          <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
+            <div className="space-y-5">
+              <StatusPill tone="success">Документи без біганини</StatusPill>
+              <h2 className="text-4xl font-black leading-tight text-lider-graphite sm:text-5xl">
+                Подати документи можна спокійно: список, фото і заявка в одному місці
+              </h2>
+              <p className="text-base font-semibold leading-7 text-lider-muted">
+                Якщо не хочете розбиратися самі, залиште заявку з фото документів або напишіть у Telegram-бот.
+                Менеджер перевірить комплект і підкаже, чого не вистачає.
+              </p>
+              {telegram ? (
+                <a
+                  href={telegram.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="tap-target inline-flex items-center gap-2 rounded-full bg-[#229ED9] px-5 py-3 text-sm font-black text-white"
+                >
+                  <Send className="h-4 w-4" aria-hidden />
+                  Подати через Telegram-бот
+                </a>
+              ) : null}
+            </div>
+            <div className="grid gap-4">
+              <div className="rounded-[26px] border border-lider-line bg-white p-5 shadow-soft sm:p-6">
+                <h3 className="text-2xl font-black text-lider-graphite">Що потрібно для вступу</h3>
+                <div className="mt-5 grid gap-3">
+                  {admissionDocuments.map((item) => (
+                    <div key={item} className="flex gap-3 rounded-2xl bg-lider-background p-4">
+                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-lider-red" aria-hidden />
+                      <p className="text-sm font-semibold leading-6 text-lider-graphite">{item}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="rounded-[26px] bg-lider-graphite p-5 text-white shadow-[0_24px_70px_rgba(26,26,26,0.18)] sm:p-6">
+                <h3 className="text-2xl font-black">Важливо знати після навчання</h3>
+                <div className="mt-5 grid gap-3">
+                  {importantStudyNotes.map((item) => (
+                    <div key={item} className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3">
+                      <p className="text-sm font-semibold leading-6 text-white/76">{item}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -585,6 +738,21 @@ export default function HomePage() {
                   </div>
                 ))}
               </div>
+              <div className="rounded-[26px] border border-lider-line bg-white p-5 shadow-soft">
+                <p className="text-sm font-black uppercase tracking-[0.14em] text-lider-red">
+                  Після отримання прав
+                </p>
+                <h3 className="mt-2 text-2xl font-black text-lider-graphite">
+                  Додаток має залишатися корисним і після іспиту
+                </h3>
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  {retentionFeatures.slice(0, 4).map((feature) => (
+                    <div key={feature} className="rounded-2xl bg-lider-background px-4 py-3">
+                      <p className="text-sm font-bold leading-6 text-lider-muted">{feature}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
               <div className="flex flex-wrap gap-3">
                 {Object.values(appStoreLinks).map((store) => (
                   <span
@@ -641,7 +809,47 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="graduates" className="motion-section bg-white py-12 sm:py-16 lg:py-20">
+        <section id="pride" className="motion-section bg-white py-12 sm:py-16 lg:py-20">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6">
+            <div className="grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
+              <SectionHeader
+                eyebrow="Гордість Лідера"
+                title="Реальні випускники з правами, а не красиві слова"
+                description="Фото з папки Images_with_prava використані як живий доказ результату. Без вигаданих імен: тільки нейтральні підписи й повага до людей у кадрі."
+              />
+              <div className="rounded-[24px] bg-lider-background p-5">
+                <p className="text-sm font-black uppercase tracking-[0.14em] text-lider-red">Наша гордість</p>
+                <p className="mt-2 text-sm font-semibold leading-6 text-lider-muted">
+                  Кожне посвідчення - це не «кейс», а чийсь новий рівень свободи: робота, родина, подорожі,
+                  перша самостійна дорога.
+                </p>
+              </div>
+            </div>
+            <div className="pride-rail mt-8 flex snap-x gap-4 overflow-x-auto pb-4 lg:grid lg:grid-cols-4 lg:overflow-visible lg:pb-0">
+              {pridePhotos.map((photo) => (
+                <article
+                  key={photo.src}
+                  className="group min-w-[76vw] snap-start overflow-hidden rounded-[24px] border border-lider-line bg-white shadow-soft transition hover:-translate-y-1 hover:shadow-premium sm:min-w-[340px] lg:min-w-0"
+                >
+                  <Image
+                    src={photo.src}
+                    alt={photo.title}
+                    width={640}
+                    height={820}
+                    sizes="(max-width: 768px) 76vw, (max-width: 1280px) 25vw, 300px"
+                    className="aspect-[4/5] w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                  />
+                  <div className="p-4">
+                    <h3 className="text-lg font-black text-lider-graphite">{photo.title}</h3>
+                    <p className="mt-2 text-sm font-semibold leading-6 text-lider-muted">{photo.caption}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="graduates" className="motion-section bg-lider-background py-12 sm:py-16 lg:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <SectionHeader
               eyebrow="Соціальний доказ"
@@ -698,7 +906,7 @@ export default function HomePage() {
             <SectionHeader
               eyebrow="Філіали"
               title="Оберіть місто та зручний маршрут"
-              description="Активний філіал показує адресу, контакти та карту. Можна одразу зателефонувати або залишити заявку."
+              description="Активний філіал показує адресу, маршрут, графік і форму для швидкої заявки."
             />
             <div className="mt-8">
               <BranchSelector />
@@ -730,11 +938,11 @@ export default function HomePage() {
               </p>
               <div className="grid gap-3 sm:grid-cols-3">
                 <a
-                  href={`tel:${primaryPhoneHref}`}
+                  href="#signup"
                   className="tap-target rounded-2xl bg-lider-graphite p-4 text-white"
                 >
-                  <PhoneCall className="h-6 w-6" aria-hidden />
-                  <span className="mt-3 block text-sm font-black">Подзвонити</span>
+                  <MessageCircle className="h-6 w-6" aria-hidden />
+                  <span className="mt-3 block text-sm font-black">Зворотний дзвінок</span>
                 </a>
                 {telegram ? (
                   <a href={telegram.href} className="tap-target rounded-2xl bg-[#229ED9] p-4 text-white">

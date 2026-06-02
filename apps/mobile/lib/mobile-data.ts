@@ -1,4 +1,4 @@
-import { branches, samplePayments, sampleProgress, sampleSlots, services } from "@lider/shared";
+import { branches, retentionFeatures, samplePayments, sampleProgress, sampleSlots, services } from "@lider/shared";
 
 export const student = {
   name: "Марія Коваль",
@@ -69,8 +69,18 @@ export const quickActions = [
   {
     title: "Написати менеджеру",
     detail: "Олена відповість у робочий час"
+  },
+  {
+    title: "Запросити друга",
+    detail: "Бонус для родини або знайомих після підтвердження заявки"
+  },
+  {
+    title: "Чек-лист водія",
+    detail: "Що перевірити перед першою самостійною поїздкою"
   }
 ] as const;
+
+export const retentionRoadmap = retentionFeatures;
 
 export const testCategories = [
   "Знаки",

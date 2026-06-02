@@ -19,6 +19,8 @@ export type ServiceCard = {
   retraining: boolean;
   duration: string;
   priceFrom: number;
+  minimumAge?: string;
+  condition?: string;
   summary: string;
   outcomes: string[];
 };

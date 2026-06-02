@@ -132,7 +132,7 @@ export default async function ContentPage({ params }: PageProps) {
             />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            {(page.checklist ?? ["Залиште заявку", "Отримайте дзвінок", "Почніть навчання"]).map((item, index) => (
+            {(page.checklist ?? ["Залиште заявку", "Отримайте відповідь", "Почніть навчання"]).map((item, index) => (
               <article key={item} className="rounded-[18px] border border-lider-line bg-white p-5 shadow-sm">
                 <span className="text-sm font-semibold text-lider-red">0{index + 1}</span>
                 <h2 className="mt-3 text-lg font-semibold text-lider-graphite">{item}</h2>

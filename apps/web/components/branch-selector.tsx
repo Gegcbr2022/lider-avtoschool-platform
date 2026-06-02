@@ -2,7 +2,7 @@
 
 import { branches } from "@lider/shared";
 import { AnimatePresence, motion } from "framer-motion";
-import { Clock3, MapPinned, PhoneCall, Route, Send } from "lucide-react";
+import { Clock3, MapPinned, MessageCircle, Route, Send } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -19,7 +19,7 @@ export function BranchSelector() {
             Оберіть місто, а ми покажемо адресу, карту і контакт
           </h2>
           <p className="mt-5 max-w-xl text-lg leading-8 text-white/68">
-            Найближчу філію можна знайти за кілька секунд: адреса, телефон, графік, маршрут і запис на консультацію
+            Найближчу філію можна знайти за кілька секунд: адреса, графік, маршрут і запис на консультацію
             зібрані в одному місці.
           </p>
           <div className="mt-8 grid gap-2 sm:grid-cols-2">
@@ -79,13 +79,13 @@ export function BranchSelector() {
                     <Route size={17} />
                     Маршрут
                   </a>
-                  <a
-                    href={`tel:${activeBranch.phone}`}
+                  <Link
+                    href="#signup"
                     className="tap-target inline-flex items-center justify-center gap-2 rounded-[16px] bg-[#1a1a1a] px-4 py-3 text-sm font-bold text-white"
                   >
-                    <PhoneCall size={17} />
-                    Дзвінок
-                  </a>
+                    <MessageCircle size={17} />
+                    Зворотний зв'язок
+                  </Link>
                   <Link href="#signup" className="red-cta tap-target px-4 py-3 text-sm">
                     Запис
                     <Send size={16} />

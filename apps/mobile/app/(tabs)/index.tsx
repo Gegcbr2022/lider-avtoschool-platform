@@ -15,6 +15,7 @@ import {
   notifications,
   onboardingSteps,
   quickActions,
+  retentionRoadmap,
   student,
   upcomingSlot
 } from "../../lib/mobile-data";
@@ -72,6 +73,18 @@ export default function HomeTab() {
         <Label>Швидкі дії</Label>
         {quickActions.map((item) => (
           <Row key={item.title} title={item.title} detail={item.detail} />
+        ))}
+      </Card>
+
+      <Card tone="yellow">
+        <Label>Після отримання прав</Label>
+        <Text style={styles.yellowTitle}>Кабінет не закінчується на іспиті</Text>
+        <Text style={styles.yellowText}>
+          Тут з'являться механіки повернення: ПДР-повторення, клуб випускників, бонуси за друзів і корисні
+          підказки для дороги.
+        </Text>
+        {retentionRoadmap.slice(0, 4).map((item) => (
+          <Row key={item} title={item} detail="Основа для майбутньої функції" />
         ))}
       </Card>
 
