@@ -7,20 +7,28 @@ import {
   locales,
   priceFootnote,
   pridePhotos,
-  retentionFeatures,
   services,
   siteBrand,
   socialLinks,
   type Locale
 } from "@lider/shared";
 import { SectionHeader, StatusPill } from "@lider/ui";
-import { ArrowLeft, ArrowRight, CheckCircle2, FileCheck2, MapPin, Phone, Send, Smartphone } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  FileCheck2,
+  MapPin,
+  Phone,
+  Route,
+  Send,
+  Star,
+  Trophy
+} from "lucide-react";
 import Image from "next/image";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { LanguageSwitcher } from "../../components/language-switcher";
-import { LeadForm } from "../../components/lead-form";
 import { ConversionWidgets } from "../../components/conversion-widgets";
 import { contentPages, getLocalizedContentPage } from "../../lib/site-pages";
 
@@ -38,19 +46,11 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   const query = searchParams ? await searchParams : {};
   const activeLocale = normalizeLocale(query.lang);
   const page = getLocalizedContentPage(slug, activeLocale);
-
-  if (!page) {
-    return {};
-  }
-
+  if (!page) return {};
   return {
     title: page.title,
     description: page.summary,
-    openGraph: {
-      title: page.title,
-      description: page.summary,
-      type: "website"
-    }
+    openGraph: { title: page.title, description: page.summary, type: "website" }
   };
 }
 
@@ -58,88 +58,156 @@ export default async function ContentPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
   const query = searchParams ? await searchParams : {};
   const activeLocale = normalizeLocale(query.lang);
-  const page = getLocalizedContentPage(slug, activeLocale);
 
-  if (!page) {
-    notFound();
+  // Contacts → redirect to branches
+  if (slug === "contacts") {
+    redirect(`/branches?lang=${activeLocale}`);
   }
+
+  const page = getLocalizedContentPage(slug, activeLocale);
+  if (!page) notFound();
 
   const branch = page.branchId ? branches.find((item) => item.id === page.branchId) : undefined;
   const relatedServices = page.category
-    ? services.filter((service) => service.category === page.category)
+    ? services.filter((s) => s.category === page.category)
     : services.slice(0, 4);
   const jsonLd = buildJsonLd(page, branch);
+
+  // Translation helpers
+  const tk = (uk: string, ru: string, en: string) =>
+    activeLocale === "en" ? en : activeLocale === "ru" ? ru : uk;
+
+  const copy = {
+    applyCta:    tk("Записатися", "Записаться", "Apply"),
+    backHome:    tk("На головну", "На главную", "Home"),
+    keyPoints:   tk("Коротко", "Коротко", "Key points"),
+    howTitle:    page.kind === "category"
+                   ? tk("Що входить у курс", "Что входит в курс", "What's included")
+                   : tk("Як це працює", "Как это работает", "How it works"),
+    howDesc:     tk(
+                   "Кожна сторінка допомагає швидко зрозуміти маршрут: що підготувати, з ким зв'язатися і як почати.",
+                   "Каждая страница помогает быстро понять маршрут: что подготовить, с кем связаться и как начать.",
+                   "Each page helps you understand the route: what to prepare, who to contact and how to start."
+                 ),
+    stepDesc:    tk(
+                   "Менеджер автошколи допоможе пройти цей крок без зайвих дзвінків.",
+                   "Менеджер автошколы поможет пройти этот шаг без лишних звонков.",
+                   "A manager will help you with this step without unnecessary calls."
+                 ),
+    progsTitle:  page.kind === "city"
+                   ? tk("Доступні категорії у філії", "Доступные категории в филиале", "Available categories")
+                   : tk("Програми навчання", "Программы обучения", "Training programmes"),
+    progsDesc:   tk(
+                   "Ціни, категорії та тривалість подані однаково на всіх сторінках.",
+                   "Цены, категории и длительность представлены одинаково на всех страницах.",
+                   "Prices, categories and duration are consistent across all pages."
+                 ),
+    ctaTitle:    tk("Залишити заявку", "Оставить заявку", "Send a request"),
+    ctaDesc:     tk(
+                   "Залиште телефон — менеджер уточнить деталі і підкаже найближчий старт.",
+                   "Оставьте телефон — менеджер уточнит детали и подскажет ближайший старт.",
+                   "Leave your phone — a manager will clarify details and suggest the nearest start."
+                 ),
+    ctaReady:    tk("Готові почати?", "Готовы начать?", "Ready to start?"),
+    defaultHighlights: [
+      tk("Онлайн-заявка",        "Онлайн-заявка",            "Online request"),
+      tk("Підтримка менеджера",   "Поддержка менеджера",      "Manager support"),
+      tk("Підготовка до іспиту",  "Подготовка к экзамену",    "Exam preparation")
+    ],
+    defaultChecklist: [
+      tk("Залишити заявку",  "Оставить заявку",  "Send a request"),
+      tk("Отримати відповідь", "Получить ответ", "Get a response"),
+      tk("Почати навчання",  "Начать обучение",  "Start training")
+    ],
+    defaultCta:      tk("Отримати консультацію", "Получить консультацию", "Get a consultation"),
+    defaultEyebrow:  tk("Автошкола Лідер",       "Автошкола Лидер",       "Leader Driving School"),
+    retraining:      tk("Перепідготовка",         "Переподготовка",        "Retraining"),
+    breadcrumbHome:  tk("Головна",                "Главная",               "Home"),
+    routeLabel:      tk("Маршрут",                "Маршрут",               "Directions"),
+    hoursLabel:      tk("Графік",                 "График",                "Hours"),
+    emailShort:      "Email",
+  };
+
+  // Which sections to show
+  const isLegal = page.kind === "legal";
+  const isAbout = slug === "about";
+  const isBranches = slug === "branches";
+  const showSteps = !isLegal && !isAbout && !isBranches && (page.kind === "city" || page.kind === "category" || slug === "documents" || slug === "faq" || slug === "online-application");
+  const showServiceCards = !isLegal && !isAbout && !isBranches && (page.kind === "city" || page.kind === "category");
+  const showCta = !isLegal;
+
+  const telegram = socialLinks.find((s) => s.id === "telegram");
 
   return (
     <main className="min-h-screen bg-lider-background">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <header className="border-b border-white/70 bg-lider-background/90 backdrop-blur-xl">
+
+      {/* Sub-page header — clean, no blur */}
+      <header className="border-b border-lider-line bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 lg:px-8">
-          <Link href={`/?lang=${activeLocale}`} className="inline-flex items-center gap-2 font-semibold text-lider-graphite">
-            <ArrowLeft size={16} />
-            {siteBrand.name}
+          <Link href={`/?lang=${activeLocale}`} className="inline-flex items-center gap-2 text-sm font-semibold text-lider-graphite transition hover:text-lider-red">
+            ← {siteBrand.shortName}
           </Link>
           <div className="flex items-center gap-2">
             <LanguageSwitcher activeLocale={activeLocale} />
-            <Link
-              href={`/?lang=${activeLocale}#signup`}
-              className="rounded-[12px] bg-lider-red px-4 py-2 text-sm font-semibold text-white"
+            <a
+              href="#application"
+              className="tap-target rounded-[12px] bg-lider-red px-4 py-2 text-sm font-black text-white transition hover:bg-[#d81414]"
             >
-              {activeLocale === "en" ? "Apply" : activeLocale === "ru" ? "Записаться" : "Записатися"}
-            </Link>
+              {copy.applyCta}
+            </a>
           </div>
         </div>
       </header>
 
-      <section className="premium-surface soft-grid px-5 py-16 lg:px-8 lg:py-24">
-        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1fr_0.78fr] lg:items-center">
+      {/* Hero */}
+      <section className="premium-surface soft-grid px-5 py-14 lg:px-8 lg:py-20">
+        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1fr_0.72fr] lg:items-center">
           <div className="reveal-up">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-lider-red">
-              {page.eyebrow ?? "Автошкола Лідер"}
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-lider-red">
+              {page.eyebrow ?? copy.defaultEyebrow}
             </p>
-            <h1 className="mt-4 max-w-4xl text-4xl font-semibold tracking-[-0.04em] text-lider-graphite md:text-6xl">
+            <h1 className="mt-4 max-w-4xl text-4xl font-black tracking-tight text-lider-graphite md:text-6xl">
               {page.title}
             </h1>
-            <p className="mt-6 max-w-3xl text-lg leading-8 text-lider-muted">{page.summary}</p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link
-                href="#application"
-                className="inline-flex items-center justify-center rounded-[12px] bg-lider-red px-5 py-3 text-sm font-semibold text-white transition hover:bg-lider-redDark"
-              >
-                {page.cta ?? "Отримати консультацію"}
-              </Link>
-              <Link
-                href={`/?lang=${activeLocale}`}
-                className="inline-flex items-center justify-center gap-2 rounded-[12px] bg-white px-5 py-3 text-sm font-semibold text-lider-red transition hover:bg-[#fff1f1]"
-              >
-                {activeLocale === "en" ? "Home" : activeLocale === "ru" ? "На главную" : "На головну"} <ArrowRight size={16} />
-              </Link>
-            </div>
+            <p className="mt-5 max-w-3xl text-lg font-semibold leading-8 text-lider-muted">{page.summary}</p>
+            {!isLegal ? (
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <a
+                  href="#application"
+                  className="tap-target red-cta inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3 text-sm font-black"
+                >
+                  {page.cta ?? copy.defaultCta}
+                  <ArrowRight size={16} aria-hidden />
+                </a>
+                <Link
+                  href={`/?lang=${activeLocale}`}
+                  className="tap-target inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-3 text-sm font-black text-lider-graphite shadow-soft transition hover:shadow-premium"
+                >
+                  {copy.backHome}
+                </Link>
+              </div>
+            ) : null}
           </div>
 
-          <aside className="rounded-[22px] border border-white bg-white/92 p-5 shadow-soft backdrop-blur">
-            <p className="text-sm font-semibold text-lider-graphite">Коротко</p>
+          {/* Aside — solid white, no blur */}
+          <aside className="rounded-[22px] border border-lider-line bg-white p-5 shadow-soft">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-lider-red">{copy.keyPoints}</p>
             <div className="mt-4 grid gap-3">
-              {(page.highlights ?? ["Онлайн-заявка", "Підтримка менеджера", "Підготовка до іспиту"]).map((item) => (
-                <div
-                  key={item}
-                  className="flex items-center gap-3 rounded-[14px] border border-lider-line bg-white px-4 py-3"
-                >
-                  <CheckCircle2 className="h-5 w-5 text-lider-red" />
+              {(page.highlights ?? copy.defaultHighlights).map((item) => (
+                <div key={item} className="flex items-center gap-3 rounded-[14px] border border-lider-line bg-lider-background px-4 py-3">
+                  <CheckCircle2 className="h-5 w-5 shrink-0 text-lider-red" aria-hidden />
                   <span className="text-sm font-semibold text-lider-graphite">{item}</span>
                 </div>
               ))}
             </div>
             {branch ? (
               <div className="mt-5 rounded-[16px] bg-lider-red p-4 text-white">
-                <MapPin className="h-5 w-5 text-white" />
-                <p className="mt-3 text-lg font-semibold">{branch.city}</p>
+                <MapPin className="h-5 w-5" aria-hidden />
+                <p className="mt-3 text-lg font-black">{branch.city}</p>
                 <p className="mt-1 text-sm text-white/72">{branch.address}</p>
-                <a
-                  href={`tel:${branch.phone}`}
-                  className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-white underline decoration-white/30 underline-offset-4"
-                >
-                  <Phone size={15} />
+                <a href={`tel:${branch.phone}`} className="mt-3 inline-flex items-center gap-2 text-sm font-black text-white">
+                  <Phone size={15} aria-hidden />
                   {branch.phone}
                 </a>
               </div>
@@ -148,87 +216,121 @@ export default async function ContentPage({ params, searchParams }: PageProps) {
         </div>
       </section>
 
-      <section className="px-5 py-20 lg:px-8">
-        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.72fr_1fr]">
-          <div>
-            <SectionHeader
-              title={page.kind === "category" ? "Що входить у курс" : "Як це працює"}
-              description="Кожна сторінка допомагає швидко зрозуміти маршрут: що підготувати, з ким зв'язатися і як почати навчання без зайвих кроків."
-            />
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            {(page.checklist ?? ["Залиште заявку", "Отримайте відповідь", "Почніть навчання"]).map((item, index) => (
-              <article key={item} className="rounded-[18px] border border-lider-line bg-white p-5 shadow-sm">
-                <span className="text-sm font-semibold text-lider-red">0{index + 1}</span>
-                <h2 className="mt-3 text-lg font-semibold text-lider-graphite">{item}</h2>
-                <p className="mt-2 text-sm leading-6 text-lider-muted">
-                  Менеджер автошколи допоможе пройти цей крок без зайвих дзвінків і дублювання інформації.
-                </p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-white px-5 py-20 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <SectionHeader
-            title={page.kind === "city" ? "Доступні категорії у філії" : "Програми навчання"}
-            description="Ціни, категорії та тривалість подані однаково на всіх сторінках, щоб перед заявкою не було плутанини."
-          />
-          <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-            {relatedServices.map((service) => (
-              <article key={service.id} className="rounded-[18px] border border-lider-line bg-white p-5 shadow-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-lg font-semibold text-lider-graphite">{service.title}</h2>
-                  <StatusPill tone={service.retraining ? "warning" : "neutral"}>
-                    {service.retraining ? "Перепідготовка" : service.category}
-                  </StatusPill>
-                </div>
-                <p className="mt-3 text-sm leading-6 text-lider-muted">{service.summary}</p>
-                <p className="mt-5 text-lg font-semibold text-lider-red">
-                  від {service.priceFrom.toLocaleString("uk-UA")} грн
-                </p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <SpecializedPageSection slug={slug} locale={activeLocale} />
-
-      <section id="application" className="px-5 py-20 lg:px-8">
-        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.82fr_1fr]">
-          <div>
-            <SectionHeader
-              title="Залиште заявку"
-              description="Залиште телефон, місто та категорію. Менеджер уточнить деталі, підкаже документи і допоможе обрати найближчий старт."
-            />
-            <div className="mt-8 space-y-4">
-              {homeFaq.slice(0, 3).map((item) => (
-                <article key={item.question} className="rounded-[16px] border border-lider-line bg-white p-4">
-                  <h2 className="font-semibold text-lider-graphite">{item.question}</h2>
-                  <p className="mt-2 text-sm leading-6 text-lider-muted">{item.answer}</p>
+      {/* Steps/Checklist (city/category/docs pages only) */}
+      {showSteps ? (
+        <section className="px-5 py-16 lg:px-8">
+          <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.72fr_1fr]">
+            <SectionHeader title={copy.howTitle} description={copy.howDesc} />
+            <div className="grid gap-4 md:grid-cols-2">
+              {(page.checklist ?? copy.defaultChecklist).map((item, index) => (
+                <article key={item} className="rounded-[18px] border border-lider-line bg-white p-5 shadow-sm">
+                  <span className="text-sm font-black text-lider-red">0{index + 1}</span>
+                  <h2 className="mt-3 text-lg font-black text-lider-graphite">{item}</h2>
+                  <p className="mt-2 text-sm leading-6 text-lider-muted">{copy.stepDesc}</p>
                 </article>
               ))}
             </div>
           </div>
-          <LeadForm locale={activeLocale} submitLabel={page.cta ?? "Отримати консультацію"} />
-        </div>
-      </section>
+        </section>
+      ) : null}
+
+      {/* Service cards (city/category pages only) */}
+      {showServiceCards ? (
+        <section className="bg-white px-5 py-16 lg:px-8">
+          <div className="mx-auto max-w-7xl">
+            <SectionHeader title={copy.progsTitle} description={copy.progsDesc} />
+            <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+              {relatedServices.map((service) => (
+                <article key={service.id} className="rounded-[18px] border border-lider-line bg-white p-5 shadow-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 className="text-lg font-black text-lider-graphite">{service.title}</h2>
+                    <StatusPill tone={service.retraining ? "warning" : "neutral"}>
+                      {service.retraining ? copy.retraining : service.category}
+                    </StatusPill>
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-lider-muted">{service.summary}</p>
+                  <p className="mt-4 text-xl font-black text-lider-red">від {service.priceFrom.toLocaleString("uk-UA")} грн</p>
+                  <a href="#application" className="tap-target mt-4 flex items-center justify-center rounded-[14px] border border-lider-red/25 bg-lider-background px-3 py-3 text-sm font-black text-lider-red transition hover:bg-[#fff5f5]">
+                    {copy.applyCta}
+                  </a>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      {/* Specialized content */}
+      <SpecializedPageSection slug={slug} locale={activeLocale} copy={copy} telegram={telegram} />
+
+      {/* Final CTA — popup trigger, replaces full LeadForm */}
+      {showCta ? (
+        <section id="application" className="bg-lider-graphite px-5 py-16 text-white lg:px-8">
+          <div className="mx-auto max-w-2xl text-center">
+            <StatusPill tone="warning">{copy.ctaReady}</StatusPill>
+            <h2 className="mt-5 text-4xl font-black">{copy.ctaTitle}</h2>
+            <p className="mt-4 text-base font-semibold leading-7 text-white/70">{copy.ctaDesc}</p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+              <a
+                href="#application"
+                className="tap-target red-cta inline-flex items-center justify-center gap-2 rounded-2xl px-7 py-4 text-base font-black"
+              >
+                {page.cta ?? copy.defaultCta}
+                <ArrowRight className="h-5 w-5" aria-hidden />
+              </a>
+              {telegram ? (
+                <a
+                  href={telegram.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="tap-target inline-flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/[0.07] px-7 py-4 text-base font-black text-white transition hover:bg-white/[0.12]"
+                >
+                  <Send className="h-5 w-5" aria-hidden />
+                  Telegram
+                </a>
+              ) : null}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <ConversionWidgets activeLocale={activeLocale} leadPopupDelayMs={45_000} reopenAfterMs={15 * 60 * 1000} />
     </main>
   );
 }
 
-function SpecializedPageSection({ slug, locale }: { slug: string; locale: Locale }) {
+// ─── Specialized sections ────────────────────────────────────────────────────
+
+type CopyMap = {
+  routeLabel: string;
+  hoursLabel: string;
+  emailShort: string;
+  applyCta: string;
+  retraining: string;
+};
+
+function SpecializedPageSection({
+  slug,
+  locale,
+  copy,
+  telegram
+}: {
+  slug: string;
+  locale: Locale;
+  copy: CopyMap & Record<string, unknown>;
+  telegram: (typeof socialLinks)[number] | undefined;
+}) {
+  const tk = (uk: string, ru: string, en: string) =>
+    locale === "en" ? en : locale === "ru" ? ru : uk;
+
+  // ── Categories / Prices ────────────────────────────────────────────────────
   if (slug === "categories" || slug === "prices") {
     return (
-      <section className="bg-lider-background px-5 py-20 lg:px-8">
+      <section className="bg-lider-background px-5 py-16 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <SectionHeader
-            eyebrow={locale === "en" ? "Full list" : locale === "ru" ? "Полный список" : "Повний список"}
-            title={locale === "en" ? "Categories, duration and price" : locale === "ru" ? "Категории, сроки и цены" : "Категорії, строки та ціни"}
+            eyebrow={tk("Повний список", "Полный список", "Full list")}
+            title={tk("Категорії, строки та ціни", "Категории, сроки и цены", "Categories, duration and prices")}
             description={priceFootnote}
           />
           <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -240,18 +342,26 @@ function SpecializedPageSection({ slug, locale }: { slug: string; locale: Locale
                     <h2 className="mt-2 text-2xl font-black text-lider-graphite">{service.title}</h2>
                   </div>
                   <StatusPill tone={service.retraining ? "warning" : "neutral"}>
-                    {service.retraining ? "retraining" : service.duration}
+                    {service.retraining ? copy.retraining as string : service.duration}
                   </StatusPill>
                 </div>
                 <p className="mt-4 text-sm font-semibold leading-6 text-lider-muted">{service.summary}</p>
                 <div className="mt-5 flex flex-wrap gap-2">
                   {service.outcomes.map((item) => (
-                    <span key={item} className="rounded-full bg-lider-background px-3 py-2 text-xs font-black text-lider-graphite">
+                    <span key={item} className="rounded-full bg-lider-background px-3 py-1.5 text-xs font-black text-lider-graphite">
                       {item}
                     </span>
                   ))}
                 </div>
-                {service.condition ? <p className="mt-4 rounded-2xl bg-lider-background p-4 text-xs font-bold leading-5 text-lider-muted">{service.condition}</p> : null}
+                {service.condition ? (
+                  <p className="mt-4 rounded-2xl bg-lider-background p-4 text-xs font-bold leading-5 text-lider-muted">
+                    {service.condition}
+                  </p>
+                ) : null}
+                <p className="mt-5 text-2xl font-black text-lider-red">від {service.priceFrom.toLocaleString("uk-UA")} грн</p>
+                <a href="#application" className="tap-target mt-3 flex items-center justify-center rounded-[14px] border border-lider-red/25 bg-lider-background px-3 py-3 text-sm font-black text-lider-red transition hover:bg-[#fff5f5]">
+                  {copy.applyCta as string}
+                </a>
               </article>
             ))}
           </div>
@@ -260,14 +370,15 @@ function SpecializedPageSection({ slug, locale }: { slug: string; locale: Locale
     );
   }
 
+  // ── Documents ──────────────────────────────────────────────────────────────
   if (slug === "documents") {
     return (
-      <section className="bg-white px-5 py-20 lg:px-8">
+      <section className="bg-white px-5 py-16 lg:px-8">
         <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-2">
           <article className="rounded-[22px] border border-lider-line bg-lider-background p-6">
             <FileCheck2 className="h-9 w-9 text-lider-red" aria-hidden />
             <h2 className="mt-5 text-3xl font-black text-lider-graphite">
-              {locale === "en" ? "Admission documents" : locale === "ru" ? "Документы для поступления" : "Документи для вступу"}
+              {tk("Документи для вступу", "Документы для поступления", "Admission documents")}
             </h2>
             <div className="mt-5 grid gap-3">
               {admissionDocuments.map((item) => (
@@ -277,7 +388,7 @@ function SpecializedPageSection({ slug, locale }: { slug: string; locale: Locale
           </article>
           <article className="rounded-[22px] bg-lider-graphite p-6 text-white">
             <h2 className="text-3xl font-black">
-              {locale === "en" ? "Important after training" : locale === "ru" ? "Важно после обучения" : "Важливо після навчання"}
+              {tk("Важливо після навчання", "Важно после обучения", "Important after training")}
             </h2>
             <div className="mt-5 grid gap-3">
               {importantStudyNotes.map((item) => (
@@ -290,14 +401,19 @@ function SpecializedPageSection({ slug, locale }: { slug: string; locale: Locale
     );
   }
 
+  // ── Pride ─────────────────────────────────────────────────────────────────
   if (slug === "pride") {
     return (
-      <section className="bg-white px-5 py-20 lg:px-8">
+      <section className="bg-white px-5 py-16 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <SectionHeader
-            eyebrow={locale === "en" ? "Gallery" : locale === "ru" ? "Галерея" : "Галерея"}
-            title={locale === "en" ? "Real graduate photos" : locale === "ru" ? "Реальные фото выпускников" : "Реальні фото випускників"}
-            description={locale === "en" ? "Neutral captions, no invented personal data, lazy-loaded images." : locale === "ru" ? "Нейтральные подписи, без выдуманных персональных данных, lazy loading." : "Нейтральні підписи, без вигаданих персональних даних, lazy loading."}
+            eyebrow={tk("Галерея", "Галерея", "Gallery")}
+            title={tk("Реальні фото випускників", "Реальные фото выпускников", "Real graduate photos")}
+            description={tk(
+              "Нейтральні підписи, без вигаданих персональних даних.",
+              "Нейтральные подписи, без выдуманных персональных данных.",
+              "Neutral captions, no invented personal data."
+            )}
           />
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {pridePhotos.map((photo) => (
@@ -315,29 +431,181 @@ function SpecializedPageSection({ slug, locale }: { slug: string; locale: Locale
     );
   }
 
-  if (slug === "app" || slug === "account") {
+  // ── About ─────────────────────────────────────────────────────────────────
+  if (slug === "about") {
+    const stats = [
+      { value: "10+",    label: tk("років досвіду",      "лет опыта",               "years of experience") },
+      { value: "15 000+", label: tk("випускників з правами", "выпускников с правами", "graduates licensed") },
+      { value: "5",      label: tk("активних філій",     "активных филиалов",        "active branches") },
+      { value: "A–CE",   label: tk("категорії прав",     "категории прав",           "licence categories") }
+    ];
+    const values = [
+      tk("Найнижчі ціни в Україні",                    "Лучшие цены в Украине",                   "Best value prices in Ukraine"),
+      tk("Досвідчені та професійні інструктори",        "Опытные профессиональные инструкторы",    "Experienced professional instructors"),
+      tk("Гнучкий графік — онлайн-теорія доступна",    "Гибкий график — онлайн-теория доступна",  "Flexible schedule — online theory available"),
+      tk("Готуємо не водіїв, а колег по дорозі",       "Готовим коллег по дороге, а не водителей","We train colleagues on the road, not just drivers"),
+      tk("Ми ЛЮБИМО своїх учнів",                      "Мы ЛЮБИМ своих учеников",                 "We LOVE our students"),
+      tk("Підтримка від заявки до отримання прав",     "Поддержка от заявки до получения прав",   "Support from application to licence")
+    ];
+    const instructorTitle = tk("Наш інструктор — Чемпіон", "Наш инструктор — Чемпион", "Our instructor is a Champion");
+    const instructorDesc = tk(
+      "Інструктор з водіння Щукін Денис Анатолійович — багаторазовий призер та переможець автозмагань регіонального та республіканського рівнів. Досвід безаварійного водіння, накопичений роками завзятих тренувань, він передає учням найкращої автошколи України.",
+      "Инструктор по вождению Щукин Денис Анатольевич — многократный призёр и победитель автосоревнований регионального и республиканского уровней. Опыт безаварийного вождения, накопленный годами упорных тренировок, он передаёт ученикам лучшей автошколы Украины.",
+      "Driving instructor Shchukin Denys — multiple prize-winner and champion of regional and national driving competitions. Years of accident-free driving experience, accumulated through dedicated practice, are passed on to students of Ukraine's finest driving school."
+    );
+    const autodromeTitle = tk("Власний навчальний автодром", "Собственный учебный автодром", "Our own training ground");
+    const autodromeCity  = tk("м. Слов'янськ, вул. Торгова, 46А", "г. Славянск, ул. Торговая, 46А", "Sloviansk, Torhova St, 46A");
+    const autodromeLink  = "https://goo.gl/maps/3UiN9nWWimAviDpH7";
+
     return (
-      <section className="bg-lider-background px-5 py-20 lg:px-8">
-        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
-          <div>
-            <Smartphone className="h-10 w-10 text-lider-red" aria-hidden />
-            <h2 className="mt-5 text-4xl font-black text-lider-graphite">
-              {locale === "en" ? "Not a one-time app" : locale === "ru" ? "Не одноразовое приложение" : "Не одноразовий застосунок"}
-            </h2>
-            <p className="mt-4 text-base font-semibold leading-7 text-lider-muted">
-              {locale === "en"
-                ? "The roadmap keeps students and graduates engaged after the exam."
-                : locale === "ru"
-                  ? "Roadmap удерживает ученика и выпускника после экзамена."
-                  : "Roadmap утримує учня і випускника після іспиту."}
-            </p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {retentionFeatures.map((feature) => (
-              <div key={feature} className="rounded-2xl bg-white p-4 shadow-sm">
-                <CheckCircle2 className="h-5 w-5 text-lider-red" aria-hidden />
-                <p className="mt-3 text-sm font-bold leading-6 text-lider-muted">{feature}</p>
+      <section className="bg-white px-5 py-16 lg:px-8">
+        <div className="mx-auto max-w-7xl space-y-16">
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {stats.map((s) => (
+              <div key={s.value} className="rounded-[22px] border border-lider-line bg-lider-background p-5 text-center">
+                <p className="text-4xl font-black text-lider-red">{s.value}</p>
+                <p className="mt-2 text-sm font-semibold text-lider-muted">{s.label}</p>
               </div>
+            ))}
+          </div>
+
+          {/* Values */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {values.map((val) => (
+              <div key={val} className="flex gap-3 rounded-[18px] border border-lider-line bg-lider-background p-4">
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-lider-red" aria-hidden />
+                <p className="text-sm font-semibold leading-6 text-lider-graphite">{val}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Instructor */}
+          <div className="overflow-hidden rounded-[28px] bg-lider-graphite text-white">
+            <div className="grid gap-8 p-6 lg:grid-cols-[1fr_0.9fr] lg:items-center lg:p-10">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full bg-lider-red/20 px-3 py-1.5">
+                  <Trophy className="h-4 w-4 text-lider-red" aria-hidden />
+                  <span className="text-xs font-black uppercase tracking-[0.14em] text-lider-red">
+                    {tk("Чемпіон", "Чемпион", "Champion")}
+                  </span>
+                </div>
+                <h2 className="mt-4 text-3xl font-black">{instructorTitle}</h2>
+                <p className="mt-4 text-base font-semibold leading-7 text-white/72">{instructorDesc}</p>
+                <a
+                  href="#application"
+                  className="tap-target red-cta mt-6 inline-flex items-center gap-2 rounded-2xl px-6 py-3 text-sm font-black"
+                >
+                  {tk("Записатися до чемпіона", "Записаться к чемпиону", "Train with the champion")}
+                  <ArrowRight className="h-4 w-4" aria-hidden />
+                </a>
+              </div>
+              <div className="overflow-hidden rounded-[22px]">
+                <Image
+                  src="/images/lesson-premium.png"
+                  alt={instructorTitle}
+                  width={800} height={600}
+                  className="aspect-[4/3] w-full object-cover"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Autodrome */}
+          <div className="rounded-[26px] border border-lider-line bg-lider-background p-6">
+            <div className="flex items-start gap-3">
+              <Star className="mt-0.5 h-6 w-6 shrink-0 text-lider-red" aria-hidden />
+              <div>
+                <h2 className="text-2xl font-black text-lider-graphite">{autodromeTitle}</h2>
+                <p className="mt-2 text-base font-semibold text-lider-muted">{autodromeCity}</p>
+                <a
+                  href={autodromeLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-lider-line bg-white px-5 py-3 text-sm font-black text-lider-graphite transition hover:border-lider-red hover:text-lider-red"
+                >
+                  <MapPin className="h-4 w-4" aria-hidden />
+                  {tk("Відкрити на карті", "Открыть на карте", "Open in maps")}
+                  <ArrowRight className="h-4 w-4" aria-hidden />
+                </a>
+              </div>
+            </div>
+            <div className="mt-6 overflow-hidden rounded-[20px]">
+              <iframe
+                title={autodromeTitle}
+                src="https://maps.google.com/maps?q=%D0%A1%D0%BB%D0%BE%D0%B2%27%D1%8F%D0%BD%D1%81%D1%8C%D0%BA+%D0%A2%D0%BE%D1%80%D0%B3%D0%BE%D0%B2%D0%B0+46%D0%90&output=embed"
+                className="h-[260px] w-full border-0"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            </div>
+          </div>
+
+        </div>
+      </section>
+    );
+  }
+
+  // ── Branches ──────────────────────────────────────────────────────────────
+  if (slug === "branches") {
+    return (
+      <section className="bg-lider-background px-5 py-16 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            {branches.map((b) => (
+              <article key={b.id} className="overflow-hidden rounded-[26px] border border-lider-line bg-white shadow-soft">
+                <iframe
+                  title={`${tk("Карта", "Карта", "Map")} ${b.city}`}
+                  src={`https://maps.google.com/maps?q=${encodeURIComponent(b.mapQuery)}&output=embed`}
+                  className="h-[180px] w-full border-0"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+                <div className="p-5">
+                  <h2 className="text-2xl font-black text-lider-graphite">{b.city}</h2>
+                  <div className="mt-4 space-y-3">
+                    <div className="flex items-start gap-2">
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-lider-red" aria-hidden />
+                      <p className="text-sm font-semibold leading-6 text-lider-muted">{b.address}</p>
+                    </div>
+                    <a
+                      href={`tel:${b.phone}`}
+                      className="flex items-center gap-2 rounded-2xl bg-lider-background px-3 py-2 text-sm font-black text-lider-graphite transition hover:text-lider-red"
+                    >
+                      <Phone className="h-4 w-4 text-lider-red" aria-hidden />
+                      {b.phone}
+                    </a>
+                    <a
+                      href={`mailto:${siteBrand.email}`}
+                      className="flex items-center gap-2 text-sm font-semibold text-lider-muted transition hover:text-lider-red"
+                    >
+                      <span className="text-xs font-black text-lider-red">{copy.emailShort as string}</span>
+                      {siteBrand.email}
+                    </a>
+                    <p className="text-xs font-semibold text-lider-muted">
+                      {copy.hoursLabel as string}: {b.workingHours}
+                    </p>
+                  </div>
+                  <div className="mt-5 grid grid-cols-2 gap-2">
+                    <a
+                      href={b.routeUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="tap-target inline-flex items-center justify-center gap-2 rounded-[14px] bg-lider-background px-3 py-3 text-sm font-bold text-lider-graphite transition hover:bg-[#eee]"
+                    >
+                      <Route className="h-4 w-4" aria-hidden />
+                      {copy.routeLabel as string}
+                    </a>
+                    <a
+                      href="#application"
+                      className="tap-target red-cta inline-flex items-center justify-center rounded-[14px] px-3 py-3 text-sm font-black"
+                    >
+                      {copy.applyCta as string}
+                    </a>
+                  </div>
+                </div>
+              </article>
             ))}
           </div>
         </div>
@@ -345,36 +613,12 @@ function SpecializedPageSection({ slug, locale }: { slug: string; locale: Locale
     );
   }
 
-  if (slug === "contacts") {
-    const telegram = socialLinks.find((item) => item.id === "telegram");
-    return (
-      <section className="bg-white px-5 py-20 lg:px-8">
-        <div className="mx-auto grid max-w-7xl gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {branches.map((branch) => (
-            <article key={branch.id} className="rounded-[20px] border border-lider-line bg-lider-background p-5">
-              <MapPin className="h-6 w-6 text-lider-red" aria-hidden />
-              <h2 className="mt-4 text-2xl font-black text-lider-graphite">{branch.city}</h2>
-              <p className="mt-2 text-sm font-semibold leading-6 text-lider-muted">{branch.address}</p>
-              <p className="mt-3 text-sm font-black text-lider-graphite">{branch.workingHours}</p>
-            </article>
-          ))}
-        </div>
-        {telegram ? (
-          <div className="mx-auto mt-8 max-w-7xl">
-            <a href={telegram.href} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full bg-[#229ED9] px-5 py-3 text-sm font-black text-white">
-              <Send className="h-4 w-4" aria-hidden />
-              Telegram
-            </a>
-          </div>
-        ) : null}
-      </section>
-    );
-  }
-
+  // ── Privacy ───────────────────────────────────────────────────────────────
   if (slug === "privacy") {
     return <LegalSection slug="privacy" locale={locale} />;
   }
 
+  // ── Terms / Offer ─────────────────────────────────────────────────────────
   if (slug === "terms" || slug === "offer") {
     return <LegalSection slug="terms" locale={locale} />;
   }
@@ -382,212 +626,79 @@ function SpecializedPageSection({ slug, locale }: { slug: string; locale: Locale
   return null;
 }
 
+// ─── Legal content ───────────────────────────────────────────────────────────
+
 const legalContent = {
   privacy: {
     uk: {
-      disclaimer:
-        "Цей текст є підготовчим чернетком і потребує юридичного підтвердження перед публікацією як остаточний документ.",
+      disclaimer: "Цей текст є підготовчим чернетком і потребує юридичного підтвердження перед публікацією як остаточний документ.",
       sections: [
-        {
-          title: "Хто відповідає за обробку даних",
-          body: "Автошкола «Лідер» — суб'єкт господарювання, що надає послуги підготовки водіїв. Контактна адреса: lideravtoshkola@gmail.com. Ми збираємо лише ті дані, які необхідні для запису на навчання та зворотного зв'язку."
-        },
-        {
-          title: "Які дані ми збираємо",
-          body: "Через форму заявки: ім'я, телефон, email (за бажанням), місто, обрана категорія, зручний спосіб зв'язку. Через Telegram-бота: Telegram-username та параметри старту. Через аналітику: сторінка переходу, джерело (utm), тип пристрою, мова браузера."
-        },
-        {
-          title: "Для чого використовуються дані",
-          body: "Ім'я і телефон — для зв'язку з менеджером і запису на навчання. Email — якщо вказаний, тільки для відповіді на заявку. Аналітичні дані — для розуміння ефективності каналів без ідентифікації особистості."
-        },
-        {
-          title: "Де зберігаються дані",
-          body: "Заявки зберігаються у Firebase Firestore (сервери Google, EU/USA). Файли документів — у Firebase Storage. Дані не передаються третім особам, крім технічних підрядників (Google, Telegram, OpenAI) на умовах їх власних угод."
-        },
-        {
-          title: "Скільки зберігаються дані",
-          body: "Заявки зберігаються протягом 2 років або до видалення за запитом. Навчальні документи — до завершення навчання і 6 місяців після."
-        },
-        {
-          title: "Ваші права",
-          body: "Ви маєте право запросити видалення ваших даних, виправлення або копію. Для цього напишіть на lideravtoshkola@gmail.com."
-        },
-        {
-          title: "Cookies та аналітика",
-          body: "Сайт може використовувати Google Analytics 4 та Meta Pixel для агрегованої статистики. Жодних персональних даних в аналітику не передається напряму."
-        }
+        { title: "Хто відповідає за обробку даних", body: "Автошкола «Лідер» — суб'єкт господарювання, що надає послуги підготовки водіїв. Контактна адреса: lideravtoshkola@gmail.com. Ми збираємо лише ті дані, які необхідні для запису на навчання та зворотного зв'язку." },
+        { title: "Які дані ми збираємо", body: "Через форму заявки: ім'я, телефон, email (за бажанням), місто, обрана категорія. Через Telegram-бота: Telegram-username та параметри старту. Через аналітику: сторінка переходу, джерело (utm), тип пристрою." },
+        { title: "Для чого використовуються дані", body: "Ім'я і телефон — для зв'язку з менеджером і запису на навчання. Email — якщо вказаний, тільки для відповіді на заявку. Аналітичні дані — для розуміння ефективності каналів без ідентифікації особистості." },
+        { title: "Де зберігаються дані", body: "Заявки зберігаються у Firebase Firestore (сервери Google, EU/USA). Файли документів — у Firebase Storage. Дані не передаються третім особам, крім технічних підрядників (Google, Telegram, OpenAI)." },
+        { title: "Скільки зберігаються дані", body: "Заявки зберігаються протягом 2 років або до видалення за запитом. Навчальні документи — до завершення навчання і 6 місяців після." },
+        { title: "Ваші права", body: "Ви маєте право запросити видалення ваших даних, виправлення або копію. Для цього напишіть на lideravtoshkola@gmail.com." },
+        { title: "Cookies та аналітика", body: "Сайт може використовувати Google Analytics 4 та Meta Pixel для агрегованої статистики. Жодних персональних даних в аналітику не передається напряму." }
       ]
     },
     ru: {
-      disclaimer:
-        "Этот текст является подготовительным черновиком и требует юридического подтверждения перед публикацией как окончательный документ.",
+      disclaimer: "Этот текст является подготовительным черновиком и требует юридического подтверждения перед публикацией как окончательный документ.",
       sections: [
-        {
-          title: "Кто отвечает за обработку данных",
-          body: "Автошкола «Лидер» — субъект хозяйствования, предоставляющий услуги подготовки водителей. Контактный адрес: lideravtoshkola@gmail.com. Мы собираем только те данные, которые необходимы для записи на обучение и обратной связи."
-        },
-        {
-          title: "Какие данные мы собираем",
-          body: "Через форму заявки: имя, телефон, email (по желанию), город, выбранная категория, удобный способ связи. Через Telegram-бота: Telegram-username и параметры старта. Через аналитику: страница перехода, источник (utm), тип устройства, язык браузера."
-        },
-        {
-          title: "Для чего используются данные",
-          body: "Имя и телефон — для связи с менеджером и записи на обучение. Email — если указан, только для ответа на заявку. Аналитические данные — для понимания эффективности каналов без идентификации личности."
-        },
-        {
-          title: "Где хранятся данные",
-          body: "Заявки хранятся в Firebase Firestore (серверы Google, EU/USA). Файлы документов — в Firebase Storage. Данные не передаются третьим лицам, кроме технических подрядчиков (Google, Telegram, OpenAI) на условиях их соглашений."
-        },
-        {
-          title: "Сколько хранятся данные",
-          body: "Заявки хранятся в течение 2 лет или до удаления по запросу. Учебные документы — до завершения обучения и 6 месяцев после."
-        },
-        {
-          title: "Ваши права",
-          body: "Вы имеете право запросить удаление данных, их исправление или копию. Для этого напишите на lideravtoshkola@gmail.com."
-        },
-        {
-          title: "Cookies и аналитика",
-          body: "Сайт может использовать Google Analytics 4 и Meta Pixel для агрегированной статистики. Персональные данные в аналитику напрямую не передаются."
-        }
+        { title: "Кто отвечает за обработку данных", body: "Автошкола «Лидер» — субъект хозяйствования, предоставляющий услуги подготовки водителей. Контактный адрес: lideravtoshkola@gmail.com." },
+        { title: "Какие данные мы собираем", body: "Через форму заявки: имя, телефон, email (по желанию), город, выбранная категория. Через Telegram-бота: Telegram-username. Через аналитику: источник, тип устройства." },
+        { title: "Для чего используются данные", body: "Имя и телефон — для связи с менеджером и записи на обучение. Email — если указан, только для ответа на заявку." },
+        { title: "Где хранятся данные", body: "Заявки хранятся в Firebase Firestore (серверы Google, EU/USA). Файлы документов — в Firebase Storage." },
+        { title: "Сколько хранятся данные", body: "Заявки хранятся в течение 2 лет или до удаления по запросу." },
+        { title: "Ваши права", body: "Вы имеете право запросить удаление данных, их исправление или копию. Напишите на lideravtoshkola@gmail.com." },
+        { title: "Cookies и аналитика", body: "Сайт может использовать Google Analytics 4 и Meta Pixel для агрегированной статистики." }
       ]
     },
     en: {
-      disclaimer:
-        "This text is a preparatory draft and requires legal review before being published as a final document.",
+      disclaimer: "This text is a preparatory draft and requires legal review before being published as a final document.",
       sections: [
-        {
-          title: "Data controller",
-          body: "Leader Driving School — a business entity providing driver training services. Contact: lideravtoshkola@gmail.com. We collect only the data required for enrolment and communication."
-        },
-        {
-          title: "What data we collect",
-          body: "Through the request form: name, phone, email (optional), city, selected category, preferred contact method. Through the Telegram bot: Telegram username and start parameters. Through analytics: referral page, source (utm), device type, browser language."
-        },
-        {
-          title: "How data is used",
-          body: "Name and phone — to contact the manager and enrol you. Email — if provided, only to respond to your request. Analytics data — to understand channel effectiveness without identifying individuals."
-        },
-        {
-          title: "Where data is stored",
-          body: "Requests are stored in Firebase Firestore (Google servers, EU/USA). Document files in Firebase Storage. Data is not shared with third parties except technical subcontractors (Google, Telegram, OpenAI) under their own agreements."
-        },
-        {
-          title: "Retention period",
-          body: "Requests are retained for 2 years or until deleted on request. Training documents — until training completion and 6 months thereafter."
-        },
-        {
-          title: "Your rights",
-          body: "You have the right to request deletion, correction, or a copy of your data. Write to lideravtoshkola@gmail.com."
-        },
-        {
-          title: "Cookies and analytics",
-          body: "The site may use Google Analytics 4 and Meta Pixel for aggregate statistics. No personal data is passed directly to analytics."
-        }
+        { title: "Data controller", body: "Leader Driving School — a business entity providing driver training services. Contact: lideravtoshkola@gmail.com." },
+        { title: "What data we collect", body: "Through the request form: name, phone, email (optional), city, selected category. Through the Telegram bot: username. Through analytics: referral source, device type." },
+        { title: "How data is used", body: "Name and phone — to contact the manager and enrol you. Email — if provided, only to respond to your request." },
+        { title: "Where data is stored", body: "Requests are stored in Firebase Firestore (Google servers, EU/USA). Document files in Firebase Storage." },
+        { title: "Retention period", body: "Requests are retained for 2 years or until deleted on request." },
+        { title: "Your rights", body: "You have the right to request deletion, correction, or a copy of your data. Write to lideravtoshkola@gmail.com." },
+        { title: "Cookies and analytics", body: "The site may use Google Analytics 4 and Meta Pixel for aggregate statistics." }
       ]
     }
   },
   terms: {
     uk: {
-      disclaimer:
-        "Цей текст є підготовчим чернетком і потребує юридичного підтвердження перед публікацією як остаточний документ.",
+      disclaimer: "Цей текст є підготовчим чернетком і потребує юридичного підтвердження перед публікацією як остаточний документ.",
       sections: [
-        {
-          title: "Предмет",
-          body: "Ці умови регулюють використання сайту lider.bdslab.net, форм заявок, майбутнього кабінету учня та мобільного застосунку автошколи «Лідер»."
-        },
-        {
-          title: "Форма заявки",
-          body: "Надсилаючи заявку, ви надаєте згоду на зв'язок щодо навчання. Заявка не є договором і не гарантує зарахування без підтвердження менеджера і підписання договору."
-        },
-        {
-          title: "Завантаження документів",
-          body: "Файли, надіслані через форму, зберігаються у Firebase Storage і доступні тільки менеджерам автошколи. Дозволені формати: JPG, PNG, PDF. Максимальний розмір файлу: 10 МБ."
-        },
-        {
-          title: "Telegram-бот",
-          body: "Telegram-бот надає довідкову інформацію та можливість записатися. Переписка в Telegram не є юридично значущим документом."
-        },
-        {
-          title: "Відповідальність сайту",
-          body: "Автошкола не несе відповідальності за технічні збої сторонніх сервісів (Google, Telegram, Vercel) або за дії третіх осіб. Ми зобов'язуємося усувати власні технічні проблеми в розумні строки."
-        },
-        {
-          title: "Актуальність цін",
-          body: "Ціни на сайті є орієнтовними. Точна вартість підтверджується менеджером перед підписанням договору і може відрізнятися залежно від міста, категорії та поточних умов."
-        },
-        {
-          title: "Зміни в умовах",
-          body: "Ми можемо оновлювати ці умови без попереднього повідомлення. Актуальна версія завжди доступна на цій сторінці."
-        }
+        { title: "Предмет", body: "Ці умови регулюють використання сайту lider.bdslab.net, форм заявок та мобільного застосунку автошколи «Лідер»." },
+        { title: "Форма заявки", body: "Надсилаючи заявку, ви надаєте згоду на зв'язок щодо навчання. Заявка не є договором і не гарантує зарахування без підтвердження менеджера." },
+        { title: "Завантаження документів", body: "Файли, надіслані через форму, зберігаються у Firebase Storage і доступні тільки менеджерам автошколи. Дозволені формати: JPG, PNG, PDF. Максимальний розмір файлу: 10 МБ." },
+        { title: "Telegram-бот", body: "Telegram-бот надає довідкову інформацію та можливість записатися. Переписка в Telegram не є юридично значущим документом." },
+        { title: "Актуальність цін", body: "Ціни на сайті є орієнтовними. Точна вартість підтверджується менеджером перед підписанням договору." },
+        { title: "Зміни в умовах", body: "Ми можемо оновлювати ці умови без попереднього повідомлення. Актуальна версія завжди доступна на цій сторінці." }
       ]
     },
     ru: {
-      disclaimer:
-        "Этот текст является подготовительным черновиком и требует юридического подтверждения перед публикацией как окончательный документ.",
+      disclaimer: "Этот текст является подготовительным черновиком и требует юридического подтверждения перед публикацией как окончательный документ.",
       sections: [
-        {
-          title: "Предмет",
-          body: "Эти условия регулируют использование сайта lider.bdslab.net, форм заявок, будущего кабинета ученика и мобильного приложения автошколы «Лидер»."
-        },
-        {
-          title: "Форма заявки",
-          body: "Отправляя заявку, вы соглашаетесь на связь по поводу обучения. Заявка не является договором и не гарантирует зачисление без подтверждения менеджером и подписания договора."
-        },
-        {
-          title: "Загрузка документов",
-          body: "Файлы, отправленные через форму, хранятся в Firebase Storage и доступны только менеджерам автошколы. Разрешённые форматы: JPG, PNG, PDF. Максимальный размер файла: 10 МБ."
-        },
-        {
-          title: "Telegram-бот",
-          body: "Telegram-бот предоставляет справочную информацию и возможность записаться. Переписка в Telegram не является юридически значимым документом."
-        },
-        {
-          title: "Ответственность сайта",
-          body: "Автошкола не несёт ответственности за технические сбои сторонних сервисов (Google, Telegram, Vercel) или действия третьих лиц. Мы обязуемся устранять собственные технические проблемы в разумные сроки."
-        },
-        {
-          title: "Актуальность цен",
-          body: "Цены на сайте являются ориентировочными. Точная стоимость подтверждается менеджером перед подписанием договора и может отличаться в зависимости от города, категории и условий."
-        },
-        {
-          title: "Изменения в условиях",
-          body: "Мы можем обновлять эти условия без предварительного уведомления. Актуальная версия всегда доступна на этой странице."
-        }
+        { title: "Предмет", body: "Эти условия регулируют использование сайта lider.bdslab.net, форм заявок и мобильного приложения автошколы «Лидер»." },
+        { title: "Форма заявки", body: "Отправляя заявку, вы соглашаетесь на связь по поводу обучения. Заявка не является договором и не гарантирует зачисление без подтверждения менеджером." },
+        { title: "Загрузка документов", body: "Файлы хранятся в Firebase Storage и доступны только менеджерам автошколы. Разрешённые форматы: JPG, PNG, PDF. Максимальный размер: 10 МБ." },
+        { title: "Telegram-бот", body: "Telegram-бот предоставляет справочную информацию и возможность записаться." },
+        { title: "Актуальность цен", body: "Цены на сайте являются ориентировочными. Точная стоимость подтверждается менеджером перед подписанием договора." },
+        { title: "Изменения в условиях", body: "Мы можем обновлять эти условия без предварительного уведомления." }
       ]
     },
     en: {
-      disclaimer:
-        "This text is a preparatory draft and requires legal review before being published as a final document.",
+      disclaimer: "This text is a preparatory draft and requires legal review before being published as a final document.",
       sections: [
-        {
-          title: "Scope",
-          body: "These terms govern use of lider.bdslab.net, request forms, the future student cabinet and the mobile application of Leader Driving School."
-        },
-        {
-          title: "Request form",
-          body: "By submitting a request you consent to being contacted about training. A request is not a contract and does not guarantee enrolment without manager confirmation and a signed agreement."
-        },
-        {
-          title: "Document uploads",
-          body: "Files sent via the form are stored in Firebase Storage and accessible only to school managers. Permitted formats: JPG, PNG, PDF. Maximum file size: 10 MB."
-        },
-        {
-          title: "Telegram bot",
-          body: "The Telegram bot provides reference information and enrolment. Telegram correspondence does not constitute a legally significant document."
-        },
-        {
-          title: "Liability",
-          body: "The school is not liable for technical failures of third-party services (Google, Telegram, Vercel) or third-party actions. We commit to resolving our own technical issues within a reasonable timeframe."
-        },
-        {
-          title: "Pricing accuracy",
-          body: "Prices on the site are indicative. Exact cost is confirmed by a manager before signing a contract and may vary by city, category and current conditions."
-        },
-        {
-          title: "Updates to these terms",
-          body: "We may update these terms without prior notice. The current version is always available on this page."
-        }
+        { title: "Scope", body: "These terms govern use of lider.bdslab.net, request forms and the mobile application of Leader Driving School." },
+        { title: "Request form", body: "By submitting a request you consent to being contacted about training. A request is not a contract and does not guarantee enrolment." },
+        { title: "Document uploads", body: "Files are stored in Firebase Storage and accessible only to school managers. Permitted: JPG, PNG, PDF. Max size: 10 MB." },
+        { title: "Telegram bot", body: "The Telegram bot provides reference information and enrolment. Telegram correspondence is not a legally significant document." },
+        { title: "Pricing accuracy", body: "Prices are indicative. Exact cost is confirmed by a manager before signing a contract." },
+        { title: "Updates", body: "We may update these terms without prior notice. The current version is always available here." }
       ]
     }
   }
@@ -597,7 +708,6 @@ type LegalSlug = "privacy" | "terms";
 
 function LegalSection({ slug, locale }: { slug: LegalSlug; locale: Locale }) {
   const content = legalContent[slug][locale];
-
   return (
     <section className="bg-white px-5 py-16 lg:px-8">
       <div className="mx-auto max-w-3xl">
@@ -619,11 +729,7 @@ function LegalSection({ slug, locale }: { slug: LegalSlug; locale: Locale }) {
         </div>
         <div className="mt-12 rounded-2xl bg-lider-background p-5">
           <p className="text-sm font-semibold text-lider-muted">
-            {locale === "en"
-              ? "Questions about your data or these terms: "
-              : locale === "ru"
-                ? "Вопросы о данных или условиях: "
-                : "Питання про дані або умови: "}
+            {locale === "en" ? "Questions: " : locale === "ru" ? "Вопросы: " : "Питання: "}
             <a href="mailto:lideravtoshkola@gmail.com" className="font-black text-lider-red">
               lideravtoshkola@gmail.com
             </a>
@@ -634,9 +740,11 @@ function LegalSection({ slug, locale }: { slug: LegalSlug; locale: Locale }) {
   );
 }
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
 function normalizeLocale(value: string | string[] | undefined): Locale {
-  const nextValue = Array.isArray(value) ? value[0] : value;
-  return locales.includes(nextValue as Locale) ? (nextValue as Locale) : defaultLocale;
+  const v = Array.isArray(value) ? value[0] : value;
+  return locales.includes(v as Locale) ? (v as Locale) : defaultLocale;
 }
 
 function buildJsonLd(page: (typeof contentPages)[number], branch?: (typeof branches)[number]) {
@@ -644,59 +752,24 @@ function buildJsonLd(page: (typeof contentPages)[number], branch?: (typeof branc
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      {
-        "@type": "ListItem",
-        position: 1,
-        name: "Головна",
-        item: "/"
-      },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: page.title,
-        item: `/${page.slug}`
-      }
+      { "@type": "ListItem", position: 1, name: "Головна", item: "/" },
+      { "@type": "ListItem", position: 2, name: page.title, item: `/${page.slug}` }
     ]
   };
-
   if (page.kind === "city" && branch) {
     return [
       breadcrumb,
-      {
-        "@context": "https://schema.org",
-        "@type": "DrivingSchool",
-        name: `${siteBrand.name} ${branch.city}`,
-        address: branch.address,
-        telephone: branch.phone,
-        areaServed: branch.city,
-        url: `/${page.slug}`
-      }
+      { "@context": "https://schema.org", "@type": "DrivingSchool", name: `${siteBrand.name} ${branch.city}`, address: branch.address, telephone: branch.phone, areaServed: branch.city }
     ];
   }
-
   if (page.kind === "category") {
     return [
       breadcrumb,
-      {
-        "@context": "https://schema.org",
-        "@type": "Course",
-        name: page.title,
-        description: page.summary,
-        provider: {
-          "@type": "DrivingSchool",
-          name: siteBrand.name
-        }
-      }
+      { "@context": "https://schema.org", "@type": "Course", name: page.title, description: page.summary, provider: { "@type": "DrivingSchool", name: siteBrand.name } }
     ];
   }
-
   return [
     breadcrumb,
-    {
-      "@context": "https://schema.org",
-      "@type": "WebPage",
-      name: page.title,
-      description: page.summary
-    }
+    { "@context": "https://schema.org", "@type": "WebPage", name: page.title, description: page.summary }
   ];
 }

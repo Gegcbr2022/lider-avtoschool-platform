@@ -267,6 +267,20 @@ type LocalizedPageFields = Partial<Pick<ContentPage, "title" | "summary" | "eyeb
 
 const localizedPages: Partial<Record<Locale, Record<string, LocalizedPageFields>>> = {
   ru: {
+    about: {
+      title: "О школе",
+      summary: "История, подход к обучению, команда инструкторов и стандарты безопасности.",
+      eyebrow: "Команда и стандарты",
+      highlights: ["10+ лет опыта", "Онлайн-теория", "Поддержка менеджера"],
+      checklist: ["Как проходит обучение", "Кто сопровождает ученика", "Как быстро начать"]
+    },
+    branches: {
+      title: "Филиалы",
+      summary: "Адреса, часы работы, контакты и маршрут до каждого филиала.",
+      eyebrow: "Города обучения",
+      highlights: ["5 активных филиалов", "Быстрая связь", "Контакты и маршруты"],
+      checklist: ["Выберите ближайший город", "Свяжитесь с менеджером", "Подготовьте документы"]
+    },
     categories: {
       title: "Категории",
       summary: "Программы для A, A1, B, C, CE и переподготовки: сроки, цены, возраст и условия.",
@@ -319,6 +333,20 @@ const localizedPages: Partial<Record<Locale, Record<string, LocalizedPageFields>
     }
   },
   en: {
+    about: {
+      title: "About the school",
+      summary: "History, training approach, instructor team and safety standards.",
+      eyebrow: "Team and standards",
+      highlights: ["10+ years of experience", "Online theory", "Manager support"],
+      checklist: ["How training works", "Who supports students", "How to start quickly"]
+    },
+    branches: {
+      title: "Branches",
+      summary: "Addresses, working hours, contacts and directions to each branch.",
+      eyebrow: "Training cities",
+      highlights: ["5 active branches", "Quick contact", "Contacts and directions"],
+      checklist: ["Choose the nearest city", "Contact a manager", "Prepare documents"]
+    },
     categories: {
       title: "Categories",
       summary: "Programs for A, A1, B, C, CE and retraining: duration, prices, age and conditions.",
