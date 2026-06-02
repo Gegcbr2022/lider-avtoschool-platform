@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 import { getApps, initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 import { onRequest } from "firebase-functions/v2/https";
 import {
   bookingRequestSchema,
@@ -76,6 +77,36 @@ app.post("/leads", async (request, response) => {
     console.error("Telegram lead logging failed", error);
   });
   response.status(201).json({ id: persistence.id, persistence: persistence.mode, lead });
+});
+
+app.patch("/leads/:leadId/documents", async (request, response) => {
+  const { leadId } = request.params;
+  const { documents } = request.body as { documents?: unknown[] };
+
+  if (!leadId || !Array.isArray(documents) || documents.length === 0) {
+    response.status(422).json({ error: "Invalid payload" });
+    return;
+  }
+
+  try {
+    await db.collection("leads").doc(leadId).update({
+      documents,
+      updatedAt: new Date().toISOString()
+    });
+
+    // Forward documents to Telegram as actual files
+    await sendDocumentsToTelegram(
+      documents as Array<{ storagePath: string; contentType: string; originalName: string }>,
+      leadId
+    ).catch((error: unknown) => {
+      console.error("Telegram document upload failed", error);
+    });
+
+    response.json({ ok: true });
+  } catch (error) {
+    console.error("Failed to update lead documents", error);
+    response.status(500).json({ error: "Failed to update lead" });
+  }
 });
 
 app.get("/kpi/summary", async (_request, response) => {
@@ -423,18 +454,35 @@ async function sendLeadToTelegram(lead: Record<string, unknown>, leadId: string)
     return;
   }
 
-  const message = [
-    "🚘 Нова заявка",
-    `ID: ${leadId}`,
-    `Ім'я: ${String(lead.name ?? "-")}`,
-    `Телефон: ${String(lead.phone ?? "-")}`,
-    `Місто: ${String(lead.city ?? "-")}`,
-    `Категорія: ${String(lead.category ?? "-")}`,
-    `Філія: ${String(lead.branchId ?? "-")}`,
-    `Джерело: ${String(lead.source ?? "-")}`,
-    `Коментар: ${String(lead.message ?? "-")}`,
-    `Створено: ${String(lead.createdAt ?? "-")}`
-  ].join("\n");
+  const phone = String(lead.phone ?? "-");
+  const phoneClean = phone.replace(/\D/g, "");
+  const referral = lead.referralCode ?? lead.telegramStartParam ?? lead.utmSource;
+  const hasDocuments = Array.isArray(lead.documents) && lead.documents.length > 0;
+  const hasDocumentFiles = Array.isArray(lead.documentFiles) && lead.documentFiles.length > 0;
+
+  const messageParts = [
+    "🚘 <b>Нова заявка</b>",
+    `🆔 <code>${leadId}</code>`,
+    "",
+    `👤 <b>${String(lead.name ?? "-")}</b>`,
+    `📞 <a href="tel:+${phoneClean}">${phone}</a>`,
+    lead.email ? `📧 ${String(lead.email)}` : null,
+    "",
+    `📍 ${String(lead.city ?? "-")}  |  ${String(lead.branchId ?? "-")}`,
+    `🏷 Категорія: <b>${String(lead.category ?? "-")}</b>`,
+    `📲 Зв'язок: ${String(lead.contactMethod ?? lead.preferredContactMethod ?? "-")}`,
+    `🔗 Джерело: ${String(lead.source ?? "-")}`,
+    referral ? `🎯 Реферал: ${String(referral)}` : null,
+    "",
+    lead.message && String(lead.message).trim() ? `💬 ${String(lead.message).trim()}` : null,
+    hasDocuments || hasDocumentFiles
+      ? `📎 Документів: ${hasDocuments ? (lead.documents as unknown[]).length : (lead.documentFiles as unknown[]).length} шт.`
+      : null,
+    "",
+    `⏱ ${new Date(String(lead.createdAt ?? "")).toLocaleString("uk-UA", { timeZone: "Europe/Kyiv" })}`
+  ]
+    .filter((line) => line !== null)
+    .join("\n");
 
   const endpoint = `https://api.telegram.org/bot${botToken}/sendMessage`;
   const result = await fetch(endpoint, {
@@ -442,7 +490,8 @@ async function sendLeadToTelegram(lead: Record<string, unknown>, leadId: string)
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       chat_id: chatId,
-      text: message,
+      text: messageParts,
+      parse_mode: "HTML",
       disable_web_page_preview: true
     })
   });
@@ -450,6 +499,54 @@ async function sendLeadToTelegram(lead: Record<string, unknown>, leadId: string)
   if (!result.ok) {
     const body = await result.text();
     throw new Error(`Telegram sendMessage failed with ${result.status}: ${body}`);
+  }
+}
+
+async function sendDocumentsToTelegram(
+  documents: Array<{ storagePath: string; contentType: string; originalName: string }>,
+  leadId: string
+) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_LOG_CHAT_ID;
+
+  if (!botToken || !chatId || documents.length === 0) {
+    return;
+  }
+
+  let bucket: ReturnType<ReturnType<typeof getStorage>["bucket"]>;
+
+  try {
+    bucket = getStorage().bucket();
+  } catch {
+    console.warn("Firebase Storage not available, skipping document upload to Telegram");
+    return;
+  }
+
+  for (const doc of documents) {
+    try {
+      const file = bucket.file(doc.storagePath);
+      const [buffer] = await file.download();
+
+      const isImage =
+        doc.contentType.startsWith("image/") &&
+        !doc.contentType.includes("heic");
+      const endpoint = `https://api.telegram.org/bot${botToken}/${isImage ? "sendPhoto" : "sendDocument"}`;
+      const fieldName = isImage ? "photo" : "document";
+
+      const form = new FormData();
+      form.append("chat_id", chatId);
+      form.append("caption", `📎 ${doc.originalName}  |  ID: ${leadId}`);
+      form.append(fieldName, new Blob([new Uint8Array(buffer)], { type: doc.contentType }), doc.originalName);
+
+      const result = await fetch(endpoint, { method: "POST", body: form });
+
+      if (!result.ok) {
+        const body = await result.text();
+        console.error(`Telegram send file failed (${doc.originalName}): ${result.status} ${body}`);
+      }
+    } catch (error) {
+      console.error(`Failed to send ${doc.storagePath} to Telegram`, error);
+    }
   }
 }
 

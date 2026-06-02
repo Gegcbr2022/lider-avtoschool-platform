@@ -41,7 +41,6 @@ import { BrandLogo } from "../components/brand-logo";
 import { BranchSelector } from "../components/branch-selector";
 import { ConversionWidgets } from "../components/conversion-widgets";
 import { FaqAccordion } from "../components/faq-accordion";
-import { GraduateShowcase } from "../components/graduate-showcase";
 import { LanguageSwitcher } from "../components/language-switcher";
 import { LeadForm } from "../components/lead-form";
 import { MobileMenu } from "../components/mobile-menu";
@@ -212,7 +211,7 @@ const sectionCopy: Record<
     prideGalleryLink: "Вся галерея",
     graduatesEyebrow: "Відгуки",
     graduatesTitle: "Учні довіряють не обіцянкам, а спокійному процесу",
-    graduatesDesc: "Що найчастіше цінують ті, хто пройшов навчання: зрозумілий план, підтримка менеджера, адекватний інструктор і жодного хаосу з документами.",
+    graduatesDesc: "Короткі відгуки допомагають швидко зрозуміти, як проходить навчання: графік, інструктор, документи, практика і підготовка до іспиту.",
     resultEyebrow: "Результат",
     resultTitle: "Сильна школа відчувається в деталях",
     resultDesc: "Нам важливо, щоб учень розумів маршрут, бачив прогрес і мав поруч людей, які відповідають швидко та по суті.",
@@ -267,7 +266,7 @@ const sectionCopy: Record<
     prideGalleryLink: "Вся галерея",
     graduatesEyebrow: "Отзывы",
     graduatesTitle: "Ученики доверяют не обещаниям, а спокойному процессу",
-    graduatesDesc: "Что чаще всего ценят те, кто прошёл обучение: понятный план, поддержка менеджера, адекватный инструктор и никакого хаоса с документами.",
+    graduatesDesc: "Короткие отзывы помогают понять, как проходит обучение: расписание, инструктор, документы, практика и подготовка к экзамену.",
     resultEyebrow: "Результат",
     resultTitle: "Сильная школа чувствуется в деталях",
     resultDesc: "Нам важно, чтобы ученик понимал маршрут, видел прогресс и имел рядом людей, которые отвечают быстро и по существу.",
@@ -322,7 +321,7 @@ const sectionCopy: Record<
     prideGalleryLink: "Full gallery",
     graduatesEyebrow: "Reviews",
     graduatesTitle: "Students trust the calm process, not promises",
-    graduatesDesc: "What graduates appreciate most: a clear plan, manager support, a sensible instructor and no document chaos.",
+    graduatesDesc: "Short reviews help quickly understand the training: schedule, instructor, documents, practice and exam preparation.",
     resultEyebrow: "Result",
     resultTitle: "A strong school is felt in the details",
     resultDesc: "It matters to us that students understand the route, see progress and have people nearby who respond quickly and to the point.",
@@ -1091,8 +1090,7 @@ export default async function HomePage({
               title="Учні довіряють не обіцянкам, а спокійному процесу"
               description="Що найчастіше цінують ті, хто пройшов навчання: зрозумілий план, підтримка менеджера, адекватний інструктор і жодного хаосу з документами."
             />
-            <div className="mt-8 space-y-8">
-              <GraduateShowcase />
+            <div className="mt-8">
               <ReviewsCarousel />
             </div>
           </div>
