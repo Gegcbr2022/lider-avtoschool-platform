@@ -34,15 +34,8 @@ import { FaqAccordion } from "../components/faq-accordion";
 import { LanguageSwitcher } from "../components/language-switcher";
 import { MobileMenu } from "../components/mobile-menu";
 import { ReviewsCarousel } from "../components/reviews-carousel";
+import { SiteFooter } from "../components/site-footer";
 import { contentPages } from "../lib/site-pages";
-
-const socialBg: Record<string, string> = {
-  telegram: "bg-[#229ED9]",
-  instagram: "bg-[#E1306C]",
-  facebook: "bg-[#1877F2]",
-  youtube: "bg-[#FF0000]",
-  whatsapp: "bg-[#25D366]",
-};
 
 const homeCopy: Record<
   Locale,
@@ -421,7 +414,7 @@ export default async function HomePage({
 
         {/* Stats */}
         <section className="motion-section border-b border-lider-line bg-white py-6 sm:py-8">
-          <div className="mx-auto grid max-w-7xl gap-3 px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
+          <div className="stagger mx-auto grid max-w-7xl gap-3 px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
             {socialProofStats.map((stat) => (
               <MetricCard key={stat.value} value={stat.value} label={stat.label} detail={stat.detail} />
             ))}
@@ -432,7 +425,7 @@ export default async function HomePage({
         <section id="services" className="motion-section bg-white py-12 sm:py-16 lg:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <SectionHeader eyebrow={sc.servicesEyebrow} title={sc.servicesTitle} description={sc.servicesDesc} />
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="stagger mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {services.filter((s) => !s.retraining).slice(0, 4).map((service) => (
                 <article key={service.id} className="flex flex-col justify-between rounded-[24px] border border-lider-line bg-white p-5 shadow-soft transition hover:-translate-y-1 hover:border-lider-red/40 hover:shadow-premium">
                   <div>
@@ -520,9 +513,9 @@ export default async function HomePage({
                   <ArrowRight className="h-4 w-4" aria-hidden />
                 </a>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="stagger grid gap-3 sm:grid-cols-2">
                 {premiumBenefits.map((benefit) => (
-                  <article key={benefit.title} className="rounded-[24px] border border-white/10 bg-white/[0.06] p-5 backdrop-blur transition hover:bg-white/[0.1]">
+                  <article key={benefit.title} className="rounded-[24px] border border-white/10 bg-white/[0.06] p-5 transition hover:bg-white/[0.1]">
                     <benefit.icon className="h-8 w-8 text-lider-red" aria-hidden />
                     <h3 className="mt-5 text-lg font-black text-white">{benefit.title}</h3>
                     <p className="mt-3 text-sm font-semibold leading-6 text-white/65">{benefit.text}</p>
@@ -547,7 +540,7 @@ export default async function HomePage({
                 </a>
               </div>
             </div>
-            <div className="pride-rail mt-8 flex snap-x gap-4 overflow-x-auto pb-4 lg:grid lg:grid-cols-4 lg:overflow-visible lg:pb-0">
+            <div className="pride-rail stagger mt-8 flex snap-x gap-4 overflow-x-auto pb-4 lg:grid lg:grid-cols-4 lg:overflow-visible lg:pb-0">
               {pridePhotos.slice(0, 8).map((photo) => (
                 <article key={photo.src} className="group min-w-[76vw] snap-start overflow-hidden rounded-[24px] border border-lider-line bg-white shadow-soft transition hover:-translate-y-1 hover:shadow-premium sm:min-w-[340px] lg:min-w-0">
                   <Image src={photo.src} alt={photo.title} width={640} height={820} sizes="(max-width: 768px) 76vw, (max-width: 1280px) 25vw, 300px" className="aspect-[4/5] w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
@@ -609,49 +602,7 @@ export default async function HomePage({
         </section>
       </main>
 
-      {/* Footer — compact, no nav links, small social chips */}
-      <footer className="border-t border-lider-line bg-lider-graphite text-white">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-          <div className="grid gap-6 sm:grid-cols-[1fr_auto] sm:items-start">
-            <div>
-              <p className="text-xl font-black">{siteBrand.name}</p>
-              <p className="mt-2 max-w-xs text-sm font-semibold leading-6 text-white/58">{sc.footerDesc}</p>
-              <nav aria-label="Правова інформація" className="mt-4 flex flex-wrap gap-4">
-                <a href={withLocale("/privacy", activeLocale)} className="text-xs font-semibold text-white/40 transition hover:text-white/80">
-                  {sc.footerPrivacy}
-                </a>
-                <a href={withLocale("/terms", activeLocale)} className="text-xs font-semibold text-white/40 transition hover:text-white/80">
-                  {sc.footerTerms}
-                </a>
-                <a href={`mailto:${siteBrand.email}`} className="text-xs font-semibold text-white/40 transition hover:text-white/80">
-                  {siteBrand.email}
-                </a>
-              </nav>
-            </div>
-            {/* Social chips */}
-            <div className="flex flex-wrap gap-2">
-              {socialLinks.map((s) => (
-                <a
-                  key={s.id}
-                  href={s.href}
-                  target={s.href.startsWith("http") ? "_blank" : undefined}
-                  rel={s.href.startsWith("http") ? "noreferrer" : undefined}
-                  aria-label={s.label}
-                  title={s.label}
-                  className={`inline-flex items-center justify-center rounded-[12px] px-3 py-2 text-xs font-black text-white transition hover:opacity-85 ${socialBg[s.id] ?? "bg-white/[0.12]"}`}
-                >
-                  {s.label}
-                </a>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="border-t border-white/10 px-4 py-3 sm:px-6">
-          <p className="mx-auto max-w-7xl text-center text-xs font-semibold text-white/30">
-            © {new Date().getFullYear()} {siteBrand.name}. Всі права захищено.
-          </p>
-        </div>
-      </footer>
+      <SiteFooter activeLocale={activeLocale} />
 
       <ConversionWidgets
         activeLocale={activeLocale}

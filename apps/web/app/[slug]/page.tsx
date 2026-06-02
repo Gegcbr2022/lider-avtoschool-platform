@@ -20,9 +20,7 @@ import {
   MapPin,
   Phone,
   Route,
-  Send,
-  Star,
-  Trophy
+  Send
 } from "lucide-react";
 import Image from "next/image";
 import type { Metadata } from "next";
@@ -30,6 +28,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { LanguageSwitcher } from "../../components/language-switcher";
 import { ConversionWidgets } from "../../components/conversion-widgets";
+import { AboutContent } from "../../components/about-content";
+import { SiteFooter } from "../../components/site-footer";
 import { contentPages, getLocalizedContentPage } from "../../lib/site-pages";
 
 type PageProps = {
@@ -132,7 +132,6 @@ export default async function ContentPage({ params, searchParams }: PageProps) {
   const isLegal = page.kind === "legal";
   const isAbout = slug === "about";
   const isBranches = slug === "branches";
-  const showSteps = !isLegal && !isAbout && !isBranches && (page.kind === "city" || page.kind === "category" || slug === "documents" || slug === "faq" || slug === "online-application");
   const showServiceCards = !isLegal && !isAbout && !isBranches && (page.kind === "city" || page.kind === "category");
   const showCta = !isLegal;
 
@@ -160,8 +159,9 @@ export default async function ContentPage({ params, searchParams }: PageProps) {
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="premium-surface soft-grid px-5 py-14 lg:px-8 lg:py-20">
+      {/* Hero — skipped for About (it renders its own custom hero) */}
+      {!isAbout ? (
+      <section className="motion-section premium-surface soft-grid px-5 py-14 lg:px-8 lg:py-20">
         <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1fr_0.72fr] lg:items-center">
           <div className="reveal-up">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-lider-red">
@@ -172,7 +172,7 @@ export default async function ContentPage({ params, searchParams }: PageProps) {
             </h1>
             <p className="mt-5 max-w-3xl text-lg font-semibold leading-8 text-lider-muted">{page.summary}</p>
             {!isLegal ? (
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-8">
                 <a
                   href="#application"
                   className="tap-target red-cta inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3 text-sm font-black"
@@ -180,12 +180,6 @@ export default async function ContentPage({ params, searchParams }: PageProps) {
                   {page.cta ?? copy.defaultCta}
                   <ArrowRight size={16} aria-hidden />
                 </a>
-                <Link
-                  href={`/?lang=${activeLocale}`}
-                  className="tap-target inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-3 text-sm font-black text-lider-graphite shadow-soft transition hover:shadow-premium"
-                >
-                  {copy.backHome}
-                </Link>
               </div>
             ) : null}
           </div>
@@ -215,31 +209,14 @@ export default async function ContentPage({ params, searchParams }: PageProps) {
           </aside>
         </div>
       </section>
-
-      {/* Steps/Checklist (city/category/docs pages only) */}
-      {showSteps ? (
-        <section className="px-5 py-16 lg:px-8">
-          <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.72fr_1fr]">
-            <SectionHeader title={copy.howTitle} description={copy.howDesc} />
-            <div className="grid gap-4 md:grid-cols-2">
-              {(page.checklist ?? copy.defaultChecklist).map((item, index) => (
-                <article key={item} className="rounded-[18px] border border-lider-line bg-white p-5 shadow-sm">
-                  <span className="text-sm font-black text-lider-red">0{index + 1}</span>
-                  <h2 className="mt-3 text-lg font-black text-lider-graphite">{item}</h2>
-                  <p className="mt-2 text-sm leading-6 text-lider-muted">{copy.stepDesc}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
       ) : null}
 
       {/* Service cards (city/category pages only) */}
       {showServiceCards ? (
-        <section className="bg-white px-5 py-16 lg:px-8">
+        <section className="motion-section bg-white px-5 py-16 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <SectionHeader title={copy.progsTitle} description={copy.progsDesc} />
-            <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+            <div className="stagger mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
               {relatedServices.map((service) => (
                 <article key={service.id} className="rounded-[18px] border border-lider-line bg-white p-5 shadow-sm">
                   <div className="flex items-center justify-between gap-3">
@@ -265,7 +242,7 @@ export default async function ContentPage({ params, searchParams }: PageProps) {
 
       {/* Final CTA — popup trigger, replaces full LeadForm */}
       {showCta ? (
-        <section id="application" className="bg-lider-graphite px-5 py-16 text-white lg:px-8">
+        <section id="application" className="motion-section bg-lider-graphite px-5 py-16 text-white lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <StatusPill tone="warning">{copy.ctaReady}</StatusPill>
             <h2 className="mt-5 text-4xl font-black">{copy.ctaTitle}</h2>
@@ -293,6 +270,8 @@ export default async function ContentPage({ params, searchParams }: PageProps) {
           </div>
         </section>
       ) : null}
+
+      <SiteFooter activeLocale={activeLocale} />
 
       <ConversionWidgets activeLocale={activeLocale} leadPopupDelayMs={45_000} reopenAfterMs={15 * 60 * 1000} />
     </main>
@@ -326,14 +305,14 @@ function SpecializedPageSection({
   // ── Categories / Prices ────────────────────────────────────────────────────
   if (slug === "categories" || slug === "prices") {
     return (
-      <section className="bg-lider-background px-5 py-16 lg:px-8">
+      <section className="motion-section bg-lider-background px-5 py-16 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <SectionHeader
             eyebrow={tk("Повний список", "Полный список", "Full list")}
             title={tk("Категорії, строки та ціни", "Категории, сроки и цены", "Categories, duration and prices")}
             description={priceFootnote}
           />
-          <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="stagger mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {services.map((service) => (
               <article key={service.id} className="rounded-[20px] border border-lider-line bg-white p-5 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
@@ -373,7 +352,7 @@ function SpecializedPageSection({
   // ── Documents ──────────────────────────────────────────────────────────────
   if (slug === "documents") {
     return (
-      <section className="bg-white px-5 py-16 lg:px-8">
+      <section className="motion-section bg-white px-5 py-16 lg:px-8">
         <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-2">
           <article className="rounded-[22px] border border-lider-line bg-lider-background p-6">
             <FileCheck2 className="h-9 w-9 text-lider-red" aria-hidden />
@@ -404,7 +383,7 @@ function SpecializedPageSection({
   // ── Pride ─────────────────────────────────────────────────────────────────
   if (slug === "pride") {
     return (
-      <section className="bg-white px-5 py-16 lg:px-8">
+      <section className="motion-section bg-white px-5 py-16 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <SectionHeader
             eyebrow={tk("Галерея", "Галерея", "Gallery")}
@@ -415,7 +394,7 @@ function SpecializedPageSection({
               "Neutral captions, no invented personal data."
             )}
           />
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="stagger mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {pridePhotos.map((photo) => (
               <article key={photo.src} className="overflow-hidden rounded-[20px] border border-lider-line bg-white shadow-soft">
                 <Image src={photo.src} alt={photo.title} width={640} height={820} sizes="(max-width: 768px) 50vw, 25vw" className="aspect-[4/5] w-full object-cover" />
@@ -431,128 +410,17 @@ function SpecializedPageSection({
     );
   }
 
-  // ── About ─────────────────────────────────────────────────────────────────
+  // About ─ handled by the dedicated <AboutContent/> component
   if (slug === "about") {
-    const stats = [
-      { value: "10+",    label: tk("років досвіду",      "лет опыта",               "years of experience") },
-      { value: "15 000+", label: tk("випускників з правами", "выпускников с правами", "graduates licensed") },
-      { value: "5",      label: tk("активних філій",     "активных филиалов",        "active branches") },
-      { value: "A–CE",   label: tk("категорії прав",     "категории прав",           "licence categories") }
-    ];
-    const values = [
-      tk("Найнижчі ціни в Україні",                    "Лучшие цены в Украине",                   "Best value prices in Ukraine"),
-      tk("Досвідчені та професійні інструктори",        "Опытные профессиональные инструкторы",    "Experienced professional instructors"),
-      tk("Гнучкий графік — онлайн-теорія доступна",    "Гибкий график — онлайн-теория доступна",  "Flexible schedule — online theory available"),
-      tk("Готуємо не водіїв, а колег по дорозі",       "Готовим коллег по дороге, а не водителей","We train colleagues on the road, not just drivers"),
-      tk("Ми ЛЮБИМО своїх учнів",                      "Мы ЛЮБИМ своих учеников",                 "We LOVE our students"),
-      tk("Підтримка від заявки до отримання прав",     "Поддержка от заявки до получения прав",   "Support from application to licence")
-    ];
-    const instructorTitle = tk("Наш інструктор — Чемпіон", "Наш инструктор — Чемпион", "Our instructor is a Champion");
-    const instructorDesc = tk(
-      "Інструктор з водіння Щукін Денис Анатолійович — багаторазовий призер та переможець автозмагань регіонального та республіканського рівнів. Досвід безаварійного водіння, накопичений роками завзятих тренувань, він передає учням найкращої автошколи України.",
-      "Инструктор по вождению Щукин Денис Анатольевич — многократный призёр и победитель автосоревнований регионального и республиканского уровней. Опыт безаварийного вождения, накопленный годами упорных тренировок, он передаёт ученикам лучшей автошколы Украины.",
-      "Driving instructor Shchukin Denys — multiple prize-winner and champion of regional and national driving competitions. Years of accident-free driving experience, accumulated through dedicated practice, are passed on to students of Ukraine's finest driving school."
-    );
-    const autodromeTitle = tk("Власний навчальний автодром", "Собственный учебный автодром", "Our own training ground");
-    const autodromeCity  = tk("м. Слов'янськ, вул. Торгова, 46А", "г. Славянск, ул. Торговая, 46А", "Sloviansk, Torhova St, 46A");
-    const autodromeLink  = "https://goo.gl/maps/3UiN9nWWimAviDpH7";
-
-    return (
-      <section className="bg-white px-5 py-16 lg:px-8">
-        <div className="mx-auto max-w-7xl space-y-16">
-
-          {/* Stats */}
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {stats.map((s) => (
-              <div key={s.value} className="rounded-[22px] border border-lider-line bg-lider-background p-5 text-center">
-                <p className="text-4xl font-black text-lider-red">{s.value}</p>
-                <p className="mt-2 text-sm font-semibold text-lider-muted">{s.label}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Values */}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {values.map((val) => (
-              <div key={val} className="flex gap-3 rounded-[18px] border border-lider-line bg-lider-background p-4">
-                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-lider-red" aria-hidden />
-                <p className="text-sm font-semibold leading-6 text-lider-graphite">{val}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Instructor */}
-          <div className="overflow-hidden rounded-[28px] bg-lider-graphite text-white">
-            <div className="grid gap-8 p-6 lg:grid-cols-[1fr_0.9fr] lg:items-center lg:p-10">
-              <div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-lider-red/20 px-3 py-1.5">
-                  <Trophy className="h-4 w-4 text-lider-red" aria-hidden />
-                  <span className="text-xs font-black uppercase tracking-[0.14em] text-lider-red">
-                    {tk("Чемпіон", "Чемпион", "Champion")}
-                  </span>
-                </div>
-                <h2 className="mt-4 text-3xl font-black">{instructorTitle}</h2>
-                <p className="mt-4 text-base font-semibold leading-7 text-white/72">{instructorDesc}</p>
-                <a
-                  href="#application"
-                  className="tap-target red-cta mt-6 inline-flex items-center gap-2 rounded-2xl px-6 py-3 text-sm font-black"
-                >
-                  {tk("Записатися до чемпіона", "Записаться к чемпиону", "Train with the champion")}
-                  <ArrowRight className="h-4 w-4" aria-hidden />
-                </a>
-              </div>
-              <div className="overflow-hidden rounded-[22px]">
-                <Image
-                  src="/images/lesson-premium.png"
-                  alt={instructorTitle}
-                  width={800} height={600}
-                  className="aspect-[4/3] w-full object-cover"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Autodrome */}
-          <div className="rounded-[26px] border border-lider-line bg-lider-background p-6">
-            <div className="flex items-start gap-3">
-              <Star className="mt-0.5 h-6 w-6 shrink-0 text-lider-red" aria-hidden />
-              <div>
-                <h2 className="text-2xl font-black text-lider-graphite">{autodromeTitle}</h2>
-                <p className="mt-2 text-base font-semibold text-lider-muted">{autodromeCity}</p>
-                <a
-                  href={autodromeLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-lider-line bg-white px-5 py-3 text-sm font-black text-lider-graphite transition hover:border-lider-red hover:text-lider-red"
-                >
-                  <MapPin className="h-4 w-4" aria-hidden />
-                  {tk("Відкрити на карті", "Открыть на карте", "Open in maps")}
-                  <ArrowRight className="h-4 w-4" aria-hidden />
-                </a>
-              </div>
-            </div>
-            <div className="mt-6 overflow-hidden rounded-[20px]">
-              <iframe
-                title={autodromeTitle}
-                src="https://maps.google.com/maps?q=%D0%A1%D0%BB%D0%BE%D0%B2%27%D1%8F%D0%BD%D1%81%D1%8C%D0%BA+%D0%A2%D0%BE%D1%80%D0%B3%D0%BE%D0%B2%D0%B0+46%D0%90&output=embed"
-                className="h-[260px] w-full border-0"
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
-            </div>
-          </div>
-
-        </div>
-      </section>
-    );
+    return <AboutContent locale={locale} />;
   }
 
   // ── Branches ──────────────────────────────────────────────────────────────
   if (slug === "branches") {
     return (
-      <section className="bg-lider-background px-5 py-16 lg:px-8">
+      <section className="motion-section bg-lider-background px-5 py-16 lg:px-8">
         <div className="mx-auto max-w-7xl">
-          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="stagger grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
             {branches.map((b) => (
               <article key={b.id} className="overflow-hidden rounded-[26px] border border-lider-line bg-white shadow-soft">
                 <iframe
@@ -709,7 +577,7 @@ type LegalSlug = "privacy" | "terms";
 function LegalSection({ slug, locale }: { slug: LegalSlug; locale: Locale }) {
   const content = legalContent[slug][locale];
   return (
-    <section className="bg-white px-5 py-16 lg:px-8">
+    <section className="motion-section bg-white px-5 py-16 lg:px-8">
       <div className="mx-auto max-w-3xl">
         <div className="mb-8 rounded-2xl border border-lider-red/20 bg-lider-background px-5 py-4 text-sm font-semibold leading-6 text-lider-muted">
           ⚠ {content.disclaimer}

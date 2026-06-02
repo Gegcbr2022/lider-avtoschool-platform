@@ -17,11 +17,12 @@ export type ContentPage = {
 export const contentPages: readonly ContentPage[] = [
   {
     slug: "about",
-    title: "Про школу",
-    summary: "Історія, підхід до навчання, команда інструкторів і стандарти безпеки.",
-    eyebrow: "Команда і стандарти",
-    highlights: ["10+ років досвіду", "Онлайн-теорія", "Підтримка менеджера"],
-    checklist: ["Як проходить навчання", "Хто супроводжує учня", "Як швидко почати"]
+    title: "Про нас",
+    summary:
+      "Найкраща автошкола України: понад 10 років досвіду, 15 000+ випускників, інструктор-чемпіон, власний автодром у Слов'янську та філіал у Краматорську.",
+    eyebrow: "Про нас",
+    highlights: ["10+ років досвіду", "15 000+ випускників", "Інструктор-чемпіон"],
+    checklist: ["Команда професіоналів", "Власний автодром", "Реальні фото буднів"]
   },
   {
     slug: "branches",
@@ -268,11 +269,12 @@ type LocalizedPageFields = Partial<Pick<ContentPage, "title" | "summary" | "eyeb
 const localizedPages: Partial<Record<Locale, Record<string, LocalizedPageFields>>> = {
   ru: {
     about: {
-      title: "О школе",
-      summary: "История, подход к обучению, команда инструкторов и стандарты безопасности.",
-      eyebrow: "Команда и стандарты",
-      highlights: ["10+ лет опыта", "Онлайн-теория", "Поддержка менеджера"],
-      checklist: ["Как проходит обучение", "Кто сопровождает ученика", "Как быстро начать"]
+      title: "О нас",
+      summary:
+        "Лучшая автошкола Украины: более 10 лет опыта, 15 000+ выпускников, инструктор-чемпион, собственный автодром в Славянске и филиал в Краматорске.",
+      eyebrow: "О нас",
+      highlights: ["10+ лет опыта", "15 000+ выпускников", "Инструктор-чемпион"],
+      checklist: ["Команда профессионалов", "Собственный автодром", "Реальные фото будней"]
     },
     branches: {
       title: "Филиалы",
@@ -334,11 +336,12 @@ const localizedPages: Partial<Record<Locale, Record<string, LocalizedPageFields>
   },
   en: {
     about: {
-      title: "About the school",
-      summary: "History, training approach, instructor team and safety standards.",
-      eyebrow: "Team and standards",
-      highlights: ["10+ years of experience", "Online theory", "Manager support"],
-      checklist: ["How training works", "Who supports students", "How to start quickly"]
+      title: "About us",
+      summary:
+        "Ukraine's finest driving school: 10+ years of experience, 15,000+ graduates, a champion instructor, our own training ground in Sloviansk and a branch in Kramatorsk.",
+      eyebrow: "About us",
+      highlights: ["10+ years of experience", "15,000+ graduates", "A champion instructor"],
+      checklist: ["A team of professionals", "Our own training ground", "Real photos of daily life"]
     },
     branches: {
       title: "Branches",

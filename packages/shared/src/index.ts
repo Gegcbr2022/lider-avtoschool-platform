@@ -616,6 +616,12 @@ export const socialLinks = [
     label: "WhatsApp",
     href: "whatsapp://send/?phone=380504233022",
     description: "зручний канал для консультації в месенджері та передачі контакту менеджеру"
+  },
+  {
+    id: "tiktok",
+    label: "TikTok",
+    href: "https://www.tiktok.com/@avtoshkola_lider?_r=1",
+    description: "короткі відео про навчання, автодром, будні автошколи та випускників"
   }
 ] as const;
 

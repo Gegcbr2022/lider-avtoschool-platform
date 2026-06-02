@@ -6,6 +6,7 @@ import { openLeadPopup } from "../lib/open-lead-popup";
 import { FloatingPhoneButton } from "./floating-phone-button";
 import { LeadPopup } from "./lead-popup";
 import { MobileQuickActions } from "./mobile-quick-actions";
+import { MotionReveal } from "./motion-reveal";
 
 export function ConversionWidgets({
   activeLocale,
@@ -39,6 +40,7 @@ export function ConversionWidgets({
 
   return (
     <>
+      <MotionReveal />
       <LeadPopup locale={activeLocale} delayMs={leadPopupDelayMs} reopenAfterMs={reopenAfterMs} />
       <FloatingPhoneButton locale={activeLocale} />
       <MobileQuickActions activeLocale={activeLocale} />

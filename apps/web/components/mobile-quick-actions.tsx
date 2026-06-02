@@ -1,8 +1,9 @@
 "use client";
 
 import { defaultLocale, type Locale } from "@lider/shared";
-import Link from "next/link";
+import { PhoneCall } from "lucide-react";
 import { useEffect, useState } from "react";
+import { openLeadPopup } from "../lib/open-lead-popup";
 
 const ctaLabel: Record<Locale, string> = {
   uk: "Залишити заявку",
@@ -10,43 +11,69 @@ const ctaLabel: Record<Locale, string> = {
   en: "Apply now"
 };
 
+// Appears only after the user scrolls past the hero, and steps aside near the
+// final CTA / footer so it never covers them. Opens the lead popup directly
+// (no scroll-to-form). Mobile only.
+const SHOW_AFTER_PX = 340;
+
 export function MobileQuickActions({ activeLocale = defaultLocale }: { activeLocale?: Locale }) {
-  const [isSignupVisible, setIsSignupVisible] = useState(false);
+  const [show, setShow] = useState(false);
 
   useEffect(() => {
-    const signupSection = document.querySelector("#signup");
+    const visibleEnds = new Set<Element>();
+    const endTargets = Array.from(document.querySelectorAll("#signup, #application, footer"));
 
-    if (!signupSection) {
-      return;
+    function update() {
+      const scrolledEnough = window.scrollY > SHOW_AFTER_PX;
+      setShow(scrolledEnough && visibleEnds.size === 0);
     }
 
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        setIsSignupVisible(Boolean(entry?.isIntersecting && (entry.intersectionRatio ?? 0) > 0.16));
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            visibleEnds.add(entry.target);
+          } else {
+            visibleEnds.delete(entry.target);
+          }
+        }
+        update();
       },
-      { threshold: [0, 0.16, 0.36] }
+      { threshold: 0 }
     );
+    endTargets.forEach((target) => observer.observe(target));
 
-    observer.observe(signupSection);
-    return () => observer.disconnect();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    update();
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
   }, []);
 
   const label = ctaLabel[activeLocale] ?? ctaLabel.uk;
 
   return (
     <div
-      className={`safe-bottom fixed inset-x-3 bottom-3 z-40 rounded-[20px] border border-white/70 bg-white/95 p-2 shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl transition duration-200 md:hidden ${
-        isSignupVisible ? "pointer-events-none translate-y-4 opacity-0" : "translate-y-0 opacity-100"
+      className={`safe-bottom pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-3 transition-all duration-300 md:hidden ${
+        show ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"
       }`}
+      aria-hidden={!show}
     >
-      <div className="flex items-center gap-2">
-        <Link
-          href="#signup"
-          className="tap-target red-cta flex flex-1 items-center justify-center gap-2 rounded-[14px] px-4 py-3 text-sm font-black"
-        >
-          {label}
-        </Link>
-      </div>
+      <button
+        type="button"
+        onClick={() => openLeadPopup("mobile-sticky")}
+        tabIndex={show ? 0 : -1}
+        className={`red-cta tap-target w-full max-w-sm rounded-[16px] px-5 py-3.5 text-sm font-black shadow-[0_12px_36px_rgba(255,30,30,0.34)] ${
+          show ? "pointer-events-auto" : "pointer-events-none"
+        }`}
+      >
+        <PhoneCall className="h-4 w-4" aria-hidden />
+        {label}
+      </button>
     </div>
   );
 }
