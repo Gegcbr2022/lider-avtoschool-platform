@@ -1,4 +1,4 @@
-import { assessLeadRisk, createLeadSchema, hashLeadRiskKey, stripLeadProtectionFields } from "@lider/shared";
+import { assessLeadRisk, createLeadSchema, hashLeadRiskKey, normalizeLeadSource, stripLeadProtectionFields } from "@lider/shared";
 import { NextResponse } from "next/server";
 
 const requestBuckets = new Map<string, { count: number; resetAt: number }>();
@@ -104,7 +104,8 @@ function enrichLeadBody(body: unknown, request: Request) {
     page: payload.page ?? referer,
     userAgent,
     language: language === "ru" || language === "en" ? language : "uk",
-    source: payload.source ?? "website",
+    source: normalizeLeadSource(payload.source),
+    sourceDetail: typeof payload.source === "string" ? payload.source : undefined,
     preferredContactMethod: payload.preferredContactMethod ?? payload.contactMethod,
     updatedAt: new Date().toISOString()
   };

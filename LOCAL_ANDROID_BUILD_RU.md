@@ -23,21 +23,23 @@ file:///C:/Users/Nice Try)/Downloads/Avtoschool_APP/node_modules/expo-linking/lo
 **Решение — перенести проект в путь без спецсимволов:**
 
 ```powershell
-# 1. Клонировать/скопировать в чистый путь
-xcopy /E /H /Y "C:\Users\Nice Try)\Downloads\Avtoschool_APP" "C:\projects\lider-app\"
+# 1. Скопировать или клонировать заново:
+xcopy /E /H /Y "C:\Users\Nice Try)\Downloads\Avtoschool_APP" "C:\Avtoschool_APP\"
 
-# 2. Или просто клонировать свежей командой:
-git clone <repo-url> C:\projects\lider-app
+# 2. Или клонировать:
+git clone <repo-url> C:\Avtoschool_APP
 
-# 3. Установить зависимости
-cd C:\projects\lider-app
-npm install -g pnpm
-pnpm install
+# 3. Установить зависимости (ВАЖНО после переноса — пересоздаёт workspace symlinks)
+cd C:\Avtoschool_APP
+npm install
 
 # 4. Дальше следовать инструкции ниже
 ```
 
+**Текущий рабочий путь проекта (2026-06-03):** `C:\Avtoschool_APP\` ✅
+
 Пути, которые **работают:**
+- `C:\Avtoschool_APP\` ✅ (текущий)
 - `C:\projects\lider-app\` ✅
 - `C:\lider-avtoschool\` ✅
 - `D:\work\lider\` ✅
@@ -350,8 +352,8 @@ apps\mobile\android\app\build\outputs\apk\release\app-release-unsigned.apk
 ## Быстрая команда «собери и запусти в BlueStacks»
 
 ```powershell
-# Из чистого пути (без спецсимволов!) например C:\projects\lider-app\
-cd C:\projects\lider-app\apps\mobile\android
+# Из текущего рабочего пути проекта C:\Avtoschool_APP\
+cd C:\Avtoschool_APP\apps\mobile\android
 .\gradlew.bat assembleDebug ; adb connect 127.0.0.1:5555 ; adb install -r app\build\outputs\apk\debug\app-debug.apk
 ```
 
@@ -366,9 +368,41 @@ cd C:\projects\lider-app\apps\mobile\android
 | ANDROID_HOME = C:\Android\SDK | ✅ задан |
 | JAVA_HOME = C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot\ | ✅ задан |
 | ADB version 1.0.41 | ✅ работает |
-| expo prebuild --platform android | ✅ успешно |
-| gradlew.bat assembleDebug | ❌ FAILED — `)` в пути `C:\Users\Nice Try)\` |
+| expo prebuild --platform android (старый путь) | ✅ успешно |
+| gradlew.bat assembleDebug (старый путь `C:\Users\Nice Try)\`) | ❌ FAILED — `)` в пути ломает Gradle Ivy URL parser |
 | Workaround subst L: | ❌ не помогает — Node.js резолвит реальный путь |
 | Workaround junction | ❌ не помогает — Node.js резолвит реальный путь |
+| **Проект перенесён на `C:\Avtoschool_APP\`** | ✅ путь без скобок |
+| npm install после переноса | ✅ workspace symlinks пересозданы |
+| TypeScript typecheck (shared/api/web/mobile) | ✅ 0 ошибок |
+| firebase deploy --only functions | ✅ успешно задеплоено |
+| expo prebuild --platform android --clean | ✅ успешно (новые пути) |
+| gradlew assembleDebug | ✅ **BUILD SUCCESSFUL** — 4m 55s |
+| APK размер | ✅ 144 MB (debug) |
+| APK путь | `C:\Avtoschool_APP\apps\mobile\android\app\build\outputs\apk\debug\app-debug.apk` |
 
-**Вывод:** Для локальной сборки нужно перенести проект на `C:\projects\lider-app\` или аналогичный путь без скобок.
+**Статус:** ✅ APK собран успешно из `C:\Avtoschool_APP\`.
+
+### Команды для Android сборки из нового пути:
+
+```powershell
+# 1. Убедиться что environment настроен
+node -v        # v22.x
+java -version  # 17.x
+adb version    # Android Debug Bridge
+
+# 2. Prebuild (генерация native проекта)
+cd C:\Avtoschool_APP\apps\mobile
+npx expo prebuild --platform android
+
+# 3. Сборка APK
+cd android
+.\gradlew.bat assembleDebug
+
+# 4. APK готов в:
+# C:\Avtoschool_APP\apps\mobile\android\app\build\outputs\apk\debug\app-debug.apk
+
+# 5. Установить в BlueStacks
+adb connect 127.0.0.1:5555
+adb install -r app\build\outputs\apk\debug\app-debug.apk
+```

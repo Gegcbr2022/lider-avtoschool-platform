@@ -108,11 +108,6 @@ function StoryViewer({ story, onClose }: { story: ClubStory; onClose: () => void
           <View style={styles.storyCaption}>
             <Text style={[styles.storyCaptionText, { color: textColor }]}>{story.caption}</Text>
           </View>
-          {story.musicTitle ? (
-            <View style={styles.storyMusic}>
-              <Text style={[styles.storyMusicText, { color: textColor }]}>🎵 {story.musicTitle}</Text>
-            </View>
-          ) : null}
           <View style={styles.storyReactions}>
             <Text style={[styles.storyReactionCount, { color: textColor }]}>♥ {story.reactions}</Text>
             {story.tags.map((tag) => (
@@ -555,8 +550,6 @@ const styles = StyleSheet.create({
   storyCloseText: { fontSize: 20, fontWeight: "900" },
   storyCaption: { flex: 1, justifyContent: "center" },
   storyCaptionText: { fontSize: 28, fontWeight: "900", lineHeight: 38, letterSpacing: -0.5 },
-  storyMusic: { marginBottom: 10, alignSelf: "flex-start", backgroundColor: "rgba(0,0,0,0.25)", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
-  storyMusicText: { fontSize: 13, fontWeight: "700" },
   storyReactions: { flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" },
   storyReactionCount: { fontSize: 20, fontWeight: "900" },
   storyTag: { backgroundColor: "rgba(255,255,255,0.25)", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },

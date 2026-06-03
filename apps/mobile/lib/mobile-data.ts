@@ -561,7 +561,6 @@ export type ClubStory = {
   initials: string;
   city?: string;
   caption: string;
-  musicTitle?: string;
   reactions: number;
   createdAt: string;
   tags: string[];
@@ -583,14 +582,6 @@ export const storyToneBg: Record<StoryTone, string> = {
   dark:   "#1a1a1a",
 };
 
-export const mockMusicTracks = [
-  { id: "drive-mood",   title: "Drive Mood"         },
-  { id: "first-ride",   title: "First Ride"          },
-  { id: "misto-che",    title: "Місто чекає"         },
-  { id: "no-panic",     title: "No Panic Parking"    },
-  { id: "prava-v-dii",  title: "Права в Дії"         },
-] as const;
-
 export const storyTemplates = [
   { id: "theory-passed",  label: "Я склав теорію",        emoji: "📚", tone: "green"  as StoryTone },
   { id: "first-lesson",   label: "Мій перший урок",       emoji: "🚗", tone: "dark"   as StoryTone },
@@ -604,13 +595,13 @@ export const mockStories: ClubStory[] = [
   {
     id: "s1", authorName: "Марія", initials: "М", city: "Київ",
     caption: "Здала теорію з першого разу! 🎉",
-    musicTitle: "Drive Mood", reactions: 24, createdAt: "2026-06-03",
+    reactions: 24, createdAt: "2026-06-03",
     tags: ["теорія"], tone: "green", templateId: "theory-passed"
   },
   {
     id: "s2", authorName: "Олег", initials: "О", city: "Дніпро",
     caption: "Перша поїздка містом. Місто відкрилося по-новому!",
-    musicTitle: "Місто чекає", reactions: 41, createdAt: "2026-06-03",
+    reactions: 41, createdAt: "2026-06-03",
     tags: ["практика"], tone: "dark"
   },
   {
@@ -622,7 +613,7 @@ export const mockStories: ClubStory[] = [
   {
     id: "s4", authorName: "Вова", initials: "В", city: "Слов'янськ",
     caption: "Паркування більше не страшне. Бос рівня пройдено!",
-    musicTitle: "No Panic Parking", reactions: 19, createdAt: "2026-06-02",
+    reactions: 19, createdAt: "2026-06-02",
     tags: ["паркування"], tone: "red", templateId: "parking-won"
   },
   {
@@ -736,27 +727,3 @@ export const clubThreadPosts: ClubThreadPost[] = [
   },
 ];
 
-// ─── Music for Stories ────────────────────────────────────────────────────────
-
-export type StoryMusicSource = "local" | "royalty_free" | "spotify_link" | "apple_music_link" | "custom_upload";
-
-export type StoryMusicTrack = {
-  id: string;
-  title: string;
-  artist?: string;
-  source: StoryMusicSource;
-  previewUrl?: string;
-  externalUrl?: string;
-  durationSec?: number;
-  license: "mock" | "royalty_free" | "licensed" | "external_link_only";
-  mood: "drive" | "calm" | "victory" | "city" | "meme";
-};
-
-export const storyMusicTracks: StoryMusicTrack[] = [
-  { id: "drive-mood",   title: "Drive Mood",       artist: "Mock Track",  source: "local",        durationSec: 30, license: "mock", mood: "drive"   },
-  { id: "first-ride",   title: "First Ride",        artist: "Mock Track",  source: "local",        durationSec: 28, license: "mock", mood: "calm"    },
-  { id: "misto-che",    title: "Місто чекає",       artist: "Mock Track",  source: "local",        durationSec: 32, license: "mock", mood: "city"    },
-  { id: "no-panic",     title: "No Panic Parking",  artist: "Mock Track",  source: "local",        durationSec: 25, license: "mock", mood: "meme"    },
-  { id: "prava-v-dii",  title: "Права в Дії",       artist: "Mock Track",  source: "local",        durationSec: 30, license: "mock", mood: "victory" },
-  { id: "pixabay-road", title: "Road Trip",         artist: "Pixabay",     source: "royalty_free", durationSec: 60, license: "royalty_free", mood: "drive", externalUrl: "https://pixabay.com/music" },
-];

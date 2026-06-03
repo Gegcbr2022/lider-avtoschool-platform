@@ -11,6 +11,7 @@ import {
   branches,
   createLeadSchema,
   hashLeadRiskKey,
+  normalizeLeadSource,
   paymentIntentSchema,
   sampleKpiSnapshot,
   stripLeadProtectionFields
@@ -586,12 +587,14 @@ function getRequestIp(request: express.Request) {
 function enrichLeadPayload(request: express.Request) {
   const payload = typeof request.body === "object" && request.body !== null ? request.body : {};
   const rawIp = getRequestIp(request);
+  const rawSource = payload.source;
 
   return {
     ...payload,
     userAgent: payload.userAgent ?? request.header("user-agent"),
     ipHash: payload.ipHash ?? hashIp(rawIp),
-    source: payload.source ?? "website",
+    source: normalizeLeadSource(rawSource),
+    sourceDetail: typeof rawSource === "string" ? rawSource : undefined,
     preferredContactMethod: payload.preferredContactMethod ?? payload.contactMethod,
     updatedAt: payload.updatedAt ?? new Date().toISOString()
   };

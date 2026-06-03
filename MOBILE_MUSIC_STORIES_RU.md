@@ -1,219 +1,96 @@
-# Музыка для Stories — Архитектура и Ограничения
+# Stories без музики — MVP як Telegram Stories
 
-> Объясняем, почему нельзя просто «встроить Spotify как в TikTok», и что использовать вместо этого.
+> Рішення (2026-06-03): Stories в MVP виходять без музики, як Telegram Stories. Музика — future feature.
 
 ---
 
-## Почему Spotify / Apple Music нельзя встроить как TikTok
+## Рішення для MVP
 
-TikTok имеет **лицензионные соглашения** с мейджор-лейблами (Universal, Sony, Warner) и независимыми издателями. Это многомиллионные сделки, позволяющие воспроизводить музыку в своём приложении.
+Stories реалізовані без музики:
 
-### Что нельзя делать без лицензии
+- Немає music badge у viewer
+- Немає music picker у Create Story sheet
+- `musicTitle` прибрано з типу `ClubStory`
+- `mockMusicTracks`, `storyMusicTracks`, `StoryMusicTrack`, `StoryMusicSource` — видалено з коду
+- `expo-av` не встановлюємо (не потрібен для MVP)
 
-| Действие | Статус |
+Stories MVP включає:
+- Горизонтальна лента (як Telegram/Instagram)
+- Fullscreen viewer з кольоровим фоном, автором, містом
+- Реакції (♥ + кількість)
+- Теги (теорія / практика / права / etc.)
+- Create Story sheet з 6 шаблонами
+- Модераційне попередження
+
+---
+
+## Чому музика не потрібна для запуску
+
+| Питання | Відповідь |
 |---|---|
-| Воспроизводить треки Spotify/Apple Music в своём приложении | ❌ Запрещено |
-| Использовать Spotify/Apple Music аудио как фон для Stories | ❌ Нарушение ToS |
-| Скачивать треки для оффлайн-использования в Stories | ❌ Запрещено |
-| Использовать full-длину треков без лицензии | ❌ DMCA / авторские права |
+| Чи можна запустити Stories без музики? | ✅ Так. Telegram Stories — без музики. |
+| Чи є Stories без музики менш цінними? | ❌ Ні. Контент важливіший за фон. |
+| Чи потрібен `expo-av` для MVP? | ❌ Ні. Тільки після додавання audio. |
+| Коли музика? | Після отримання реального каталогу (royalty-free). |
 
-### Что разрешено
+---
 
-| Действие | Статус |
+## Чому не можна вбудувати Spotify/Apple Music як TikTok
+
+TikTok має **ліцензійні угоди** з Universal, Sony, Warner — багатомільйонні контракти.
+
+| Дія | Статус |
 |---|---|
-| Открывать Spotify/Apple Music трек как deep link | ✅ Разрешено |
-| Показывать 30-секундный preview (если API это предоставляет) | ✅ Разрешено (Spotify Web API) |
-| Использовать royalty-free музыку | ✅ Разрешено |
-| Загружать собственные треки (с правами) | ✅ Разрешено |
-| Использовать YouTube Music API / Embed (с ограничениями) | ⚠️ Требует проверки ToS |
+| Відтворювати треки Spotify/Apple Music у своєму додатку | ❌ Заборонено |
+| Використовувати Spotify/Apple Music як фон Stories | ❌ Порушення ToS |
+| Відкривати трек як deep link | ✅ Дозволено |
+| Використовувати royalty-free музику | ✅ Дозволено |
 
 ---
 
-## Варианты реализации
+## Future: як додати музику після MVP
 
-### Вариант 1: Royalty-Free (рекомендуется для старта)
+### Варіант 1 (рекомендовано): Royalty-Free каталог
 
-**Ресурсы:**
-- **Pixabay Music** (бесплатно, нет атрибуции для коммерческого) → https://pixabay.com/music/
-- **Free Music Archive** → https://freemusicarchive.org
-- **ccMixter** (Creative Commons) → https://ccmixter.org
-- **Incompetech** (Kevin MacLeod) → https://incompetech.com
+Ресурси:
+- **Pixabay Music** — безкоштовно, без атрибуції для комерційних → pixabay.com/music
+- **Free Music Archive** → freemusicarchive.org
+- **Incompetech** (Kevin MacLeod) → incompetech.com
 
-**Подготовка:**
-1. Загрузить 5-10 коротких треков (30-60 секунд) в Firebase Storage
-2. Хранить в `audio/stories/{trackId}.mp3`
-3. Сделать публично доступными (Storage Rules)
-4. В мобильном приложении — воспроизводить через `expo-av`
+Кроки:
+1. Завантажити 5-10 коротких треків (30-60 сек) у Firebase Storage
+2. Зберігати в `audio/stories/{trackId}.mp3`
+3. Додати `expo-av` (`npx expo install expo-av`)
+4. Оновити `ClubStory` тип — додати `musicUrl?: string` (не `musicTitle`)
 
-```typescript
-// Будущая интеграция с expo-av
-import { Audio } from "expo-av";
+### Варіант 2: Spotify Deep Link (тільки посилання)
 
-async function playStoryTrack(url: string) {
-  const { sound } = await Audio.Sound.createAsync({ uri: url });
-  await sound.playAsync();
-  return sound; // сохранить для остановки
-}
-```
+Користувач бачить "🎵 Drive Mood" → тап → відкривається Spotify.
+Аудіо НЕ відтворюється всередині додатку.
 
-**Стоимость:** бесплатно (Pixabay), Firebase Storage ~$0.026/GB/мес
+### Варіант 3 (при >10k MAU): Партнерський каталог
+
+- **Epidemic Sound** — $15/міс, api.epidemicsound.com
+- **Artlist** — ліцензія для додатків
 
 ---
 
-### Вариант 2: Spotify Deep Link (только ссылка, без воспроизведения)
+## Stories MVP можна виходити вже зараз
 
-Пользователь видит "🎵 Drive Mood" → тап → открывается Spotify.
-
-```typescript
-import { Linking } from "react-native";
-
-// Открыть трек в Spotify
-Linking.openURL("spotify:track:TRACK_ID");
-// или в браузере
-Linking.openURL("https://open.spotify.com/track/TRACK_ID");
-```
-
-**Ограничения:** пользователь должен иметь Spotify. Аудио НЕ воспроизводится внутри приложения.
+✅ Mock медіа/картки замість реального upload  
+✅ Реакції  
+✅ Шаблони (6 штук)  
+✅ Теги  
+✅ Create Story sheet  
+✅ Модераційне попередження  
+❌ Музика — не в MVP, можлива пізніше через royalty-free/licensed каталог  
+❌ Реальний upload фото/відео — потребує Firebase Storage + модерація
 
 ---
 
-### Вариант 3: Spotify Web API Preview (30 сек)
+## Файли проекту
 
-Spotify API предоставляет `preview_url` — 30-секундный превью трека в MP3.
-
-**Проблема:** нужна регистрация приложения в Spotify Developer Dashboard + OAuth. Не факт, что это разрешено для use-case "фон для Stories" — нужно проверять ToS.
-
-```typescript
-// Получить preview URL
-const response = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
-  headers: { Authorization: `Bearer ${accessToken}` }
-});
-const track = await response.json();
-const previewUrl = track.preview_url; // может быть null
-```
-
----
-
-### Вариант 4: Партнёрский музыкальный каталог
-
-Сервисы для работы с лицензионной музыкой в приложениях:
-- **Epidemic Sound** — $15/мес, api.epidemicsound.com
-- **Artlist** — лицензия для приложений
-- **Soundtrack by Twitch** — для прямых трансляций
-- **Musicbed** — для коммерческих продуктов
-
-**Когда использовать:** при наличии >10k MAU и желании монетизации через Stories.
-
----
-
-## Текущая реализация в приложении
-
-### Архитектура типов (готова)
-
-```typescript
-// apps/mobile/lib/mobile-data.ts
-
-export type StoryMusicSource = "local" | "royalty_free" | "spotify_link" | "apple_music_link" | "custom_upload";
-
-export type StoryMusicTrack = {
-  id: string;
-  title: string;
-  artist?: string;
-  source: StoryMusicSource;
-  previewUrl?: string;
-  externalUrl?: string;
-  durationSec?: number;
-  license: "mock" | "royalty_free" | "licensed" | "external_link_only";
-  mood: "drive" | "calm" | "victory" | "city" | "meme";
-};
-```
-
-### Текущие mock-треки
-
-| Название | Настроение | Источник |
-|---|---|---|
-| Drive Mood | 🚗 drive | mock |
-| First Ride | 😌 calm | mock |
-| Місто чекає | 🌆 city | mock |
-| No Panic Parking | 😎 meme | mock |
-| Права в Дії | 🏆 victory | mock |
-| Road Trip | 🚗 drive | royalty_free (Pixabay) |
-
----
-
-## Что нужно сделать для production
-
-### Шаг 1: Добавить `expo-av`
-
-```bash
-npx expo install expo-av
-```
-
-Обновить `apps/mobile/package.json` и пересобрать (`expo prebuild`).
-
-### Шаг 2: Загрузить royalty-free треки
-
-1. Скачать 5+ треков с Pixabay Music
-2. Загрузить в Firebase Storage: `audio/stories/`
-3. Обновить `storyMusicTracks` в `mobile-data.ts` с реальными `previewUrl`
-
-### Шаг 3: Реализовать плеер
-
-```typescript
-// apps/mobile/lib/audio.ts
-import { Audio } from "expo-av";
-
-let currentSound: Audio.Sound | null = null;
-
-export async function playTrack(url: string) {
-  await stopTrack();
-  await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
-  const { sound } = await Audio.Sound.createAsync({ uri: url });
-  currentSound = sound;
-  await sound.playAsync();
-}
-
-export async function stopTrack() {
-  if (currentSound) {
-    await currentSound.stopAsync();
-    await currentSound.unloadAsync();
-    currentSound = null;
-  }
-}
-```
-
-### Шаг 4: Music Picker UI
-
-Добавить секцию в Create Story sheet:
-- Горизонтальный список треков
-- Иконка 🎵 + название
-- Визуализатор (mock progress bar)
-- Кнопка Preview (если `previewUrl` есть)
-
----
-
-## ENV для будущих интеграций
-
-| ENV | Где | Назначение |
-|---|---|---|
-| `EXPO_PUBLIC_SPOTIFY_CLIENT_ID` | Vercel + Mobile | Spotify Web API |
-| `SPOTIFY_CLIENT_SECRET` | Firebase Functions | Server-side Spotify auth |
-| `EPIDEMIC_SOUND_API_KEY` | Firebase Functions | Epidemic Sound catalog |
-| `FIREBASE_STORAGE_BUCKET` | Firebase Functions | Уже есть — для audio upload |
-
----
-
-## TL;DR — Что делать прямо сейчас
-
-1. **Сейчас**: использовать mock названия треков (уже реализовано) + показывать в Story viewer
-2. **Следующий шаг**: добавить `expo-av` + 3-5 Pixabay треков в Firebase Storage
-3. **При росте (>5k MAU)**: Epidemic Sound ($15/мес) для полноценного каталога
-4. **NOT до того**: не встраивать Spotify/Apple Music напрямую без лицензионного соглашения
-
----
-
-## Файлы проекта
-
-- `apps/mobile/lib/mobile-data.ts` → `StoryMusicTrack`, `storyMusicTracks`
-- `apps/mobile/app/(tabs)/club.tsx` → StoryViewer, CreateStorySheet (music badge)
+- `apps/mobile/lib/mobile-data.ts` → `ClubStory` (без `musicTitle`), `mockStories`
+- `apps/mobile/app/(tabs)/club.tsx` → `StoryViewer`, `CreateStorySheet` (без music UI)
 - `MOBILE_PRODUCT_ROADMAP_RU.md` → Фаза 3 (Stories)
+- `MISSING_FOR_PRODUCTION.md` → статус Stories та music

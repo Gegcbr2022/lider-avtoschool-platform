@@ -24,13 +24,15 @@
 - **Smart CAPTCHA / Cloudflare Turnstile**: risk-based flow. Нормальний користувач без CAPTCHA; підозрілий отримує Turnstile.
 - **CAPTCHA safe mode**: ✅ env-флаг `LEAD_CAPTCHA_ENABLED=false` (default off) — заявки відправляються без CAPTCHA. Включається через Vercel + Firebase Functions ENV. Пороги підвищено: score≥5, ipAttempts≥5, phoneAttempts≥4 (було 3/2/2).
 - **source enum виправлено**: ✅ `sticky_mobile`, `floating_phone`, `branch_card`, `hero_cta`, `footer`, `about`, `cta_link`, `documents` додані в `leadFormSchema` та `leadSources`. Firebase Functions перезадеплоєно з актуальним enum.
+- **`normalizeLeadSource()` додано**: ✅ будь-який невідомий UI-source тепер нормалізується до `website` замість того, щоб ламати заявку. Оригінальний source зберігається у `sourceDetail`. Захист від майбутніх нових CTA. Реалізовано у `packages/shared`, web route та Firebase Functions.
+- **Firebase Functions перезадеплоєно (2026-06-03)**: ✅ `https://api-jd6b6vy57a-ew.a.run.app` — актуальний enum + normalizeLeadSource. Заявки більше не падають через `hero_cta` або будь-який інший CTA-source.
 - **Admin DEMO-режим**: жовтий банер, "DEMO — зразкові дані", `ADMIN_ROLES_GUIDE.md`.
 - **MOBILE_RELEASE_GUIDE_RU.md**: повний гайд по збірці APK/AAB/IPA через EAS.
 - **LOCAL_ANDROID_BUILD_RU.md**: ✅ інструкція локальної збірки APK для BlueStacks (Windows, без EAS) — JDK 17, Android Studio, gradle assembleDebug, adb install.
 - **Driver Club (мобільний killer feature)**: ✅ нова вкладка «Клуб» — щоденний тест ПДР, streak + progress bar, маскот «Лідик» (адаптивні повідомлення за streak), 25 нагород «Лідер Клуб» по 7 категоріях (earned/locked + progress bars + фільтри), клубна стрічка (4 пости від інструкторів/випускників з лайками), підказка дня, чек-лист водія, реферальний блок. Mock-дані готові до підключення Firestore backend.
 - **Нагороди Driver Club**: ✅ 25 awards: streak (3/7/14/30/100 днів), tests (ПДР-ніндзя, знавець, чемпіон), learning (перший урок, теорія), practice (місто, паркування, самурай), community (клубний голос, story, 100 реакцій), safety (без паніки, спокійний), graduation (права в Дії, машина, маршрут, випускник). Фільтри по категоріях в UI.
 - **Маскот «Лідик»**: ✅ адаптивні повідомлення залежно від streak + 9 станів (loading/error/empty/lost-streak/success/no-internet/test-failed/test-passed/story-posted). Компонент `MascotMessage` — reusable по всьому додатку.
-- **Лідер Stories**: ✅ горизонтальна лента historій, viewer з повноекранним переглядом (кольоровий фон по тону), music badge, реакції, теги. 5 mock stories. Create Story sheet з шаблонами (без медіа upload поки). Типи `ClubStory`, `StoryTone`, `storyTemplates`, `mockMusicTracks` готові для backend.
+- **Лідер Stories (Telegram-стиль, без музики)**: ✅ горизонтальна лента historій, viewer з повноекранним переглядом (кольоровий фон по тону), реакції, теги. 5 mock stories. Create Story sheet з шаблонами (без медіа upload поки). Музика ПРИБРАНА з MVP — Stories як Telegram Stories. `musicTitle`, `mockMusicTracks`, `storyMusicTracks` видалено з UI та типів.
 - **Lidyk AI-помічник**: ✅ картка у Клубі з 5 швидкими підказками (Поясни правило / Тест 1 хвилину / Перший урок / Практика / Іспит), mock відповіді. Future: підключення OpenAI/Claude API.
 - **Клубна стрічка Threads/X-like**: ✅ `ClubThreadPost` тип з reactions {like, fire, clap} + commentsCount, ready для Firestore. UI з лайками і тегами.
 - **`MascotMessage` component**: ✅ reusable — emoji + title + message + tone (neutral/success/warning/error). Використовується в тесті дня та нагородах.
@@ -87,16 +89,15 @@
 - **AI API**: ✅ OpenAI підключено через Firebase Functions `/ai/lidyk` + Vercel proxy. Ключ у `.env.lider-avtoschool`. Модель: `gpt-4o-mini` (fallback від `OPENAI_MODEL`).
 - **Media upload for Stories**: Firebase Storage для фото/відео — після модерації.
 - **Модерація**: Stories і лента потребують перегляду перед публічним запуском. Кнопка "Поскаржитись" + панель у admin.
-- **Music licensing**: зараз тільки mock назви, `expo-av` не встановлено. Детально: `MOBILE_MUSIC_STORIES_RU.md`.
-- **APK build**: перенести проект на шлях без скобок (`C:\projects\lider-app\`) — детально `LOCAL_ANDROID_BUILD_RU.md`.
+- **Music licensing**: ❌ НЕ входить у MVP. Stories без музики (як Telegram). Музику можна додати пізніше через royalty-free каталог. `expo-av` не встановлено. Детально: `MOBILE_MUSIC_STORIES_RU.md`.
+- **APK build**: ✅ Проект перенесено на `C:\Avtoschool_APP\` (без проблемних символів). `npm install` після переносу виправив broken symlinks workspace. Android build потребує `expo prebuild` + `gradlew assembleDebug`. Детально `LOCAL_ANDROID_BUILD_RU.md`.
 - **APP_ICON_PROMPT_RU.md**: ✅ промт для генерації іконки додатку (4 варіанти: мінімал, динамік, преміум, маскот).
 - **MOBILE_PRODUCT_ROADMAP_RU.md**: ✅ дорожня карта 10 фаз: MVP → Driver Club → Stories → Push → Firestore → Модерація → Монетизація → Telegram → Privacy → Release.
 - **Маскот реальна картинка**: ✅ `maskot_test.png` та `app_logo_test.png` скопійовано в `apps/mobile/assets/`. `app.config.ts` оновлено: `icon`, `splash`, `adaptiveIcon.foregroundImage`. Маскот Лідик — червоний автомобіль з очима — використовується у MascotCard, LidykAssistant header, loading/response states, Create Story sheet.
 - **Lidyk AI — реальний endpoint**: ✅ Firebase Functions `/ai/lidyk` — приймає питання, викликає OpenAI GPT-4o-mini з system prompt Лідика, повертає `{answer, mode}`. Vercel proxy `/api/ai/lidyk` з rate limit 15 req/хв/IP. Mobile `askLidyk()` у `apps/mobile/lib/api.ts` — 15s timeout, fallback на мережеву помилку. UI: TextInput + quick prompts + loading state + response з маскотом.
-- **MOBILE_MUSIC_STORIES_RU.md**: ✅ пояснення чому не можна вбудувати Spotify/Apple Music як TikTok (немає лицензій), варіанти (royalty-free, Spotify deep link, Epidemic Sound), архітектура `StoryMusicTrack` типів, план підключення `expo-av`.
-- **StoryMusicTrack типи**: ✅ `StoryMusicSource`, `StoryMusicTrack` з `license`, `mood`, `previewUrl` — готово до Firestore та `expo-av`.
+- **MOBILE_MUSIC_STORIES_RU.md**: ✅ оновлено — музика НЕ входить у MVP, Stories робляться без музики як Telegram Stories. Майбутня музика — тільки через royalty-free/licensed каталог, без Spotify/Apple Music embedding.
 - **Club Feed розширено**: ✅ 6 постів (мем "не заглохнемо", новини набору Краматорськ) + 2 нові шаблони в clubFeedPosts.
-- **Локальна збірка APK**: ✅ Тестовано. Встановлено: Node v22, Java JDK 17, Android SDK, ADB. `expo prebuild` — успішно. `gradlew assembleDebug` — **FAILED**: `)` у шляху `C:\Users\Nice Try)\` ламає Gradle Ivy URL parser. Рішення: перенести проект на `C:\projects\lider-app\`. Детально у `LOCAL_ANDROID_BUILD_RU.md`.
+- **Локальна збірка APK**: ✅ **BUILD SUCCESSFUL** (2026-06-03). `expo prebuild --clean` + `gradlew assembleDebug` з `C:\Avtoschool_APP\`. APK: `apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk` (144 MB). Встановлення: `adb connect 127.0.0.1:5555 && adb install -r <шлях до APK>`. Детально у `LOCAL_ANDROID_BUILD_RU.md`.
 
 ### Telegram-бот
 

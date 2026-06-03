@@ -1111,3 +1111,26 @@ function isKnownLeadSource(source: string) {
   const candidates = [source, source.replace(/_/g, "-"), source.replace(/-/g, "_")];
   return candidates.some((candidate) => (leadSources as readonly string[]).includes(candidate));
 }
+
+/**
+ * Maps a frontend UI source string to a valid LeadSource enum value.
+ * If the source is already valid — returns it as-is.
+ * If it's a known alias (dashes↔underscores) — normalizes it.
+ * Unknown sources fall back to "website" so no lead is ever lost.
+ */
+export function normalizeLeadSource(source: unknown): LeadSource {
+  if (typeof source !== "string" || !source.trim()) {
+    return "website";
+  }
+
+  const s = source.trim();
+  const candidates = [s, s.replace(/_/g, "-"), s.replace(/-/g, "_")];
+
+  for (const candidate of candidates) {
+    if ((leadSources as readonly string[]).includes(candidate)) {
+      return candidate as LeadSource;
+    }
+  }
+
+  return "website";
+}
