@@ -26,6 +26,9 @@
 - **source enum виправлено**: ✅ `sticky_mobile`, `floating_phone`, `branch_card`, `hero_cta`, `footer`, `about`, `cta_link`, `documents` додані в `leadFormSchema` та `leadSources`. Firebase Functions перезадеплоєно з актуальним enum.
 - **`normalizeLeadSource()` додано**: ✅ будь-який невідомий UI-source тепер нормалізується до `website` замість того, щоб ламати заявку. Оригінальний source зберігається у `sourceDetail`. Захист від майбутніх нових CTA. Реалізовано у `packages/shared`, web route та Firebase Functions.
 - **Firebase Functions перезадеплоєно (2026-06-03)**: ✅ `https://api-jd6b6vy57a-ew.a.run.app` — актуальний enum + normalizeLeadSource. Заявки більше не падають через `hero_cta` або будь-який інший CTA-source.
+- **Vercel web route захищено (2026-06-04)**: ✅ `safeLeadSource()` інлайнено прямо в `apps/web/app/api/leads/route.ts` — заявки проходять незалежно від версії `@lider/shared` в кеші Vercel. Кеш-баст: `@lider/shared` version 0.2.0.
+- **Release APK BlueStacks (2026-06-04)**: ✅ Причина білого екрану — React version mismatch (`react: 19.2.7` vs `react-native-renderer: 19.0.0`). Виправлено: `react: 19.0.0` (exact). Команда: `EXPO_NO_METRO_WORKSPACE_ROOT=1 gradlew assembleRelease`. APK: `apps/mobile/android/app/build/outputs/apk/release/app-release.apk` (67 MB). Запускається без краш.
+- **ErrorBoundary (2026-06-04)**: ✅ expo-router `ErrorBoundary` export у `app/_layout.tsx`. Замість білого екрану — дружній екран з маскотом і кнопкою "Спробувати ще раз".
 - **Admin DEMO-режим**: жовтий банер, "DEMO — зразкові дані", `ADMIN_ROLES_GUIDE.md`.
 - **MOBILE_RELEASE_GUIDE_RU.md**: повний гайд по збірці APK/AAB/IPA через EAS.
 - **LOCAL_ANDROID_BUILD_RU.md**: ✅ інструкція локальної збірки APK для BlueStacks (Windows, без EAS) — JDK 17, Android Studio, gradle assembleDebug, adb install.
@@ -90,7 +93,7 @@
 - **Media upload for Stories**: Firebase Storage для фото/відео — після модерації.
 - **Модерація**: Stories і лента потребують перегляду перед публічним запуском. Кнопка "Поскаржитись" + панель у admin.
 - **Music licensing**: ❌ НЕ входить у MVP. Stories без музики (як Telegram). Музику можна додати пізніше через royalty-free каталог. `expo-av` не встановлено. Детально: `MOBILE_MUSIC_STORIES_RU.md`.
-- **APK build**: ✅ Проект перенесено на `C:\Avtoschool_APP\` (без проблемних символів). `npm install` після переносу виправив broken symlinks workspace. Android build потребує `expo prebuild` + `gradlew assembleDebug`. Детально `LOCAL_ANDROID_BUILD_RU.md`.
+- **APK build**: ✅ `expo prebuild --clean` + `EXPO_NO_METRO_WORKSPACE_ROOT=1 gradlew assembleRelease` → `app-release.apk` (67 MB). Встановлено та перевірено в BlueStacks — білого екрану немає. Детально `LOCAL_ANDROID_BUILD_RU.md`.
 - **APP_ICON_PROMPT_RU.md**: ✅ промт для генерації іконки додатку (4 варіанти: мінімал, динамік, преміум, маскот).
 - **MOBILE_PRODUCT_ROADMAP_RU.md**: ✅ дорожня карта 10 фаз: MVP → Driver Club → Stories → Push → Firestore → Модерація → Монетизація → Telegram → Privacy → Release.
 - **Маскот реальна картинка**: ✅ `maskot_test.png` та `app_logo_test.png` скопійовано в `apps/mobile/assets/`. `app.config.ts` оновлено: `icon`, `splash`, `adaptiveIcon.foregroundImage`. Маскот Лідик — червоний автомобіль з очима — використовується у MascotCard, LidykAssistant header, loading/response states, Create Story sheet.
