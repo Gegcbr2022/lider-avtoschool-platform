@@ -27,9 +27,13 @@
 - **Admin DEMO-режим**: жовтий банер, "DEMO — зразкові дані", `ADMIN_ROLES_GUIDE.md`.
 - **MOBILE_RELEASE_GUIDE_RU.md**: повний гайд по збірці APK/AAB/IPA через EAS.
 - **LOCAL_ANDROID_BUILD_RU.md**: ✅ інструкція локальної збірки APK для BlueStacks (Windows, без EAS) — JDK 17, Android Studio, gradle assembleDebug, adb install.
-- **Driver Club (мобільний killer feature)**: ✅ нова вкладка «Клуб» — щоденний тест ПДР, streak + progress bar, маскот «Лідик» (адаптивні повідомлення за streak), 12 нагород «Лідер Клуб» (earned/locked + progress bars), клубна стрічка (4 пости від інструкторів/випускників з лайками), підказка дня, чек-лист водія, реферальний блок. Mock-дані готові до підключення Firestore backend.
-- **Нагороди Driver Club**: ✅ Перший старт, Серія 3/7/30 днів, Знак знавця, Спокійний водій, Майстер паркування, Друг Лідера, ПДР-ніндзя, Без паніки, Дорожній колега, Чемпіон теорії, Випускник клубу — типи готові для Firestore sync.
-- **Маскот «Лідик»**: ✅ адаптивні повідомлення залежно від streak (excited/happy/encouraging/gentle-reminder), не токсичний, не агресивний.
+- **Driver Club (мобільний killer feature)**: ✅ нова вкладка «Клуб» — щоденний тест ПДР, streak + progress bar, маскот «Лідик» (адаптивні повідомлення за streak), 25 нагород «Лідер Клуб» по 7 категоріях (earned/locked + progress bars + фільтри), клубна стрічка (4 пости від інструкторів/випускників з лайками), підказка дня, чек-лист водія, реферальний блок. Mock-дані готові до підключення Firestore backend.
+- **Нагороди Driver Club**: ✅ 25 awards: streak (3/7/14/30/100 днів), tests (ПДР-ніндзя, знавець, чемпіон), learning (перший урок, теорія), practice (місто, паркування, самурай), community (клубний голос, story, 100 реакцій), safety (без паніки, спокійний), graduation (права в Дії, машина, маршрут, випускник). Фільтри по категоріях в UI.
+- **Маскот «Лідик»**: ✅ адаптивні повідомлення залежно від streak + 9 станів (loading/error/empty/lost-streak/success/no-internet/test-failed/test-passed/story-posted). Компонент `MascotMessage` — reusable по всьому додатку.
+- **Лідер Stories**: ✅ горизонтальна лента historій, viewer з повноекранним переглядом (кольоровий фон по тону), music badge, реакції, теги. 5 mock stories. Create Story sheet з шаблонами (без медіа upload поки). Типи `ClubStory`, `StoryTone`, `storyTemplates`, `mockMusicTracks` готові для backend.
+- **Lidyk AI-помічник**: ✅ картка у Клубі з 5 швидкими підказками (Поясни правило / Тест 1 хвилину / Перший урок / Практика / Іспит), mock відповіді. Future: підключення OpenAI/Claude API.
+- **Клубна стрічка Threads/X-like**: ✅ `ClubThreadPost` тип з reactions {like, fire, clap} + commentsCount, ready для Firestore. UI з лайками і тегами.
+- **`MascotMessage` component**: ✅ reusable — emoji + title + message + tone (neutral/success/warning/error). Використовується в тесті дня та нагородах.
 - **Контент теорії та практики**: ✅ на `/categories` додано блок — Zoom-заняття, YouTube-лекції, тренажер ПДР, практичні заняття з інструктором. uk/ru/en.
 - **CLIENT_DB_ARCHITECTURE_RU.md**: ✅ архітектура спільної клієнтської БД — 12 колекцій, Telegram-sync поля, matching по телефону, Security Rules, roadmap бота.
 - **DEPLOY_STRATEGY_RU.md**: ✅ порівняння Vercel+Firebase vs VPS vs гібрид, рекомендація та тригери переходу.
@@ -78,9 +82,15 @@
 - **EAS credentials**: Google Play Console ($25 once) + Apple Developer ($99/рік). Гайд: `MOBILE_RELEASE_GUIDE_RU.md`.
 - **Локальна збірка APK**: ✅ `LOCAL_ANDROID_BUILD_RU.md` — збірка для BlueStacks без EAS, потрібні JDK 17 + Android Studio + Gradle.
 - **Push-повідомлення**: `expo-notifications` + FCM token registration.
-- **Реальна синхронізація Driver Club**: streak, нагороди, checklist → Firestore після запуску в stores. Типи `ClubAward`, `ClubPost`, `ClubMascot` вже готові.
+- **Реальна синхронізація Driver Club**: streak, нагороди, checklist, stories → Firestore після запуску в stores. Типи `ClubAward`, `ClubStory`, `ClubThreadPost`, `MascotStateId` готові.
 - **Firebase мобільний**: `google-services.json` / `GoogleService-Info.plist` потрібні для production build.
 - **metro.config.js**: перевірити або створити для monorepo watchFolders — детально у `LOCAL_ANDROID_BUILD_RU.md`.
+- **AI API**: підключити OpenAI або Claude для повноцінного Lidyk AI-помічника (зараз mock відповіді).
+- **Media upload for Stories**: Firebase Storage для фото/відео в stories (зараз disabled placeholder).
+- **Модерація**: Stories і лента потребують перегляду перед публічним запуском.
+- **Music licensing**: зараз тільки mock назви треків — потрібні royalty-free треки або партнерство.
+- **APP_ICON_PROMPT_RU.md**: ✅ промт для генерації іконки додатку (4 варіанти: мінімал, динамік, преміум, маскот).
+- **MOBILE_PRODUCT_ROADMAP_RU.md**: ✅ дорожня карта 10 фаз: MVP → Driver Club → Stories → Push → Firestore → Модерація → Монетизація → Telegram → Privacy → Release.
 
 ### Telegram-бот
 

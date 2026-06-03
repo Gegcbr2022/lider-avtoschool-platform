@@ -112,6 +112,34 @@ export function EmptyState({ title, detail }: { title: string; detail: string })
   );
 }
 
+export function MascotMessage({
+  emoji,
+  title,
+  message,
+  tone = "neutral"
+}: {
+  emoji: string;
+  title: string;
+  message: string;
+  tone?: "neutral" | "success" | "warning" | "error";
+}) {
+  const bg =
+    tone === "success" ? "#e8f5ee" :
+    tone === "warning" ? "#fff8ec" :
+    tone === "error"   ? "#fef3f2" :
+    "#f0f8f6";
+
+  return (
+    <View style={[styles.mascotMsg, { backgroundColor: bg }]}>
+      <Text style={styles.mascotMsgEmoji}>{emoji}</Text>
+      <View style={styles.mascotMsgBody}>
+        <Text style={styles.mascotMsgTitle}>{title}</Text>
+        <Text style={styles.mascotMsgText}>{message}</Text>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -300,5 +328,16 @@ const styles = StyleSheet.create({
     color: colors.muted,
     lineHeight: 22,
     textAlign: "center"
-  }
+  },
+  mascotMsg: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: radii.md,
+    padding: 14
+  },
+  mascotMsgEmoji: { fontSize: 32 },
+  mascotMsgBody: { flex: 1 },
+  mascotMsgTitle: { fontSize: 14, fontWeight: "900", color: colors.graphite },
+  mascotMsgText:  { marginTop: 3, fontSize: 13, fontWeight: "600", color: colors.muted, lineHeight: 19 }
 });
