@@ -1,12 +1,13 @@
-import { assessLeadRisk, createLeadSchema, hashLeadRiskKey, stripLeadProtectionFields } from "@lider/shared";
+// v3: source validated independently — no dependency on @lider/shared enum version
+import { assessLeadRisk, hashLeadRiskKey, stripLeadProtectionFields } from "@lider/shared";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 const requestBuckets = new Map<string, { count: number; resetAt: number }>();
 const leadIpBuckets = new Map<string, { count: number; resetAt: number }>();
 const leadPhoneBuckets = new Map<string, { count: number; resetAt: number }>();
 
-// All valid lead sources — inlined here so this route works independently of
-// which version of @lider/shared the Vercel build cache contains.
+// All valid lead sources — independent of @lider/shared version in Vercel cache.
 const VALID_LEAD_SOURCES = new Set([
   "website", "popup", "telegram", "referral", "walk-in", "mobile",
   "ai-chat", "admin", "category-page", "documents-page", "contacts-page",
@@ -14,27 +15,55 @@ const VALID_LEAD_SOURCES = new Set([
   "floating_phone", "sticky_mobile", "footer", "cta_link", "documents", "about",
 ]);
 
-// Values that all schema versions (including the old 11-value cache) accept.
-// Used as the Zod-validated source so the schema never rejects on new CTA names.
-const SCHEMA_SAFE_SOURCES = new Set([
-  "website", "popup", "telegram", "referral", "walk-in", "mobile",
-  "ai-chat", "admin", "category-page", "documents-page", "contacts-page",
-]);
-
-function safeLeadSource(raw: unknown): { normalized: string; schemaSafe: string } {
-  if (typeof raw !== "string" || !raw.trim()) {
-    return { normalized: "website", schemaSafe: "website" };
-  }
+function safeLeadSource(raw: unknown): string {
+  if (typeof raw !== "string" || !raw.trim()) return "website";
   const s = raw.trim();
-  const candidates = [s, s.replace(/_/g, "-"), s.replace(/-/g, "_")];
-  let normalized = "website";
-  for (const c of candidates) {
-    if (VALID_LEAD_SOURCES.has(c)) { normalized = c; break; }
+  for (const c of [s, s.replace(/_/g, "-"), s.replace(/-/g, "_")]) {
+    if (VALID_LEAD_SOURCES.has(c)) return c;
   }
-  // For Zod validation, always use a value the cached schema accepts
-  const schemaSafe = SCHEMA_SAFE_SOURCES.has(normalized) ? normalized : "website";
-  return { normalized, schemaSafe };
+  return "website";
 }
+
+// Web-edge schema: source is z.string() so any value passes locally.
+// Firebase Functions runs its own normalized validation.
+const webLeadSchema = z.object({
+  name: z.string().trim().max(80).default(""),
+  phone: z.string().trim().min(9).max(30),
+  email: z.union([z.string().trim().email(), z.literal("")]).optional(),
+  city: z.string().trim().min(2).max(80),
+  category: z.enum(["A", "A1", "B", "C", "CE"]),
+  branchId: z.string().trim().min(2).max(80),
+  branch: z.string().trim().max(80).optional(),
+  requestType: z.enum(["application", "callback", "consultation", "documents", "category-picker"]).default("application"),
+  contactMethod: z.enum(["telegram", "phone", "whatsapp", "email", "any"]).default("telegram"),
+  preferredContactMethod: z.enum(["telegram", "phone", "whatsapp", "email", "any"]).optional(),
+  documentFiles: z.array(z.string().max(160)).max(8).optional(),
+  documents: z.array(z.unknown()).max(8).optional(),
+  message: z.string().trim().max(1400).optional(),
+  source: z.string().max(80).default("website"), // string, not enum — accepts any source
+  sourceDetail: z.string().max(80).optional(),
+  utmSource: z.string().trim().max(180).optional(),
+  utmMedium: z.string().trim().max(180).optional(),
+  utmCampaign: z.string().trim().max(180).optional(),
+  utmContent: z.string().trim().max(180).optional(),
+  utmTerm: z.string().trim().max(180).optional(),
+  referralCode: z.string().trim().max(180).optional(),
+  telegramStartParam: z.string().trim().max(180).optional(),
+  language: z.enum(["uk", "ru", "en"]).default("uk"),
+  page: z.string().trim().max(260).optional(),
+  device: z.string().trim().max(80).optional(),
+  formStartedAt: z.number().int().positive().optional(),
+  companyWebsite: z.string().trim().max(260).optional(),
+  turnstileToken: z.string().trim().max(4096).optional(),
+  consentAccepted: z.boolean().refine((v) => v, "consent_required"),
+  status: z.string().default("new"),
+  assignedTo: z.string().trim().max(80).optional(),
+  notes: z.string().trim().max(2000).optional(),
+  createdAt: z.string().datetime().optional(),
+  updatedAt: z.string().datetime().optional(),
+  ipHash: z.string().max(128).optional(),
+  userAgent: z.string().max(260).optional(),
+});
 
 export async function POST(request: Request) {
   const rateLimitResult = checkRateLimit(request);
@@ -76,18 +105,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "captcha_required" }, { status: 403 });
   }
 
-  const { normalized: normalizedSource, schemaSafe } = safeLeadSource(payload.source);
   const rawSource = typeof payload.source === "string" ? payload.source : undefined;
-
-  // Validate with schema-safe source so old cached @lider/shared enum never rejects.
-  const enrichedBody = enrichLeadBody(payload, request, schemaSafe);
-  const parsed = createLeadSchema.safeParse(enrichedBody);
+  const normalizedSource = safeLeadSource(rawSource);
+  const enrichedBody = enrichLeadBody(payload, request, normalizedSource);
+  const parsed = webLeadSchema.safeParse(enrichedBody);
 
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid lead payload", issues: parsed.error.flatten() }, { status: 422 });
   }
 
-  // Replace schemaSafe source with the real normalized source for storage/forwarding.
   const finalData = {
     ...parsed.data,
     source: normalizedSource,
@@ -133,7 +159,7 @@ export async function POST(request: Request) {
   });
 }
 
-function enrichLeadBody(body: unknown, request: Request, source: string) {
+function enrichLeadBody(body: unknown, request: Request, normalizedSource: string) {
   const payload = typeof body === "object" && body !== null ? (body as Record<string, unknown>) : {};
   const referer = request.headers.get("referer") ?? undefined;
   const userAgent = request.headers.get("user-agent") ?? undefined;
@@ -144,7 +170,7 @@ function enrichLeadBody(body: unknown, request: Request, source: string) {
     page: payload.page ?? referer,
     userAgent,
     language: language === "ru" || language === "en" ? language : "uk",
-    source, // always a value the Zod schema accepts
+    source: normalizedSource,
     preferredContactMethod: payload.preferredContactMethod ?? payload.contactMethod,
     updatedAt: new Date().toISOString()
   };
@@ -154,16 +180,11 @@ function checkRateLimit(request: Request) {
   const key = hashLeadRiskKey(getRequestIp(request) ?? "unknown", "ip") ?? "ip_unknown";
   const now = Date.now();
   const current = requestBuckets.get(key);
-
   if (!current || current.resetAt < now) {
     requestBuckets.set(key, { count: 1, resetAt: now + 60_000 });
     return { ok: true };
   }
-
-  if (current.count >= 18) {
-    return { ok: false };
-  }
-
+  if (current.count >= 18) return { ok: false };
   current.count += 1;
   return { ok: true };
 }
@@ -171,7 +192,6 @@ function checkRateLimit(request: Request) {
 function recordLeadRiskActivity(payload: Record<string, unknown>, request: Request) {
   const ipKey = hashLeadRiskKey(getRequestIp(request) ?? "unknown", "ip") ?? "ip_unknown";
   const phoneKey = hashLeadRiskKey(payload.phone, "phone");
-
   return {
     ipAttempts: bumpBucket(leadIpBuckets, ipKey, 60_000),
     phoneAttempts: phoneKey ? bumpBucket(leadPhoneBuckets, phoneKey, 10 * 60_000) : 0
@@ -181,12 +201,10 @@ function recordLeadRiskActivity(payload: Record<string, unknown>, request: Reque
 function bumpBucket(bucket: Map<string, { count: number; resetAt: number }>, key: string, windowMs: number) {
   const now = Date.now();
   const current = bucket.get(key);
-
   if (!current || current.resetAt < now) {
     bucket.set(key, { count: 1, resetAt: now + windowMs });
     return 1;
   }
-
   current.count += 1;
   return current.count;
 }
