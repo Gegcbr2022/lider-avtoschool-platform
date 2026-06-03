@@ -52,7 +52,7 @@ export const contentPages: readonly ContentPage[] = [
     slug: "documents",
     title: "Документи",
     summary: "Перелік документів, завантаження файлів і перевірка менеджером.",
-    eyebrow: "Підготовка до старту",
+    eyebrow: "Документи",
     kind: "documents",
     highlights: ["Паспорт", "ІПН", "Медична довідка"],
     checklist: ["Підготуйте копії", "Завантажте файли", "Дочекайтесь перевірки"]

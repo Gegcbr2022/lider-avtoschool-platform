@@ -15,15 +15,15 @@
 - **Firebase Functions задеплоєно**: `https://europe-west1-lider-avtoschool.cloudfunctions.net/api`
 - **Firebase Storage upload реалізовано**: форма завантажує файли в `lead-documents/{leadId}` через Firebase Storage SDK. Потрібні `NEXT_PUBLIC_FIREBASE_*` ENV у Vercel.
 - **Telegram-документи**: після загрузки файлів у Storage — `PATCH /leads/:id/documents` запускає `sendDocumentsToTelegram` у API (скачує з bucket і надсилає у чат). Явна назва bucket через `FIREBASE_STORAGE_BUCKET`.
-- **Email-уведомлення**: `sendLeadEmail()` у API — підтримує Resend (через SMTP) і прямий SMTP (nodemailer). Активується `LEAD_EMAIL_ENABLED=true`. Підтримка окремих адрес за філіями.
+- **Email-уведомлення**: `sendLeadEmail()` у API — підтримує Resend і прямий SMTP (nodemailer), не блокує Telegram/створення ліда при помилці, зберігає `emailNotificationStatus`, provider, reason і messageId. Активується `LEAD_EMAIL_ENABLED=true`. Підтримка окремих адрес за філіями.
 - **Переклади uk/ru/en**: homepage, форма, мобільне меню, sticky footer — повністю перекладені.
 - **Privacy/Terms сторінки**: черновик юридичного тексту на uk/ru/en. Потребує фінального юридичного підтвердження.
 - **Відгуки**: тільки реальний `ReviewsCarousel`, блок фейкових карток прибраний.
 - **Admin CRM**: CSV-export лідів, фільтри за містом і джерелом, кнопки копіювання номера і виклику.
 - **ENV_GUIDE_RU.md**: детальна інструкція для кожної ENV змінної, включно з email.
 - **Головна сторінка спрощена**: блок категорій показує лише 4 картки з кнопкою "Усі категорії та ціни" → `/categories`.
-- **Мобільний sticky footer**: один головний CTA "Залишити заявку" + Telegram-іконка.
-- **Footer**: прибраний номер телефону, додано Telegram + email CTA.
+- **Мобільний sticky CTA**: один головний CTA "Залишити заявку", з'являється після скролу, відкриває popup і ховається біля форми/footer.
+- **Footer**: прибраний номер телефону, додано компактні іконки соцмереж без текстових pills, включно з TikTok; privacy/terms/email залишені дрібним текстом.
 - **Адреси філіалів оновлено**: Київ (ТРК «Аркадія», 2-й поверх), Слов'янськ (Дім Побуту, 1-й поверх), Краматорськ (буд. 56), Дніпро (82Г, 3-й поверх, кім. 11).
 - **Мобільне меню**: переклади uk/ru/en через `menuCopy`.
 
@@ -38,8 +38,8 @@
 | Firebase public config | `NEXT_PUBLIC_FIREBASE_*` у Vercel — отримати з Firebase Console → Project Settings → Web app |
 | `FIREBASE_STORAGE_BUCKET` | `lider-avtoschool.firebasestorage.app` — задати у Firebase Functions env |
 | Telegram bot | `TELEGRAM_BOT_TOKEN` і `TELEGRAM_LOG_CHAT_ID` в Firebase Functions secrets |
-| Email (Resend) | `RESEND_API_KEY` + `LEAD_EMAIL_ENABLED=true` + `LEAD_EMAIL_TO=...` в Firebase Functions |
-| Email (SMTP) | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` замість `RESEND_API_KEY` |
+| Email (Resend) | `RESEND_API_KEY` + `LEAD_EMAIL_ENABLED=true` + `LEAD_EMAIL_TO=...` + `LEAD_EMAIL_FROM=...` в Firebase Functions; статус видно в `emailNotificationStatus` |
+| Email (SMTP) | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` замість `RESEND_API_KEY`; при помилці зберігається `emailNotificationReason` |
 | CAPTCHA (anti-spam) | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` |
 | Real payments | LiqPay / Fondy / Monobank keys в ENV |
 

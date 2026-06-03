@@ -325,7 +325,7 @@ export default async function HomePage({
           </nav>
           <div className="hidden items-center gap-3 lg:flex">
             <LanguageSwitcher activeLocale={activeLocale} />
-            <a href="#signup" className="tap-target red-cta rounded-full px-5 py-3 text-sm font-black">
+            <a href="#signup" data-lead-source="hero_cta" className="tap-target red-cta rounded-full px-5 py-3 text-sm font-black">
               {copy.primaryCta}
             </a>
           </div>
@@ -362,7 +362,7 @@ export default async function HomePage({
                 </p>
               </div>
               <div className="grid gap-3 sm:flex sm:flex-wrap">
-                <a href="#signup" className="tap-target red-cta inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-black shadow-premium sm:rounded-full">
+                <a href="#signup" data-lead-source="hero_cta" className="tap-target red-cta inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-black shadow-premium sm:rounded-full">
                   {copy.primaryCta}
                   <ArrowRight className="h-5 w-5" aria-hidden />
                 </a>
@@ -439,7 +439,12 @@ export default async function HomePage({
                   <div className="mt-5">
                     <p className="text-xs font-black uppercase tracking-[0.14em] text-lider-muted">{sc.priceLabel}</p>
                     <p className="mt-1 text-2xl font-black text-lider-graphite">від {service.priceFrom.toLocaleString("uk-UA")} грн</p>
-                    <a href="#signup" className="tap-target mt-4 flex items-center justify-center rounded-2xl border border-lider-red/25 bg-lider-background px-4 py-3 text-sm font-black text-lider-red transition hover:border-lider-red hover:bg-[#fff5f5]">
+                    <a
+                      href="#signup"
+                      data-lead-source="category_card"
+                      data-lead-category={service.category}
+                      className="tap-target mt-4 flex items-center justify-center rounded-2xl border border-lider-red/25 bg-lider-background px-4 py-3 text-sm font-black text-lider-red transition hover:border-lider-red hover:bg-[#fff5f5]"
+                    >
                       {sc.serviceCta}
                     </a>
                   </div>
@@ -508,7 +513,7 @@ export default async function HomePage({
                 <StatusPill tone="warning">{sc.benefitsEyebrow}</StatusPill>
                 <h2 className="text-4xl font-black leading-tight sm:text-5xl">{sc.benefitsTitle}</h2>
                 <p className="text-base font-semibold leading-7 text-white/68">{sc.benefitsDesc}</p>
-                <a href="#signup" className="tap-target inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-black text-lider-graphite">
+                <a href="#signup" data-lead-source="cta_link" className="tap-target inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-black text-lider-graphite">
                   {sc.benefitsCta}
                   <ArrowRight className="h-4 w-4" aria-hidden />
                 </a>
@@ -592,7 +597,7 @@ export default async function HomePage({
                   <h2 className="max-w-2xl text-4xl font-black leading-tight sm:text-5xl">{sc.signupTitle}</h2>
                   <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-white/70">{sc.signupDesc}</p>
                 </div>
-                <a href="#signup" className="red-cta tap-target w-full rounded-2xl px-6 py-4 text-base font-black sm:w-auto">
+                <a href="#signup" data-lead-source="footer" className="red-cta tap-target w-full rounded-2xl px-6 py-4 text-base font-black sm:w-auto">
                   {copy.primaryCta}
                   <ArrowRight className="h-5 w-5" aria-hidden />
                 </a>

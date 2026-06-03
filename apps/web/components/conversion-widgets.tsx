@@ -31,7 +31,13 @@ export function ConversionWidgets({
       }
 
       event.preventDefault();
-      openLeadPopup(target.dataset.leadSource ?? "cta-link");
+      openLeadPopup({
+        source: target.dataset.leadSource ?? "cta_link",
+        city: target.dataset.leadCity,
+        branchId: target.dataset.leadBranchId,
+        branch: target.dataset.leadBranch,
+        category: toLeadCategory(target.dataset.leadCategory)
+      });
     }
 
     document.addEventListener("click", onClick);
@@ -46,4 +52,8 @@ export function ConversionWidgets({
       <MobileQuickActions activeLocale={activeLocale} />
     </>
   );
+}
+
+function toLeadCategory(value?: string) {
+  return value === "A" || value === "A1" || value === "B" || value === "C" || value === "CE" ? value : undefined;
 }

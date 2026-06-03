@@ -79,21 +79,7 @@ export default async function ContentPage({ params, searchParams }: PageProps) {
 
   const copy = {
     applyCta:    tk("Записатися", "Записаться", "Apply"),
-    backHome:    tk("На головну", "На главную", "Home"),
-    keyPoints:   tk("Коротко", "Коротко", "Key points"),
-    howTitle:    page.kind === "category"
-                   ? tk("Що входить у курс", "Что входит в курс", "What's included")
-                   : tk("Як це працює", "Как это работает", "How it works"),
-    howDesc:     tk(
-                   "Кожна сторінка допомагає швидко зрозуміти маршрут: що підготувати, з ким зв'язатися і як почати.",
-                   "Каждая страница помогает быстро понять маршрут: что подготовить, с кем связаться и как начать.",
-                   "Each page helps you understand the route: what to prepare, who to contact and how to start."
-                 ),
-    stepDesc:    tk(
-                   "Менеджер автошколи допоможе пройти цей крок без зайвих дзвінків.",
-                   "Менеджер автошколы поможет пройти этот шаг без лишних звонков.",
-                   "A manager will help you with this step without unnecessary calls."
-                 ),
+    keyPoints:   tk("Деталі", "Детали", "Details"),
     progsTitle:  page.kind === "city"
                    ? tk("Доступні категорії у філії", "Доступные категории в филиале", "Available categories")
                    : tk("Програми навчання", "Программы обучения", "Training programmes"),
@@ -114,11 +100,6 @@ export default async function ContentPage({ params, searchParams }: PageProps) {
       tk("Підтримка менеджера",   "Поддержка менеджера",      "Manager support"),
       tk("Підготовка до іспиту",  "Подготовка к экзамену",    "Exam preparation")
     ],
-    defaultChecklist: [
-      tk("Залишити заявку",  "Оставить заявку",  "Send a request"),
-      tk("Отримати відповідь", "Получить ответ", "Get a response"),
-      tk("Почати навчання",  "Начать обучение",  "Start training")
-    ],
     defaultCta:      tk("Отримати консультацію", "Получить консультацию", "Get a consultation"),
     defaultEyebrow:  tk("Автошкола Лідер",       "Автошкола Лидер",       "Leader Driving School"),
     retraining:      tk("Перепідготовка",         "Переподготовка",        "Retraining"),
@@ -136,6 +117,19 @@ export default async function ContentPage({ params, searchParams }: PageProps) {
   const showCta = !isLegal;
 
   const telegram = socialLinks.find((s) => s.id === "telegram");
+  const pageLeadSource =
+    slug === "documents" ? "documents" :
+    slug === "about" ? "about" :
+    page.kind === "city" ? "branch_card" :
+    page.kind === "category" ? "category_card" :
+    "cta_link";
+  const pageLeadData = {
+    "data-lead-source": pageLeadSource,
+    "data-lead-city": branch?.city,
+    "data-lead-branch-id": branch?.id,
+    "data-lead-branch": branch?.city,
+    "data-lead-category": page.category
+  };
 
   return (
     <main className="min-h-screen bg-lider-background">
@@ -151,6 +145,7 @@ export default async function ContentPage({ params, searchParams }: PageProps) {
             <LanguageSwitcher activeLocale={activeLocale} />
             <a
               href="#application"
+              {...pageLeadData}
               className="tap-target rounded-[12px] bg-lider-red px-4 py-2 text-sm font-black text-white transition hover:bg-[#d81414]"
             >
               {copy.applyCta}
@@ -175,6 +170,7 @@ export default async function ContentPage({ params, searchParams }: PageProps) {
               <div className="mt-8">
                 <a
                   href="#application"
+                  {...pageLeadData}
                   className="tap-target red-cta inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3 text-sm font-black"
                 >
                   {page.cta ?? copy.defaultCta}
@@ -227,7 +223,15 @@ export default async function ContentPage({ params, searchParams }: PageProps) {
                   </div>
                   <p className="mt-3 text-sm leading-6 text-lider-muted">{service.summary}</p>
                   <p className="mt-4 text-xl font-black text-lider-red">від {service.priceFrom.toLocaleString("uk-UA")} грн</p>
-                  <a href="#application" className="tap-target mt-4 flex items-center justify-center rounded-[14px] border border-lider-red/25 bg-lider-background px-3 py-3 text-sm font-black text-lider-red transition hover:bg-[#fff5f5]">
+                  <a
+                    href="#application"
+                    data-lead-source={branch ? "branch_card" : "category_card"}
+                    data-lead-city={branch?.city}
+                    data-lead-branch-id={branch?.id}
+                    data-lead-branch={branch?.city}
+                    data-lead-category={service.category}
+                    className="tap-target mt-4 flex items-center justify-center rounded-[14px] border border-lider-red/25 bg-lider-background px-3 py-3 text-sm font-black text-lider-red transition hover:bg-[#fff5f5]"
+                  >
                     {copy.applyCta}
                   </a>
                 </article>
@@ -250,6 +254,7 @@ export default async function ContentPage({ params, searchParams }: PageProps) {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <a
                 href="#application"
+                {...pageLeadData}
                 className="tap-target red-cta inline-flex items-center justify-center gap-2 rounded-2xl px-7 py-4 text-base font-black"
               >
                 {page.cta ?? copy.defaultCta}
@@ -338,7 +343,12 @@ function SpecializedPageSection({
                   </p>
                 ) : null}
                 <p className="mt-5 text-2xl font-black text-lider-red">від {service.priceFrom.toLocaleString("uk-UA")} грн</p>
-                <a href="#application" className="tap-target mt-3 flex items-center justify-center rounded-[14px] border border-lider-red/25 bg-lider-background px-3 py-3 text-sm font-black text-lider-red transition hover:bg-[#fff5f5]">
+                <a
+                  href="#application"
+                  data-lead-source="category_card"
+                  data-lead-category={service.category}
+                  className="tap-target mt-3 flex items-center justify-center rounded-[14px] border border-lider-red/25 bg-lider-background px-3 py-3 text-sm font-black text-lider-red transition hover:bg-[#fff5f5]"
+                >
                   {copy.applyCta as string}
                 </a>
               </article>
@@ -467,6 +477,10 @@ function SpecializedPageSection({
                     </a>
                     <a
                       href="#application"
+                      data-lead-source="branch_card"
+                      data-lead-city={b.city}
+                      data-lead-branch-id={b.id}
+                      data-lead-branch={b.city}
                       className="tap-target red-cta inline-flex items-center justify-center rounded-[14px] px-3 py-3 text-sm font-black"
                     >
                       {copy.applyCta as string}

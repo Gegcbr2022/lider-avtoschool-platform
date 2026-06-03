@@ -48,7 +48,17 @@ export type LeadSource =
   | "admin"
   | "category-page"
   | "documents-page"
-  | "contacts-page";
+  | "contacts-page"
+  | "branch_card"
+  | "category_card"
+  | "service_card"
+  | "hero_cta"
+  | "floating_phone"
+  | "sticky_mobile"
+  | "footer"
+  | "cta_link"
+  | "documents"
+  | "about";
 
 export type PreferredContactMethod = "telegram" | "phone" | "whatsapp" | "email" | "any";
 

@@ -31,9 +31,12 @@
 | `TURNSTILE_SECRET_KEY` | Cloudflare Dashboard | Vercel + Firebase | **ДА** | Без него CAPTCHA не валидируется |
 | `LEAD_EMAIL_ENABLED` | Вручную | Firebase Functions | Нет | `false` → email выключен |
 | `LEAD_EMAIL_TO` | Ваш email | Firebase Functions | Нет | Без него email не отправится |
-| `RESEND_API_KEY` | resend.com | Firebase Functions | **ДА** | Нужен если PROVIDER=resend |
-| `SMTP_HOST` | Хостинг / Gmail | Firebase Functions | Нет | Нужен если PROVIDER=smtp |
-| `SMTP_USER` / `SMTP_PASS` | Хостинг / Gmail | Firebase Functions | **ДА** | Нужны если PROVIDER=smtp |
+| `LEAD_EMAIL_FROM` | Подтверждённый sender | Firebase Functions | Нет | Будет fallback из SMTP/Resend |
+| `LEAD_EMAIL_CC` | Доп. email | Firebase Functions | Нет | Можно пустым |
+| `LEAD_EMAIL_PROVIDER` | `resend` / `smtp` | Firebase Functions | Нет | Только подсказка, код выбирает транспорт автоматически |
+| `RESEND_API_KEY` | resend.com | Firebase Functions | **ДА** | Нужен для Resend |
+| `SMTP_HOST` | Хостинг / Gmail | Firebase Functions | Нет | Нужен для SMTP |
+| `SMTP_USER` / `SMTP_PASS` | Хостинг / Gmail | Firebase Functions | **ДА** | Нужны для SMTP |
 
 ---
 
@@ -330,31 +333,17 @@ firebase functions:secrets:access TELEGRAM_BOT_TOKEN
 
 Новые заявки могут приходить не только в Telegram, но и на email.
 
-### Вариант 1 — Resend (рекомендуется, бесплатный tier до 3000/мес)
+### Вариант 1 — Resend (рекомендуется)
 
 1. Зарегистрируйся на [resend.com](https://resend.com/)
-2. Создай API Key → скопируй
-3. Добавь в Firebase Functions:
-
-```bash
-firebase functions:secrets:set RESEND_API_KEY
-```
-
-4. Установи переменные в Firebase Functions env:
-
-```bash
-firebase functions:config:set \
-  lead_email.enabled=true \
-  lead_email.to=owner@example.com \
-  lead_email.from="Лідер CRM <noreply@yourdomain.com>"
-```
-
-Или добавь в `.env` локально и в Firebase через `functions:secrets:set`:
+2. Подтверди домен или разрешённый sender
+3. Создай API Key → скопируй
+4. Добавь прямые ENV/Secrets в Firebase Functions:
 
 ```env
 LEAD_EMAIL_ENABLED=true
 LEAD_EMAIL_TO=owner@example.com
-LEAD_EMAIL_FROM=noreply@yourdomain.com
+LEAD_EMAIL_FROM="Лідер CRM <noreply@yourdomain.com>"
 RESEND_API_KEY=re_xxxx
 ```
 
@@ -394,16 +383,43 @@ LEAD_EMAIL_TO_DNIPRO=dnipro@example.com
 firebase functions:secrets:set RESEND_API_KEY
 # или
 firebase functions:secrets:set SMTP_PASS
-
-# Обычные (несекретные) переменные — через environment config:
-firebase functions:config:set \
-  lead_email.enabled=true \
-  lead_email.to="owner@example.com" \
-  lead_email.from="noreply@yourdomain.com"
 ```
 
-Но проще — добавить всё как env переменные напрямую в Functions в Firebase Console:
+Обычные переменные добавляй как прямые environment variables для функции `api`:
+
+```env
+LEAD_EMAIL_ENABLED=true
+LEAD_EMAIL_TO=owner@example.com
+LEAD_EMAIL_FROM="Лідер CRM <noreply@yourdomain.com>"
+LEAD_EMAIL_CC=
+LEAD_EMAIL_PROVIDER=resend
+```
+
+`LEAD_EMAIL_PROVIDER` оставлен как подсказка для людей. Код сам выбирает Resend, если есть `RESEND_API_KEY`; иначе пробует SMTP при наличии `SMTP_HOST`, `SMTP_USER` и `SMTP_PASS`.
+
 Firebase Console → Functions → `api` → Configuration → Add variable.
+
+### Диагностика email
+
+API не ломает создание лида и Telegram, если email выключен или провайдер упал. В ответе `/leads` и в записи Firestore сохраняются:
+
+```txt
+emailNotificationStatus: sent | skipped | failed
+emailNotificationProvider: resend | smtp
+emailNotificationReason: disabled | no_transport | missing_to | provider_error
+emailNotificationMessageId
+emailNotificationError
+```
+
+Проверки:
+
+```bash
+firebase functions:log --only api --limit 100
+curl https://europe-west1-lider-avtoschool.cloudfunctions.net/api/health/email
+curl -X POST https://europe-west1-lider-avtoschool.cloudfunctions.net/api/health/email/test-lead
+```
+
+Частые причины, почему Telegram работает, а email нет: `LEAD_EMAIL_ENABLED=false`, не задан `LEAD_EMAIL_TO`, нет `RESEND_API_KEY`/SMTP-транспорта, `LEAD_EMAIL_FROM` не подтверждён в Resend или SMTP отклоняет отправителя.
 
 ---
 

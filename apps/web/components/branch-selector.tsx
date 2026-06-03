@@ -3,8 +3,8 @@
 import { branches } from "@lider/shared";
 import { AnimatePresence, motion } from "framer-motion";
 import { Clock3, MapPinned, Route, Send } from "lucide-react";
-import Link from "next/link";
 import { useMemo, useState } from "react";
+import { openLeadPopup } from "../lib/open-lead-popup";
 
 export function BranchSelector() {
   const [activeId, setActiveId] = useState(branches[0]?.id ?? "kyiv");
@@ -19,8 +19,8 @@ export function BranchSelector() {
             Оберіть місто, а ми покажемо адресу, карту і контакт
           </h2>
           <p className="mt-5 max-w-xl text-lg leading-8 text-white/68">
-            Адреса, графік і маршрут зібрані в одному місці. Для запису залиште заявку, а менеджер
-            підкаже найближчий старт.
+            Адреса, графік і маршрут зібрані в одному місці. Для запису залиште заявку, а менеджер підкаже
+            найближчий старт.
           </p>
           <div className="mt-8 grid gap-2 sm:grid-cols-2">
             {branches.map((branch) => (
@@ -80,10 +80,21 @@ export function BranchSelector() {
                     <Route size={17} />
                     Маршрут
                   </a>
-                  <Link href="#signup" className="red-cta tap-target px-4 py-3 text-sm">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      openLeadPopup({
+                        source: "branch_card",
+                        city: activeBranch.city,
+                        branchId: activeBranch.id,
+                        branch: activeBranch.city
+                      })
+                    }
+                    className="red-cta tap-target px-4 py-3 text-sm"
+                  >
                     Залишити заявку
                     <Send size={16} />
-                  </Link>
+                  </button>
                 </div>
               </div>
             </motion.div>

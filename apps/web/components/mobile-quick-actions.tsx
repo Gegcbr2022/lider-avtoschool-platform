@@ -65,7 +65,7 @@ export function MobileQuickActions({ activeLocale = defaultLocale }: { activeLoc
     >
       <button
         type="button"
-        onClick={() => openLeadPopup("mobile-sticky")}
+        onClick={() => openLeadPopup("sticky_mobile")}
         tabIndex={show ? 0 : -1}
         className={`red-cta tap-target w-full max-w-sm rounded-[16px] px-5 py-3.5 text-sm font-black shadow-[0_12px_36px_rgba(255,30,30,0.34)] ${
           show ? "pointer-events-auto" : "pointer-events-none"

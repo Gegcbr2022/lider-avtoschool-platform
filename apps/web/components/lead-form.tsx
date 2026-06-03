@@ -1,10 +1,10 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { branches, defaultLocale, leadFormSchema, type Locale } from "@lider/shared";
+import { branches, defaultLocale, leadFormSchema, leadSources, type Locale } from "@lider/shared";
 import { Button, cn } from "@lider/ui";
 import { CheckCircle2, FileUp, Loader2 } from "lucide-react";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
 import { trackEvent } from "../lib/analytics";
@@ -16,6 +16,13 @@ import {
 } from "../lib/storage-upload";
 
 type LeadFormValues = z.infer<typeof leadFormSchema>;
+type LeadFormInitialContext = {
+  source?: string;
+  city?: string;
+  branchId?: string;
+  branch?: string;
+  category?: LeadFormValues["category"];
+};
 type LeadFormProps = {
   variant?: "page" | "popup";
   className?: string;
@@ -24,6 +31,7 @@ type LeadFormProps = {
   submitLabel?: string;
   analyticsSource?: string;
   locale?: Locale;
+  initialContext?: LeadFormInitialContext;
   onSuccess?: () => void;
 };
 
@@ -176,11 +184,20 @@ export function LeadForm({
   submitLabel = "Отримати консультацію",
   analyticsSource = "lead-form",
   locale = defaultLocale,
+  initialContext,
   onSuccess
 }: LeadFormProps) {
   const copy = formCopy[locale];
   const formId = useId();
   const isPopup = variant === "popup";
+  const contextKey = [
+    initialContext?.source ?? "",
+    initialContext?.city ?? "",
+    initialContext?.branchId ?? "",
+    initialContext?.branch ?? "",
+    initialContext?.category ?? ""
+  ].join("|");
+  const contextHint = getPopupContextHint(locale, initialContext);
   const [status, setStatus] = useState<"idle" | "saving" | "uploading" | "saved" | "error">("idle");
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const [documentFiles, setDocumentFiles] = useState<string[]>([]);
@@ -193,24 +210,24 @@ export function LeadForm({
     reset
   } = useForm<LeadFormValues>({
     resolver: zodResolver(leadFormSchema),
-    defaultValues: {
-      category: "B",
-      branchId: "kyiv",
-      requestType: "application",
-      contactMethod: "phone",
-      preferredContactMethod: "phone",
-      documentFiles: [],
-      documents: [],
-      language: locale,
-      source: analyticsSource === "popup" ? "popup" : "website",
-      city: isPopup ? copy.cityPlaceholder : "",
-      consentAccepted: false
-    }
+    defaultValues: buildLeadFormDefaults({ analyticsSource, copy, initialContext, isPopup, locale })
   });
+
+  useEffect(() => {
+    if (!isPopup) {
+      return;
+    }
+
+    reset(buildLeadFormDefaults({ analyticsSource, copy, initialContext, isPopup, locale }));
+    rawFilesRef.current = [];
+    setDocumentFiles([]);
+    setStatus("idle");
+    setUploadProgress(null);
+  }, [analyticsSource, contextKey, copy, initialContext, isPopup, locale, reset]);
 
   async function onSubmit(values: LeadFormValues) {
     setStatus("saving");
-    const leadContext = getLeadContext(locale, analyticsSource);
+    const leadContext = getLeadContext(locale, analyticsSource, initialContext);
     const rawFiles = rawFilesRef.current;
 
     if (rawFiles.length > 0) {
@@ -284,29 +301,16 @@ export function LeadForm({
       }
     }
 
-    reset({
-      category: "B",
-      branchId: "kyiv",
-      requestType: "application",
-      contactMethod: "phone",
-      preferredContactMethod: "phone",
-      documentFiles: [],
-      documents: [],
-      name: "",
-      phone: "",
-      email: "",
-      city: isPopup ? copy.cityPlaceholder : "",
-      message: "",
-      consentAccepted: false
-    });
+    reset(buildLeadFormDefaults({ analyticsSource, copy, initialContext, isPopup, locale }));
     rawFilesRef.current = [];
     setDocumentFiles([]);
     window.localStorage.setItem("lider-lead-submitted", "true");
     window.dispatchEvent(new CustomEvent("lider-lead-created"));
     trackEvent(analyticsSource === "popup" ? "popup_lead_created" : "lead_created", {
-      source: analyticsSource,
-      city: values.city,
-      category: values.category
+      source: payload.source,
+      city: payload.city,
+      branchId: payload.branchId,
+      category: payload.category
     });
     setStatus("saved");
     onSuccess?.();
@@ -335,6 +339,11 @@ export function LeadForm({
           {title ? <h3 className="text-xl font-semibold tracking-[-0.01em] text-lider-graphite">{title}</h3> : null}
           {description ? <p className="mt-2 text-sm leading-6 text-lider-muted">{description}</p> : null}
         </div>
+      ) : null}
+      {isPopup && contextHint ? (
+        <p className="rounded-[14px] bg-[#fff5f5] px-4 py-3 text-sm font-black text-lider-red">
+          {contextHint}
+        </p>
       ) : null}
       <div className={isPopup ? "hidden" : undefined}>
         <label className="text-sm font-semibold text-lider-graphite" htmlFor={`${formId}-requestType`}>
@@ -542,7 +551,7 @@ export function LeadForm({
   );
 }
 
-function getLeadContext(locale: Locale, analyticsSource: string) {
+function getLeadContext(locale: Locale, analyticsSource: string, initialContext?: LeadFormInitialContext) {
   if (typeof window === "undefined") {
     return { language: locale };
   }
@@ -550,12 +559,20 @@ function getLeadContext(locale: Locale, analyticsSource: string) {
   const params = new URLSearchParams(window.location.search);
   const telegramStartParam = params.get("start") ?? params.get("tg_start") ?? params.get("telegramStartParam") ?? undefined;
   const referralCode = params.get("ref") ?? params.get("referral") ?? params.get("referralCode") ?? telegramStartParam;
+  const branch = resolveContextBranch(initialContext);
+  const contextCity = initialContext?.city ?? branch?.city;
+  const contextBranchId = initialContext?.branchId ?? branch?.id;
+  const contextBranch = initialContext?.branch ?? branch?.city;
 
   return {
     language: locale,
     page: `${window.location.pathname}${window.location.search}`,
     device: window.innerWidth < 768 ? "mobile" : window.innerWidth < 1100 ? "tablet" : "desktop",
-    source: inferLeadSource(analyticsSource, window.location.pathname, referralCode),
+    source: normalizeLeadSource(initialContext?.source) ?? inferLeadSource(analyticsSource, window.location.pathname, referralCode),
+    ...(contextCity ? { city: contextCity } : {}),
+    ...(contextBranchId ? { branchId: contextBranchId } : {}),
+    ...(contextBranch ? { branch: contextBranch } : {}),
+    ...(initialContext?.category ? { category: initialContext.category } : {}),
     utmSource: params.get("utm_source") ?? undefined,
     utmMedium: params.get("utm_medium") ?? undefined,
     utmCampaign: params.get("utm_campaign") ?? undefined,
@@ -567,6 +584,12 @@ function getLeadContext(locale: Locale, analyticsSource: string) {
 }
 
 function inferLeadSource(analyticsSource: string, pathname: string, referralCode?: string): LeadFormValues["source"] {
+  const normalizedSource = normalizeLeadSource(analyticsSource);
+
+  if (normalizedSource) {
+    return normalizedSource;
+  }
+
   if (analyticsSource === "popup") {
     return "popup";
   }
@@ -588,4 +611,90 @@ function inferLeadSource(analyticsSource: string, pathname: string, referralCode
   }
 
   return "website";
+}
+
+function buildLeadFormDefaults({
+  analyticsSource,
+  copy,
+  initialContext,
+  isPopup,
+  locale
+}: {
+  analyticsSource: string;
+  copy: (typeof formCopy)[Locale];
+  initialContext?: LeadFormInitialContext;
+  isPopup: boolean;
+  locale: Locale;
+}): LeadFormValues {
+  const branch = resolveContextBranch(initialContext) ?? branches.find((item) => item.id === "kyiv") ?? branches[0];
+  const hasBranchContext = Boolean(initialContext?.city || initialContext?.branchId);
+  const city = initialContext?.city ?? (hasBranchContext ? branch?.city : undefined) ?? (isPopup ? copy.cityPlaceholder : "");
+
+  return {
+    name: "",
+    phone: "",
+    email: "",
+    city,
+    category: initialContext?.category ?? "B",
+    branchId: initialContext?.branchId ?? branch?.id ?? "kyiv",
+    branch: initialContext?.branch ?? branch?.city,
+    requestType: "application",
+    contactMethod: "phone",
+    preferredContactMethod: "phone",
+    documentFiles: [],
+    documents: [],
+    message: "",
+    language: locale,
+    source: normalizeLeadSource(initialContext?.source) ?? normalizeLeadSource(analyticsSource) ?? (analyticsSource === "popup" ? "popup" : "website"),
+    consentAccepted: false
+  };
+}
+
+function resolveContextBranch(initialContext?: LeadFormInitialContext) {
+  if (!initialContext) {
+    return undefined;
+  }
+
+  if (initialContext.branchId) {
+    return branches.find((branch) => branch.id === initialContext.branchId);
+  }
+
+  if (initialContext.city) {
+    const normalizedCity = initialContext.city.trim().toLowerCase();
+    return branches.find((branch) => branch.city.toLowerCase() === normalizedCity);
+  }
+
+  return undefined;
+}
+
+function getPopupContextHint(locale: Locale, initialContext?: LeadFormInitialContext) {
+  if (!initialContext?.city && !initialContext?.branchId && !initialContext?.category) {
+    return "";
+  }
+
+  const branch = resolveContextBranch(initialContext);
+  const labels = {
+    branch: locale === "en" ? "Branch" : locale === "ru" ? "Филиал" : "Філія",
+    category: locale === "en" ? "Category" : locale === "ru" ? "Категория" : "Категорія"
+  };
+  const parts = [
+    branch || initialContext.city ? `${labels.branch}: ${initialContext.city ?? branch?.city}` : null,
+    initialContext.category ? `${labels.category}: ${initialContext.category}` : null
+  ].filter(Boolean);
+
+  return parts.join(" · ");
+}
+
+function normalizeLeadSource(source?: string): LeadFormValues["source"] | undefined {
+  if (!source) {
+    return undefined;
+  }
+
+  const normalized = source.trim().replace(/-/g, "_");
+
+  if ((leadSources as readonly string[]).includes(normalized)) {
+    return normalized as LeadFormValues["source"];
+  }
+
+  return undefined;
 }

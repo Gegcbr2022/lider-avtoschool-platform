@@ -105,7 +105,7 @@ export function MobileMenu({ navItems, activeLocale }: { navItems: readonly NavI
                         ))}
                       </div>
                       <div className="mt-5 grid gap-3">
-                        <Link href="#signup" onClick={close} className="red-cta tap-target px-5 py-4 text-base">
+                        <Link href="#signup" data-lead-source="sticky_mobile" onClick={close} className="red-cta tap-target px-5 py-4 text-base">
                           {mc.apply}
                           <Send size={18} />
                         </Link>

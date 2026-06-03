@@ -3,8 +3,9 @@ import { ArrowRight, CheckCircle2, MapPin, Trophy } from "lucide-react";
 import Image from "next/image";
 
 const AUTODROME_MAP = "https://goo.gl/maps/3UiN9nWWimAviDpH7";
-const AUTODROME_EMBED =
-  "https://maps.google.com/maps?q=%D0%A1%D0%BB%D0%BE%D0%B2%27%D1%8F%D0%BD%D1%81%D1%8C%D0%BA+%D0%A2%D0%BE%D1%80%D0%B3%D0%BE%D0%B2%D0%B0+46%D0%90&output=embed";
+// Properly formatted address with commas so Google Maps finds the exact location.
+// The old URL had no commas and no "вул." abbreviation, which caused a generic city view.
+const AUTODROME_EMBED = `https://www.google.com/maps?q=${encodeURIComponent("м. Слов'янськ, вул. Торгова, 46А, Україна")}&output=embed&hl=uk&z=17`;
 
 const championThumbs = [
   "/about/instructor-8.jpg",
@@ -67,6 +68,7 @@ export function AboutContent({ locale }: { locale: Locale }) {
             </p>
             <a
               href="#application"
+              data-lead-source="about"
               className="tap-target red-cta mt-8 inline-flex items-center gap-2 rounded-2xl px-7 py-4 text-base font-black"
             >
               {tk("Залишити заявку", "Оставить заявку", "Send a request")}
@@ -145,7 +147,11 @@ export function AboutContent({ locale }: { locale: Locale }) {
                   "Driving instructor Denys Shchukin is a multiple prize-winner and champion of regional and national driving competitions. The accident-free driving experience he has built through years of dedicated training is passed on to students of Ukraine's finest driving school."
                 )}
               </p>
-              <a href="#application" className="tap-target red-cta mt-6 inline-flex items-center gap-2 rounded-2xl px-6 py-3 text-sm font-black">
+              <a
+                href="#application"
+                data-lead-source="about"
+                className="tap-target red-cta mt-6 inline-flex items-center gap-2 rounded-2xl px-6 py-3 text-sm font-black"
+              >
                 {tk("Записатись до Чемпіона", "Записаться к Чемпиону", "Train with the Champion")}
                 <ArrowRight className="h-4 w-4" aria-hidden />
               </a>
@@ -283,6 +289,10 @@ export function AboutContent({ locale }: { locale: Locale }) {
               </p>
               <a
                 href="#application"
+                data-lead-source="branch_card"
+                data-lead-city="Краматорськ"
+                data-lead-branch-id="kramatorsk"
+                data-lead-branch="Краматорськ"
                 className="tap-target red-cta mt-6 inline-flex items-center gap-2 rounded-2xl px-6 py-3 text-sm font-black"
               >
                 {tk("Записатися у Краматорську", "Записаться в Краматорске", "Apply in Kramatorsk")}

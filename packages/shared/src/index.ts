@@ -64,7 +64,17 @@ export const leadSources: LeadSource[] = [
   "admin",
   "category-page",
   "documents-page",
-  "contacts-page"
+  "contacts-page",
+  "branch_card",
+  "category_card",
+  "service_card",
+  "hero_cta",
+  "floating_phone",
+  "sticky_mobile",
+  "footer",
+  "cta_link",
+  "documents",
+  "about"
 ];
 
 export const preferredContactMethods: PreferredContactMethod[] = ["telegram", "phone", "whatsapp", "email", "any"];
@@ -846,6 +856,7 @@ export const leadFormSchema = z.object({
   city: z.string().trim().min(2).max(80),
   category: z.enum(["A", "A1", "B", "C", "CE"]),
   branchId: z.string().trim().min(2).max(80),
+  branch: z.string().trim().max(80).optional(),
   requestType: z
     .enum(["application", "callback", "consultation", "documents", "category-picker"])
     .default("application"),
@@ -866,7 +877,17 @@ export const leadFormSchema = z.object({
       "admin",
       "category-page",
       "documents-page",
-      "contacts-page"
+      "contacts-page",
+      "branch_card",
+      "category_card",
+      "service_card",
+      "hero_cta",
+      "floating_phone",
+      "sticky_mobile",
+      "footer",
+      "cta_link",
+      "documents",
+      "about"
     ])
     .default("website"),
   utmSource: optionalTrackingField,

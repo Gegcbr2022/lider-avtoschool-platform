@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { PhoneCall, ShieldCheck, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { trackEvent } from "../lib/analytics";
+import type { LeadPopupContext } from "../lib/open-lead-popup";
 import { LeadForm } from "./lead-form";
 
 const NEXT_SHOW_KEY = "lider-lead-popup-next-show-at";
@@ -60,6 +61,7 @@ export function LeadPopup({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [leadContext, setLeadContext] = useState<LeadPopupContext>({});
   const triggerRef = useRef<PopupTrigger>("timer");
   const viewedSectionsRef = useRef(new Set<string>());
   const copy = popupCopy[locale] ?? popupCopy.uk;
@@ -73,8 +75,10 @@ export function LeadPopup({
     }
 
     function onOpenRequest(event: Event) {
-      const customEvent = event as CustomEvent<{ source?: string }>;
-      tryOpen("manual", true, customEvent.detail?.source);
+      const customEvent = event as CustomEvent<LeadPopupContext>;
+      const context = customEvent.detail ?? {};
+      setLeadContext(context);
+      tryOpen("manual", true, context.source);
     }
 
     function onMenuState(event: Event) {
@@ -172,6 +176,10 @@ export function LeadPopup({
       window.sessionStorage.setItem(SESSION_SHOWS_KEY, String(sessionShows + 1));
     }
 
+    if (!force) {
+      setLeadContext(source ? { source } : {});
+    }
+
     triggerRef.current = trigger;
     setIsOpen(true);
     trackEvent("popup_shown", { trigger, source: source ?? trigger, forced: force });
@@ -245,6 +253,7 @@ export function LeadPopup({
                 <LeadForm
                   variant="popup"
                   analyticsSource="popup"
+                  initialContext={leadContext}
                   locale={locale}
                   submitLabel={copy.submit}
                   onSuccess={() => closePopup("lead-created")}

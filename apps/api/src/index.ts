@@ -26,6 +26,14 @@ const db = getFirestore(firebaseApp);
 const app = express();
 const requestCounts = new Map<string, { count: number; resetAt: number }>();
 
+type EmailNotificationResult = {
+  status: "sent" | "skipped" | "failed";
+  provider?: "resend" | "smtp";
+  reason?: string;
+  messageId?: string;
+  error?: string;
+};
+
 app.use(
   cors({
     origin(origin, callback) {
@@ -137,8 +145,8 @@ app.get("/health/email/test-lead", async (_request, response) => {
   console.error = (...args: unknown[]) => { logs.push(`ERROR: ${args.join(" ")}`); origError(...args); };
 
   try {
-    await sendLeadEmail(fakeLead, testId);
-    response.json({ ok: true, logs, leadId: testId });
+    const result = await sendLeadEmail(fakeLead, testId);
+    response.json({ ok: result.status === "sent", result, logs, leadId: testId });
   } catch (error) {
     response.json({ ok: false, error: error instanceof Error ? error.message : String(error), logs });
   } finally {
@@ -180,10 +188,25 @@ app.post("/leads", async (request, response) => {
   await sendLeadToTelegram(lead, persistence.id).catch((error: unknown) => {
     console.error("Telegram lead logging failed", error);
   });
-  await sendLeadEmail(lead, persistence.id).catch((error: unknown) => {
-    console.error("Lead email failed", error);
+  const emailNotification = await sendLeadEmail(lead, persistence.id).catch((error: unknown): EmailNotificationResult => {
+    const message = formatError(error);
+    console.error("Lead email failed", message);
+    return { status: "failed", reason: "exception", error: message };
   });
-  response.status(201).json({ id: persistence.id, persistence: persistence.mode, lead });
+  await recordLeadEmailNotification(persistence, emailNotification).catch((error: unknown) => {
+    console.error("Lead email status persistence failed", formatError(error));
+  });
+  response.status(201).json({
+    id: persistence.id,
+    persistence: persistence.mode,
+    lead: {
+      ...lead,
+      emailNotificationStatus: emailNotification.status,
+      emailNotificationProvider: emailNotification.provider,
+      emailNotificationReason: emailNotification.reason,
+      emailNotificationMessageId: emailNotification.messageId
+    }
+  });
 });
 
 app.patch("/leads/:leadId/documents", async (request, response) => {
@@ -359,6 +382,36 @@ async function persist(collection: string, payload: Record<string, unknown>) {
 
     return { id: `local-${Date.now()}`, mode: "local-dev-fallback" as const };
   }
+}
+
+async function recordLeadEmailNotification(
+  persistence: { id: string; mode: "firestore" | "local-dev-fallback" },
+  result: EmailNotificationResult
+) {
+  const recordedAt = new Date().toISOString();
+  const patch = {
+    emailNotificationStatus: result.status,
+    emailNotificationProvider: result.provider,
+    emailNotificationReason: result.reason,
+    emailNotificationMessageId: result.messageId,
+    emailNotificationError: result.error ? result.error.slice(0, 500) : undefined,
+    updatedAt: recordedAt
+  };
+
+  if (persistence.mode === "firestore") {
+    await db.collection("leads").doc(persistence.id).update(compactRecord(patch));
+  }
+
+  await persist("auditLogs", compactRecord({
+    entityType: "lead",
+    entityId: persistence.id,
+    action: `email_notification_${result.status}`,
+    actor: "system",
+    provider: result.provider,
+    reason: result.reason,
+    messageId: result.messageId,
+    createdAt: recordedAt
+  }));
 }
 
 function enrichLeadPayload(request: express.Request) {
@@ -552,7 +605,8 @@ function isValidTelegramWebhook(request: express.Request) {
   return request.header("x-telegram-bot-api-secret-token") === expectedSecret;
 }
 
-async function sendLeadToTelegram(lead: Record<string, unknown>, leadId: string) {
+async function sendLeadToTelegram(leadInput: Record<string, unknown>, leadId: string) {
+  const lead = { ...leadInput };
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_LOG_CHAT_ID;
 
@@ -561,9 +615,23 @@ async function sendLeadToTelegram(lead: Record<string, unknown>, leadId: string)
     return;
   }
 
-  const phone = String(lead.phone ?? "-");
-  const phoneClean = phone.replace(/\D/g, "");
-  const referral = lead.referralCode ?? lead.telegramStartParam ?? lead.utmSource;
+  const rawPhone = String(lead.phone ?? "-");
+  const phone = escapeHtml(rawPhone);
+  const phoneClean = rawPhone.replace(/\D/g, "");
+  const rawReferral = lead.referralCode ?? lead.telegramStartParam ?? lead.utmSource;
+  const referral = rawReferral ? escapeHtml(String(rawReferral)) : undefined;
+  const city = escapeHtml(String(lead.city ?? "-"));
+  const branchId = escapeHtml(String(lead.branchId ?? "-"));
+  const source = escapeHtml(String(lead.source ?? "-"));
+  lead.name = escapeHtml(String(lead.name ?? "-"));
+  lead.email = lead.email ? escapeHtml(String(lead.email)) : undefined;
+  lead.city = city;
+  lead.branchId = branchId;
+  lead.category = escapeHtml(String(lead.category ?? "-"));
+  lead.contactMethod = escapeHtml(String(lead.contactMethod ?? lead.preferredContactMethod ?? "-"));
+  lead.preferredContactMethod = lead.contactMethod;
+  lead.source = source;
+  lead.message = lead.message ? escapeHtml(String(lead.message)) : undefined;
   const hasDocuments = Array.isArray(lead.documents) && lead.documents.length > 0;
   const hasDocumentFiles = Array.isArray(lead.documentFiles) && lead.documentFiles.length > 0;
 
@@ -686,26 +754,27 @@ function createMailTransport() {
   return null;
 }
 
-async function sendLeadEmail(lead: Record<string, unknown>, leadId: string) {
+async function sendLeadEmail(lead: Record<string, unknown>, leadId: string): Promise<EmailNotificationResult> {
   console.log(`[email] sendLeadEmail called for ${leadId}. LEAD_EMAIL_ENABLED=${process.env.LEAD_EMAIL_ENABLED}`);
 
   if (process.env.LEAD_EMAIL_ENABLED !== "true") {
     console.log(`[email] skipped: LEAD_EMAIL_ENABLED="${process.env.LEAD_EMAIL_ENABLED}" (must be exactly "true")`);
-    return;
+    return { status: "skipped", reason: "disabled" };
   }
 
   const transport = createMailTransport();
+  const provider = getMailProvider();
 
   if (!transport) {
-    console.warn(`[email] skipped: no transport. RESEND_API_KEY=${Boolean(process.env.RESEND_API_KEY)} SMTP_HOST=${process.env.SMTP_HOST}`);
-    return;
+    console.warn(`[email] skipped: no transport. provider=${provider ?? "none"} smtpHostConfigured=${Boolean(process.env.SMTP_HOST)}`);
+    return { status: "skipped", provider, reason: "no_transport" };
   }
 
   const toBase = process.env.LEAD_EMAIL_TO;
 
   if (!toBase) {
     console.warn("[email] skipped: LEAD_EMAIL_TO is not set");
-    return;
+    return { status: "skipped", provider, reason: "missing_to" };
   }
 
   const branchId = String(lead.branchId ?? "");
@@ -717,16 +786,35 @@ async function sendLeadEmail(lead: Record<string, unknown>, leadId: string) {
     (branchId === "dobropillia" ? process.env.LEAD_EMAIL_TO_DOBROPILLIA : undefined);
 
   const to = branchEmail ?? toBase;
-  const cc = process.env.LEAD_EMAIL_CC;
-  const from = process.env.LEAD_EMAIL_FROM ?? `"Лідер CRM" <${toBase.split(",")[0].trim()}>`;
+  const cc = process.env.LEAD_EMAIL_CC || undefined; // empty string → undefined (nodemailer ignores it)
+  // Latin-script display name avoids Cyrillic spam flags in some filters.
+  const from = process.env.LEAD_EMAIL_FROM ?? `"Lider School" <${toBase.split(",")[0].trim()}>`;
+  // Reply-To lets the manager reply directly to the lead's email if they provided one.
+  const replyTo = lead.email ? String(lead.email) : undefined;
 
   const referral = lead.referralCode ?? lead.telegramStartParam ?? lead.utmSource;
+  const safeName = escapeHtml(String(lead.name ?? "-"));
+  const safePhone = escapeHtml(String(lead.phone ?? "-"));
+  const phoneHref = String(lead.phone ?? "").replace(/\D/g, "");
+  const safeEmail = lead.email ? escapeHtml(String(lead.email)) : undefined;
+  const safeCity = escapeHtml(String(lead.city ?? "-"));
+  const safeBranchId = escapeHtml(String(lead.branchId ?? "-"));
+  const safeCategory = escapeHtml(String(lead.category ?? "-"));
+  const safeContactMethod = escapeHtml(String(lead.preferredContactMethod ?? lead.contactMethod ?? "-"));
+  const safeSource = escapeHtml(String(lead.source ?? "-"));
+  const safeReferral = referral ? escapeHtml(String(referral)) : undefined;
+  const safeUtmSource = lead.utmSource ? escapeHtml(String(lead.utmSource)) : undefined;
+  const safePage = lead.page ? escapeHtml(String(lead.page)) : undefined;
+  const safeLanguage = escapeHtml(String(lead.language ?? "uk"));
+  const safeMessage = lead.message ? escapeHtml(String(lead.message)) : undefined;
   const documents = Array.isArray(lead.documents) ? lead.documents : [];
   const docList = documents.length
     ? documents
         .map((d: unknown) => {
           const doc = d as Record<string, unknown>;
-          return `<li>${String(doc.originalName ?? doc.name ?? "-")} (${String(doc.storagePath ?? doc.status ?? "-")})</li>`;
+          const name = escapeHtml(String(doc.originalName ?? doc.name ?? "-"));
+          const status = escapeHtml(String(doc.storagePath ?? doc.status ?? "-"));
+          return `<li>${name} (${status})</li>`;
         })
         .join("")
     : "<li>Немає прикріплених файлів</li>";
@@ -738,21 +826,21 @@ async function sendLeadEmail(lead: Record<string, unknown>, leadId: string) {
   </h2>
   <table style="width:100%;border-collapse:collapse;font-size:14px">
     <tr><td style="padding:6px 0;color:#666;width:140px">ID заявки</td><td style="padding:6px 0;font-weight:bold">${leadId}</td></tr>
-    <tr><td style="padding:6px 0;color:#666">Ім'я</td><td style="padding:6px 0;font-weight:bold">${String(lead.name ?? "-")}</td></tr>
-    <tr><td style="padding:6px 0;color:#666">Телефон</td><td style="padding:6px 0"><a href="tel:${String(lead.phone ?? "").replace(/\D/g, "")}">${String(lead.phone ?? "-")}</a></td></tr>
-    ${lead.email ? `<tr><td style="padding:6px 0;color:#666">Email</td><td style="padding:6px 0">${String(lead.email)}</td></tr>` : ""}
-    <tr><td style="padding:6px 0;color:#666">Місто</td><td style="padding:6px 0">${String(lead.city ?? "-")}</td></tr>
-    <tr><td style="padding:6px 0;color:#666">Філія</td><td style="padding:6px 0">${String(lead.branchId ?? "-")}</td></tr>
-    <tr><td style="padding:6px 0;color:#666">Категорія</td><td style="padding:6px 0;font-weight:bold">${String(lead.category ?? "-")}</td></tr>
-    <tr><td style="padding:6px 0;color:#666">Спосіб зв'язку</td><td style="padding:6px 0">${String(lead.preferredContactMethod ?? lead.contactMethod ?? "-")}</td></tr>
-    <tr><td style="padding:6px 0;color:#666">Джерело</td><td style="padding:6px 0">${String(lead.source ?? "-")}</td></tr>
-    ${referral ? `<tr><td style="padding:6px 0;color:#666">Реферал</td><td style="padding:6px 0">${String(referral)}</td></tr>` : ""}
-    ${lead.utmSource ? `<tr><td style="padding:6px 0;color:#666">UTM Source</td><td style="padding:6px 0">${String(lead.utmSource)}</td></tr>` : ""}
-    ${lead.page ? `<tr><td style="padding:6px 0;color:#666">Сторінка</td><td style="padding:6px 0">${String(lead.page)}</td></tr>` : ""}
-    <tr><td style="padding:6px 0;color:#666">Мова</td><td style="padding:6px 0">${String(lead.language ?? "uk")}</td></tr>
+    <tr><td style="padding:6px 0;color:#666">Ім'я</td><td style="padding:6px 0;font-weight:bold">${safeName}</td></tr>
+    <tr><td style="padding:6px 0;color:#666">Телефон</td><td style="padding:6px 0"><a href="tel:${phoneHref}">${safePhone}</a></td></tr>
+    ${safeEmail ? `<tr><td style="padding:6px 0;color:#666">Email</td><td style="padding:6px 0">${safeEmail}</td></tr>` : ""}
+    <tr><td style="padding:6px 0;color:#666">Місто</td><td style="padding:6px 0">${safeCity}</td></tr>
+    <tr><td style="padding:6px 0;color:#666">Філія</td><td style="padding:6px 0">${safeBranchId}</td></tr>
+    <tr><td style="padding:6px 0;color:#666">Категорія</td><td style="padding:6px 0;font-weight:bold">${safeCategory}</td></tr>
+    <tr><td style="padding:6px 0;color:#666">Спосіб зв'язку</td><td style="padding:6px 0">${safeContactMethod}</td></tr>
+    <tr><td style="padding:6px 0;color:#666">Джерело</td><td style="padding:6px 0">${safeSource}</td></tr>
+    ${safeReferral ? `<tr><td style="padding:6px 0;color:#666">Реферал</td><td style="padding:6px 0">${safeReferral}</td></tr>` : ""}
+    ${safeUtmSource ? `<tr><td style="padding:6px 0;color:#666">UTM Source</td><td style="padding:6px 0">${safeUtmSource}</td></tr>` : ""}
+    ${safePage ? `<tr><td style="padding:6px 0;color:#666">Сторінка</td><td style="padding:6px 0">${safePage}</td></tr>` : ""}
+    <tr><td style="padding:6px 0;color:#666">Мова</td><td style="padding:6px 0">${safeLanguage}</td></tr>
     <tr><td style="padding:6px 0;color:#666">Дата</td><td style="padding:6px 0">${new Date(String(lead.createdAt ?? "")).toLocaleString("uk-UA", { timeZone: "Europe/Kyiv" })}</td></tr>
   </table>
-  ${lead.message ? `<div style="margin-top:16px;padding:12px;background:#f4f4f4;border-radius:8px"><p style="color:#666;font-size:12px;margin:0 0 4px">Коментар</p><p style="margin:0;font-size:14px">${String(lead.message)}</p></div>` : ""}
+  ${safeMessage ? `<div style="margin-top:16px;padding:12px;background:#f4f4f4;border-radius:8px"><p style="color:#666;font-size:12px;margin:0 0 4px">Коментар</p><p style="margin:0;font-size:14px">${safeMessage}</p></div>` : ""}
   <div style="margin-top:16px">
     <p style="color:#666;font-size:12px;margin:0 0 6px">Документи</p>
     <ul style="margin:0;padding-left:20px;font-size:13px">${docList}</ul>
@@ -760,22 +848,54 @@ async function sendLeadEmail(lead: Record<string, unknown>, leadId: string) {
   <p style="margin-top:24px;font-size:12px;color:#aaa">Автошкола «Лідер» · lider.bdslab.net</p>
 </div>`.trim();
 
-  console.log(`[email] sending to=${to} cc=${cc ?? "none"} from=${from}`);
+  console.log(`[email] sending provider=${provider ?? "unknown"} to=${to} cc=${cc ?? "none"} from=${from}`);
 
   try {
-    await transport.sendMail({
+    const info = await transport.sendMail({
       from,
       to,
       cc,
+      replyTo,
       subject: `Нова заявка з сайту Лідер — ${String(lead.name ?? "-")}, ${String(lead.category ?? "-")}, ${String(lead.city ?? "-")}`,
       html
     });
-    console.log(`[email] ✓ sent for leadId=${leadId} to=${to}`);
+    const messageId = (info as { messageId?: string }).messageId;
+    console.log(`[email] sent leadId=${leadId} provider=${provider ?? "unknown"} messageId=${messageId ?? "(none)"}`);
+    return { status: "sent", provider, messageId };
   } catch (error) {
-    console.error("[email] ✗ sendMail failed:", error);
-    // Re-throw so the caller logs it too
-    throw error;
+    const message = formatError(error);
+    console.error(`[email] sendMail failed provider=${provider ?? "unknown"} leadId=${leadId}: ${message}`);
+    return { status: "failed", provider, reason: "provider_error", error: message };
   }
+}
+
+function getMailProvider(): "resend" | "smtp" | undefined {
+  if (process.env.RESEND_API_KEY) {
+    return "resend";
+  }
+
+  if (process.env.SMTP_HOST || process.env.SMTP_USER || process.env.SMTP_PASS) {
+    return "smtp";
+  }
+
+  return undefined;
+}
+
+function formatError(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function compactRecord<T extends Record<string, unknown>>(record: T) {
+  return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined));
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 export const api = onRequest(

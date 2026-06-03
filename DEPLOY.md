@@ -42,7 +42,7 @@ OPENAI_MODEL=gpt-4.1-mini
 
 ### 1.2. API (Firebase Functions)
 
-Задаються через `firebase functions:config:set` або `.env.production` у `apps/api`:
+Задаються як прямі environment variables / secrets для Firebase Functions або через `.env.production` у `apps/api`:
 
 ```
 ALLOWED_ORIGINS=https://lider.bdslab.net
@@ -50,6 +50,11 @@ TELEGRAM_BOT_TOKEN=...
 TELEGRAM_LOG_CHAT_ID=...
 TELEGRAM_WEBHOOK_SECRET=...
 OPENAI_API_KEY=...
+LEAD_EMAIL_ENABLED=true
+LEAD_EMAIL_TO=owner@example.com
+LEAD_EMAIL_FROM="Лідер CRM <noreply@yourdomain.com>"
+RESEND_API_KEY=...
+# або SMTP_HOST + SMTP_USER + SMTP_PASS
 ```
 
 ### 1.3. Mobile (Expo EAS)
@@ -202,8 +207,9 @@ eas update --branch production --message "Fix: lead form validation"
 | FAQ (`/faq`) | Акордеон розкривається |
 | Контакти (`/contacts`) | Форма, адреси, Telegram |
 | Форма заявки | Відправляється, показує успіх |
-| Popup | З'являється через 25 сек |
+| Popup | Відкривається з CTA; автоматично з'являється після затримки, якщо користувач ще не залишав заявку |
 | Telegram CTA | Посилання відкриваються |
+| Email diagnostics | `/health/email` і `/health/email/test-lead` повертають provider/status без секретів |
 | Переключатель мови | UA / RU / EN переключаються |
 | Мобільне меню | Відкриває і закриває |
 | 404 | Показує кастомну сторінку |
