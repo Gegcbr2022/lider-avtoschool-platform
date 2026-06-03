@@ -18,7 +18,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
 
-  const enrichedBody = enrichLeadBody(body, request);
+  // Extract and verify Turnstile token (graceful: skipped if key not configured)
+  const rawPayload = typeof body === "object" && body !== null ? (body as Record<string, unknown>) : {};
+  const { turnstileToken, ...leadPayload } = rawPayload;
+  const turnstileResult = await verifyTurnstile(turnstileToken as string | undefined, request);
+  if (!turnstileResult.success) {
+    return NextResponse.json({ error: "CAPTCHA verification failed. Please try again." }, { status: 422 });
+  }
+
+  const enrichedBody = enrichLeadBody(leadPayload, request);
   const parsed = createLeadSchema.safeParse(enrichedBody);
 
   if (!parsed.success) {
@@ -65,6 +73,41 @@ function enrichLeadBody(body: unknown, request: Request) {
     preferredContactMethod: payload.preferredContactMethod ?? payload.contactMethod,
     updatedAt: new Date().toISOString()
   };
+}
+
+async function verifyTurnstile(token: string | undefined, request: Request): Promise<{ success: boolean; skipped?: boolean }> {
+  const secretKey = process.env.TURNSTILE_SECRET_KEY;
+
+  if (!secretKey) {
+    return { success: true, skipped: true };
+  }
+
+  if (!token) {
+    return { success: false };
+  }
+
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    request.headers.get("x-real-ip") ??
+    undefined;
+
+  try {
+    const formData = new FormData();
+    formData.append("secret", secretKey);
+    formData.append("response", token);
+    if (ip) formData.append("remoteip", ip);
+
+    const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      body: formData
+    });
+
+    if (!res.ok) return { success: true, skipped: true };
+
+    const data = await res.json() as { success?: boolean };
+    return { success: Boolean(data.success) };
+  } catch {
+    return { success: true, skipped: true };
+  }
 }
 
 function checkRateLimit(request: Request) {

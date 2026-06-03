@@ -92,7 +92,7 @@ export function CrmWorkspace() {
           <Image src="/logo.png" alt="Автошкола Лідер" width={82} height={35} className="shrink-0" />
           <div>
             <p className="font-semibold">CRM Лідер</p>
-            <p className="text-xs text-white/60">production workspace</p>
+            <p className="text-xs text-amber-300">⚠ DEMO — зразкові дані</p>
           </div>
         </div>
         <nav className="mt-8 space-y-1 text-sm">
@@ -112,6 +112,17 @@ export function CrmWorkspace() {
       </aside>
 
       <main className="lg:pl-64">
+        {/* ── SAMPLE DATA BANNER ── видалити після підключення Firestore Admin SDK */}
+        <div className="border-b-2 border-amber-400 bg-amber-50 px-5 py-3 lg:px-8">
+          <p className="flex flex-wrap items-center gap-2 text-sm font-bold text-amber-800">
+            <span>⚠ ДЕМО-РЕЖИМ:</span>
+            <span className="font-semibold">
+              Відображаються зразкові дані (sampleLeads, sampleStudents). Для роботи з реальними лідами потрібно підключити
+              Firebase Admin SDK + налаштувати Firebase Auth custom claims (role: &quot;admin&quot; / &quot;manager&quot;).
+              Деталі — у <code className="rounded bg-amber-200 px-1 font-mono text-xs">ADMIN_ROLES_GUIDE.md</code>.
+            </span>
+          </p>
+        </div>
         <header className="sticky top-0 z-30 border-b border-[#dce7e3] bg-[#f7fbf9]/90 px-5 py-4 backdrop-blur lg:px-8">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
@@ -160,10 +171,10 @@ export function CrmWorkspace() {
 
         <div className="space-y-6 px-5 py-6 lg:px-8">
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <DashboardMetric icon={UsersRound} label="Активні ліди" value={String(sampleKpiSnapshot.totalLeads)} detail={`${sampleKpiSnapshot.referralLeads} з рефералкою`} />
-            <DashboardMetric icon={Gauge} label="Конверсія" value={`${sampleKpiSnapshot.leadToStudentConversion}%`} detail="лід → учень" />
-            <DashboardMetric icon={CircleDollarSign} label="Оплати" value="184k грн" detail="LiqPay, Fondy, Mono" />
-            <DashboardMetric icon={CheckCircle2} label="Учні" value={String(activeStudents)} detail={`${verifiedDocuments} з перевіреними документами`} />
+            <DashboardMetric icon={UsersRound} label="Активні ліди" value={String(sampleKpiSnapshot.totalLeads)} detail="⚠ зразкові дані" />
+            <DashboardMetric icon={Gauge} label="Конверсія" value={`${sampleKpiSnapshot.leadToStudentConversion}%`} detail="⚠ зразкові дані" />
+            <DashboardMetric icon={CircleDollarSign} label="Оплати" value="—" detail="потребує LiqPay/Fondy ENV" />
+            <DashboardMetric icon={CheckCircle2} label="Учні" value={String(activeStudents)} detail="⚠ зразкові дані" />
           </section>
 
           <section className="rounded-[18px] border border-[#dce7e3] bg-white p-4 shadow-sm">

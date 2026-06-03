@@ -14,6 +14,7 @@ import {
   validateFiles,
   type UploadedDocument
 } from "../lib/storage-upload";
+import { TurnstileWidget } from "./turnstile-widget";
 
 type LeadFormValues = z.infer<typeof leadFormSchema>;
 type LeadFormInitialContext = {
@@ -68,6 +69,10 @@ const formCopy: Record<
     chooseFiles: string;
     comment: string;
     consent: string;
+    consentPrivacy: string;
+    consentAnd: string;
+    consentTerms: string;
+    consentSuffix: string;
     namePlaceholder: string;
     cityPlaceholder: string;
     messagePlaceholder: string;
@@ -98,7 +103,11 @@ const formCopy: Record<
     documentsHint: "Можна прикріпити фото паспорта/ID, коду, довідки або написати, що підготуєте їх у Telegram.",
     chooseFiles: "Обрати файли",
     comment: "Коментар",
-    consent: "Погоджуюсь на обробку контактних даних і зв'язок щодо навчання.",
+    consent: "Погоджуюсь з обробкою контактних даних відповідно до",
+    consentPrivacy: "Політики конфіденційності",
+    consentAnd: "та",
+    consentTerms: "Умов використання",
+    consentSuffix: "і даю згоду на зв'язок щодо навчання.",
     namePlaceholder: "Марія",
     cityPlaceholder: "Київ",
     messagePlaceholder: "Наприклад: хочу записатися через Telegram, уточнити ціну або подати документи",
@@ -128,7 +137,11 @@ const formCopy: Record<
     documentsHint: "Можно прикрепить фото паспорта/ID, кода, справки или написать, что подготовите их в Telegram.",
     chooseFiles: "Выбрать файлы",
     comment: "Комментарий",
-    consent: "Согласен на обработку контактных данных и связь по поводу обучения.",
+    consent: "Согласен на обработку контактных данных в соответствии с",
+    consentPrivacy: "Политикой конфиденциальности",
+    consentAnd: "и",
+    consentTerms: "Условиями использования",
+    consentSuffix: "и даю согласие на связь по поводу обучения.",
     namePlaceholder: "Мария",
     cityPlaceholder: "Киев",
     messagePlaceholder: "Например: хочу записаться через Telegram, уточнить цену или подать документы",
@@ -158,7 +171,11 @@ const formCopy: Record<
     documentsHint: "You can attach photos of ID, tax code, medical certificate or note that you will send them in Telegram.",
     chooseFiles: "Choose files",
     comment: "Comment",
-    consent: "I agree to contact data processing and communication about training.",
+    consent: "I agree to contact data processing in accordance with the",
+    consentPrivacy: "Privacy Policy",
+    consentAnd: "and",
+    consentTerms: "Terms of Use",
+    consentSuffix: "and consent to being contacted about training.",
     namePlaceholder: "Maria",
     cityPlaceholder: "Kyiv",
     messagePlaceholder: "For example: I want to apply via Telegram, check the price or send documents",
@@ -201,6 +218,7 @@ export function LeadForm({
   const [status, setStatus] = useState<"idle" | "saving" | "uploading" | "saved" | "error">("idle");
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const [documentFiles, setDocumentFiles] = useState<string[]>([]);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const rawFilesRef = useRef<File[]>([]);
   const {
     register,
@@ -247,7 +265,8 @@ export function LeadForm({
       documents: documentFiles.map((name) => ({ name, status: "pending_upload" as const })),
       message: [values.message, documentFiles.length ? `Фото документів: ${documentFiles.join(", ")}` : ""]
         .filter(Boolean)
-        .join("\n")
+        .join("\n"),
+      ...(turnstileToken ? { turnstileToken } : {})
     };
 
     let leadId: string | null = null;
@@ -524,9 +543,36 @@ export function LeadForm({
           className="mt-1 h-4 w-4 rounded border-lider-line accent-lider-red focus:ring-lider-red"
           {...register("consentAccepted")}
         />
-        <span>{copy.consent}</span>
+        <span>
+          {copy.consent}{" "}
+          <a
+            href={`/privacy?lang=${locale}`}
+            target="_blank"
+            rel="noreferrer"
+            className="font-black text-lider-red underline decoration-lider-red/30 underline-offset-2 transition hover:decoration-lider-red"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {copy.consentPrivacy}
+          </a>{" "}
+          {copy.consentAnd}{" "}
+          <a
+            href={`/terms?lang=${locale}`}
+            target="_blank"
+            rel="noreferrer"
+            className="font-black text-lider-red underline decoration-lider-red/30 underline-offset-2 transition hover:decoration-lider-red"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {copy.consentTerms}
+          </a>
+          {copy.consentSuffix ? ` ${copy.consentSuffix}` : ""}
+        </span>
       </label>
       {errors.consentAccepted ? <p className="-mt-3 text-xs text-red-600">{copy.errors.consent}</p> : null}
+      <TurnstileWidget
+        onVerify={(token) => setTurnstileToken(token)}
+        onExpire={() => setTurnstileToken(null)}
+        onError={() => setTurnstileToken(null)}
+      />
       <Button type="submit" disabled={status === "saving" || status === "uploading"} className="w-full">
         {status === "saving" ? (
           <span className="flex items-center justify-center gap-2">
