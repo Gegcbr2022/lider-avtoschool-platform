@@ -1,10 +1,10 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { branches, defaultLocale, leadFormSchema, leadSources, type Locale } from "@lider/shared";
+import { assessLeadRisk, branches, defaultLocale, hashLeadRiskKey, leadFormSchema, leadSources, type Locale } from "@lider/shared";
 import { Button, cn } from "@lider/ui";
 import { CheckCircle2, FileUp, Loader2 } from "lucide-react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
 import { trackEvent } from "../lib/analytics";
@@ -52,6 +52,17 @@ const contactMethods: Array<{ value: LeadFormValues["contactMethod"]; label: str
   { value: "any", label: "Як зручно менеджеру" }
 ];
 
+const LEAD_RISK_SESSION_KEY = "lider-lead-risk";
+const HAS_TURNSTILE_SITE_KEY = Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
+
+type LeadRiskSession = {
+  attempts: number;
+  validationErrors: number;
+  popupOpens: number;
+  lastSubmitAt?: number;
+  phoneHashes: Record<string, number>;
+};
+
 const formCopy: Record<
   Locale,
   {
@@ -74,8 +85,15 @@ const formCopy: Record<
     consentTerms: string;
     consentSuffix: string;
     namePlaceholder: string;
+    popupNamePlaceholder: string;
+    phonePlaceholder: string;
     cityPlaceholder: string;
     messagePlaceholder: string;
+    captchaPrompt: string;
+    captchaMissingKey: string;
+    captchaFailed: string;
+    captchaRetry: string;
+    rateLimitError: string;
     saving: string;
     uploading: string;
     saved: string;
@@ -109,8 +127,15 @@ const formCopy: Record<
     consentTerms: "Умов використання",
     consentSuffix: "і даю згоду на зв'язок щодо навчання.",
     namePlaceholder: "Марія",
+    popupNamePlaceholder: "Ваше ім’я",
+    phonePlaceholder: "Номер телефону",
     cityPlaceholder: "Київ",
     messagePlaceholder: "Наприклад: хочу записатися через Telegram, уточнити ціну або подати документи",
+    captchaPrompt: "Підтвердьте, що ви не робот",
+    captchaMissingKey: "Перевірка тимчасово недоступна. Спробуйте ще раз або напишіть у Telegram.",
+    captchaFailed: "Не вдалося підтвердити перевірку. Оновіть CAPTCHA і спробуйте ще раз.",
+    captchaRetry: "Після підтвердження натисніть кнопку ще раз.",
+    rateLimitError: "Забагато спроб. Зачекайте хвилину і спробуйте ще раз.",
     saving: "Відправляємо...",
     uploading: "Завантажуємо файли",
     saved: "Заявку прийнято. Менеджер зв'яжеться з вами.",
@@ -143,8 +168,15 @@ const formCopy: Record<
     consentTerms: "Условиями использования",
     consentSuffix: "и даю согласие на связь по поводу обучения.",
     namePlaceholder: "Мария",
+    popupNamePlaceholder: "Ваше имя",
+    phonePlaceholder: "Номер телефона",
     cityPlaceholder: "Киев",
     messagePlaceholder: "Например: хочу записаться через Telegram, уточнить цену или подать документы",
+    captchaPrompt: "Подтвердите, что вы не робот",
+    captchaMissingKey: "Проверка временно недоступна. Попробуйте ещё раз или напишите в Telegram.",
+    captchaFailed: "Не удалось подтвердить проверку. Обновите CAPTCHA и попробуйте ещё раз.",
+    captchaRetry: "После подтверждения нажмите кнопку ещё раз.",
+    rateLimitError: "Слишком много попыток. Подождите минуту и попробуйте ещё раз.",
     saving: "Отправляем...",
     uploading: "Загружаем файлы",
     saved: "Заявка принята. Менеджер свяжется с вами.",
@@ -177,8 +209,15 @@ const formCopy: Record<
     consentTerms: "Terms of Use",
     consentSuffix: "and consent to being contacted about training.",
     namePlaceholder: "Maria",
+    popupNamePlaceholder: "Your name",
+    phonePlaceholder: "Phone number",
     cityPlaceholder: "Kyiv",
     messagePlaceholder: "For example: I want to apply via Telegram, check the price or send documents",
+    captchaPrompt: "Please confirm you are not a robot",
+    captchaMissingKey: "Verification is temporarily unavailable. Try again or message us in Telegram.",
+    captchaFailed: "Verification failed. Refresh CAPTCHA and try again.",
+    captchaRetry: "After confirming, submit the form again.",
+    rateLimitError: "Too many attempts. Please wait a minute and try again.",
     saving: "Sending...",
     uploading: "Uploading files",
     saved: "Request received. A manager will contact you.",
@@ -219,7 +258,11 @@ export function LeadForm({
   const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const [documentFiles, setDocumentFiles] = useState<string[]>([]);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [captchaVisible, setCaptchaVisible] = useState(false);
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
+  const [serverError, setServerError] = useState<string | null>(null);
   const rawFilesRef = useRef<File[]>([]);
+  const formStartedAtRef = useRef(Date.now());
   const {
     register,
     handleSubmit,
@@ -241,10 +284,22 @@ export function LeadForm({
     setDocumentFiles([]);
     setStatus("idle");
     setUploadProgress(null);
+    setTurnstileToken(null);
+    setCaptchaVisible(false);
+    setServerError(null);
+    formStartedAtRef.current = Date.now();
   }, [analyticsSource, contextKey, copy, initialContext, isPopup, locale, reset]);
 
+  useEffect(() => {
+    formStartedAtRef.current = Date.now();
+
+    if (isPopup) {
+      recordLeadPopupOpen();
+    }
+  }, [contextKey, isPopup]);
+
   async function onSubmit(values: LeadFormValues) {
-    setStatus("saving");
+    setServerError(null);
     const leadContext = getLeadContext(locale, analyticsSource, initialContext);
     const rawFiles = rawFilesRef.current;
 
@@ -256,11 +311,13 @@ export function LeadForm({
       }
     }
 
+    const formStartedAt = formStartedAtRef.current;
     const payload = {
       ...values,
       ...leadContext,
       name: values.name?.trim() || copy.fallbackName,
       preferredContactMethod: values.contactMethod,
+      formStartedAt,
       documentFiles,
       documents: documentFiles.map((name) => ({ name, status: "pending_upload" as const })),
       message: [values.message, documentFiles.length ? `Фото документів: ${documentFiles.join(", ")}` : ""]
@@ -268,6 +325,28 @@ export function LeadForm({
         .join("\n"),
       ...(turnstileToken ? { turnstileToken } : {})
     };
+    const riskSession = readLeadRiskSession();
+    const phoneHash = hashLeadRiskKey(values.phone, "phone");
+    const clientRisk = assessLeadRisk({
+      payload,
+      now: Date.now(),
+      ipAttempts: riskSession.attempts,
+      phoneAttempts: phoneHash ? riskSession.phoneHashes[phoneHash] ?? 0 : 0,
+      lastSubmitAt: riskSession.lastSubmitAt,
+      popupOpens: riskSession.popupOpens,
+      validationErrors: riskSession.validationErrors,
+      userAgent: typeof navigator !== "undefined" ? navigator.userAgent : undefined
+    });
+
+    if ((clientRisk.captchaRequired || captchaVisible) && !turnstileToken) {
+      setCaptchaVisible(true);
+      setServerError(HAS_TURNSTILE_SITE_KEY ? copy.captchaRetry : copy.captchaMissingKey);
+      setStatus("idle");
+      return;
+    }
+
+    recordLeadSubmissionAttempt(values.phone);
+    setStatus("saving");
 
     let leadId: string | null = null;
 
@@ -279,6 +358,28 @@ export function LeadForm({
       });
 
       if (!response.ok) {
+        const apiError = await readLeadApiError(response);
+
+        if (apiError === "captcha_required") {
+          setCaptchaVisible(true);
+          setServerError(HAS_TURNSTILE_SITE_KEY ? copy.captchaRetry : copy.captchaMissingKey);
+          setStatus("idle");
+          return;
+        }
+
+        if (apiError === "captcha_failed" || apiError === "captcha_unavailable") {
+          setCaptchaVisible(true);
+          setTurnstileToken(null);
+          setCaptchaResetKey((key) => key + 1);
+          setServerError(apiError === "captcha_unavailable" ? copy.captchaMissingKey : copy.captchaFailed);
+          setStatus("error");
+          return;
+        }
+
+        if (apiError === "too_many_requests") {
+          setServerError(copy.rateLimitError);
+        }
+
         setStatus("error");
         return;
       }
@@ -323,6 +424,10 @@ export function LeadForm({
     reset(buildLeadFormDefaults({ analyticsSource, copy, initialContext, isPopup, locale }));
     rawFilesRef.current = [];
     setDocumentFiles([]);
+    setTurnstileToken(null);
+    setCaptchaVisible(false);
+    setServerError(null);
+    formStartedAtRef.current = Date.now();
     window.localStorage.setItem("lider-lead-submitted", "true");
     window.dispatchEvent(new CustomEvent("lider-lead-created"));
     trackEvent(analyticsSource === "popup" ? "popup_lead_created" : "lead_created", {
@@ -335,6 +440,24 @@ export function LeadForm({
     onSuccess?.();
   }
 
+  function onInvalidSubmit() {
+    const session = recordLeadValidationError();
+
+    if (session.validationErrors >= 2) {
+      setCaptchaVisible(true);
+      setServerError(HAS_TURNSTILE_SITE_KEY ? copy.captchaRetry : copy.captchaMissingKey);
+    }
+  }
+
+  const handleTurnstileVerify = useCallback((token: string) => {
+    setTurnstileToken(token);
+    setServerError(null);
+  }, []);
+
+  const handleTurnstileReset = useCallback(() => {
+    setTurnstileToken(null);
+  }, []);
+
   function onDocumentFilesChange(files: FileList | null) {
     const list = Array.from(files ?? []).slice(0, 8);
     const names = list.map((file) => file.name);
@@ -346,7 +469,7 @@ export function LeadForm({
 
   return (
     <form
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={handleSubmit(onSubmit, onInvalidSubmit)}
       className={cn(
         "grid gap-4 rounded-[22px] bg-white p-5 shadow-soft",
         isPopup && "rounded-none border-0 p-0 shadow-none",
@@ -364,6 +487,16 @@ export function LeadForm({
           {contextHint}
         </p>
       ) : null}
+      <div className="sr-only" aria-hidden="true">
+        <label htmlFor={`${formId}-companyWebsite`}>Company website</label>
+        <input
+          id={`${formId}-companyWebsite`}
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          {...register("companyWebsite")}
+        />
+      </div>
       <div className={isPopup ? "hidden" : undefined}>
         <label className="text-sm font-semibold text-lider-graphite" htmlFor={`${formId}-requestType`}>
           {copy.requestType}
@@ -383,16 +516,11 @@ export function LeadForm({
       <div>
         <label className="text-sm font-semibold text-lider-graphite" htmlFor={`${formId}-name`}>
           {copy.name}
-          {isPopup ? (
-            <span className="ml-1 font-medium text-lider-muted">
-              {locale === "en" ? "(optional)" : locale === "ru" ? "(необязательно)" : "(необов'язково)"}
-            </span>
-          ) : null}
         </label>
         <input
           id={`${formId}-name`}
           className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-lider-red focus:ring-4 focus:ring-lider-red/10"
-          placeholder={copy.namePlaceholder}
+          placeholder={isPopup ? copy.popupNamePlaceholder : copy.namePlaceholder}
           {...register("name")}
         />
         {errors.name ? <p className="mt-1 text-xs text-red-600">{copy.errors.name}</p> : null}
@@ -405,7 +533,7 @@ export function LeadForm({
           <input
             id={`${formId}-phone`}
             className="mt-2 w-full rounded-[12px] border border-lider-line px-4 py-3 text-sm outline-none transition focus:border-lider-red focus:ring-4 focus:ring-lider-red/10"
-            placeholder="050 000 00 00"
+            placeholder={isPopup ? copy.phonePlaceholder : "050 000 00 00"}
             {...register("phone")}
           />
           {errors.phone ? <p className="mt-1 text-xs text-red-600">{copy.errors.phone}</p> : null}
@@ -568,11 +696,21 @@ export function LeadForm({
         </span>
       </label>
       {errors.consentAccepted ? <p className="-mt-3 text-xs text-red-600">{copy.errors.consent}</p> : null}
-      <TurnstileWidget
-        onVerify={(token) => setTurnstileToken(token)}
-        onExpire={() => setTurnstileToken(null)}
-        onError={() => setTurnstileToken(null)}
-      />
+      {captchaVisible ? (
+        <div className="grid gap-2">
+          <TurnstileWidget
+            label={copy.captchaPrompt}
+            missingLabel={copy.captchaMissingKey}
+            resetKey={captchaResetKey}
+            onVerify={handleTurnstileVerify}
+            onExpire={handleTurnstileReset}
+            onError={handleTurnstileReset}
+          />
+          {serverError && (HAS_TURNSTILE_SITE_KEY || serverError !== copy.captchaMissingKey) ? (
+            <p className="text-sm font-semibold text-lider-muted">{serverError}</p>
+          ) : null}
+        </div>
+      ) : null}
       <Button type="submit" disabled={status === "saving" || status === "uploading"} className="w-full">
         {status === "saving" ? (
           <span className="flex items-center justify-center gap-2">
@@ -592,7 +730,9 @@ export function LeadForm({
           {copy.saved}
         </p>
       ) : null}
-      {status === "error" ? <p className="text-sm font-medium text-red-600">{copy.error}</p> : null}
+      {status === "error" && !(captchaVisible && serverError) ? (
+        <p className="text-sm font-medium text-red-600">{serverError ?? copy.error}</p>
+      ) : null}
     </form>
   );
 }
@@ -692,6 +832,7 @@ function buildLeadFormDefaults({
     message: "",
     language: locale,
     source: normalizeLeadSource(initialContext?.source) ?? normalizeLeadSource(analyticsSource) ?? (analyticsSource === "popup" ? "popup" : "website"),
+    companyWebsite: "",
     consentAccepted: false
   };
 }
@@ -736,11 +877,122 @@ function normalizeLeadSource(source?: string): LeadFormValues["source"] | undefi
     return undefined;
   }
 
-  const normalized = source.trim().replace(/-/g, "_");
+  const trimmed = source.trim();
+  const candidates = [trimmed, trimmed.replace(/-/g, "_"), trimmed.replace(/_/g, "-")];
+  const normalized = candidates.find((candidate) => (leadSources as readonly string[]).includes(candidate));
 
-  if ((leadSources as readonly string[]).includes(normalized)) {
+  if (normalized) {
     return normalized as LeadFormValues["source"];
   }
 
   return undefined;
+}
+
+function readLeadRiskSession(): LeadRiskSession {
+  const fallback: LeadRiskSession = {
+    attempts: 0,
+    validationErrors: 0,
+    popupOpens: 0,
+    phoneHashes: {}
+  };
+
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+
+  try {
+    const raw = window.sessionStorage.getItem(LEAD_RISK_SESSION_KEY);
+    const parsed = raw ? (JSON.parse(raw) as Partial<LeadRiskSession>) : {};
+
+    return {
+      attempts: normalizeSessionNumber(parsed.attempts),
+      validationErrors: normalizeSessionNumber(parsed.validationErrors),
+      popupOpens: normalizeSessionNumber(parsed.popupOpens),
+      lastSubmitAt: normalizeSessionTimestamp(parsed.lastSubmitAt),
+      phoneHashes: sanitizePhoneHashes(parsed.phoneHashes)
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function writeLeadRiskSession(session: LeadRiskSession) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(LEAD_RISK_SESSION_KEY, JSON.stringify(session));
+  } catch {
+    // Server-side risk checks still protect the endpoint if sessionStorage is unavailable.
+  }
+}
+
+function updateLeadRiskSession(updater: (session: LeadRiskSession) => LeadRiskSession) {
+  const next = updater(readLeadRiskSession());
+  writeLeadRiskSession(next);
+  return next;
+}
+
+function recordLeadPopupOpen() {
+  updateLeadRiskSession((session) => ({
+    ...session,
+    popupOpens: Math.min(session.popupOpens + 1, 99)
+  }));
+}
+
+function recordLeadValidationError() {
+  return updateLeadRiskSession((session) => ({
+    ...session,
+    validationErrors: Math.min(session.validationErrors + 1, 99)
+  }));
+}
+
+function recordLeadSubmissionAttempt(phone: string) {
+  updateLeadRiskSession((session) => {
+    const phoneKey = hashLeadRiskKey(phone, "phone");
+    const phoneHashes = { ...session.phoneHashes };
+
+    if (phoneKey) {
+      phoneHashes[phoneKey] = Math.min((phoneHashes[phoneKey] ?? 0) + 1, 99);
+    }
+
+    return {
+      ...session,
+      attempts: Math.min(session.attempts + 1, 99),
+      validationErrors: 0,
+      lastSubmitAt: Date.now(),
+      phoneHashes
+    };
+  });
+}
+
+async function readLeadApiError(response: Response) {
+  try {
+    const payload = (await response.json()) as { error?: unknown };
+    return typeof payload.error === "string" ? payload.error : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function normalizeSessionNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.min(Math.floor(value), 99) : 0;
+}
+
+function normalizeSessionTimestamp(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
+function sanitizePhoneHashes(value: unknown) {
+  if (!value || typeof value !== "object") {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .filter(([key, count]) => key.startsWith("phone_") && typeof count === "number" && Number.isFinite(count))
+      .slice(-20)
+      .map(([key, count]) => [key, Math.min(Math.floor(count as number), 99)])
+  );
 }

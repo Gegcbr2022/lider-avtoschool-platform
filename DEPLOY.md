@@ -39,6 +39,7 @@ OPENAI_MODEL=gpt-4.1-mini
 ```
 
 > Змінні без `NEXT_PUBLIC_` — серверні, не потрапляють у браузер.
+> Smart CAPTCHA показується тільки для suspicious/high-risk заявок. Звичайний submit проходить без Turnstile.
 
 ### 1.2. API (Firebase Functions)
 
@@ -54,8 +55,13 @@ LEAD_EMAIL_ENABLED=true
 LEAD_EMAIL_TO=owner@example.com
 LEAD_EMAIL_FROM="Лідер CRM <noreply@yourdomain.com>"
 RESEND_API_KEY=...
+TURNSTILE_SECRET_KEY=...
 # або SMTP_HOST + SMTP_USER + SMTP_PASS
 ```
+
+`TURNSTILE_SECRET_KEY` потрібен Firebase API для перевірки high-risk заявок після відповіді
+`captcha_required`. Якщо ключ тимчасово не заданий, low-risk заявки проходять, але high-risk отримає
+`captcha_unavailable`.
 
 ### 1.3. Mobile (Expo EAS)
 

@@ -17,7 +17,7 @@ Admin-панель (`apps/admin`) зараз відображає **зразко
 
 ```bash
 cd apps/admin
-pnpm add firebase-admin
+npm install firebase-admin --workspace @lider/admin
 ```
 
 ### Ініціалізація (server-side)

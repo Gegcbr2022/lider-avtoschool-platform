@@ -13,8 +13,8 @@
 | Инструмент | Версия |
 |---|---|
 | Node.js | >= 18 |
-| Expo CLI | `pnpm add -g expo` |
-| EAS CLI | `pnpm add -g eas-cli` |
+| Expo CLI | `npm install -g expo` |
+| EAS CLI | `npm install -g eas-cli` |
 | EAS CLI version | >= 13.0.0 (задан в `eas.json`) |
 
 ---
@@ -23,8 +23,8 @@
 
 ```bash
 cd apps/mobile
-pnpm install
-pnpm expo start
+npm install
+npm --workspace @lider/mobile run start
 ```
 
 Запускает Metro bundler. Сканируйте QR-код в приложении **Expo Go** (iOS/Android).
@@ -142,7 +142,7 @@ eas update --branch production --message "Fix: lead form validation"
 Для push-уведомлений и синхронизации с Firestore:
 
 ```bash
-pnpm add @react-native-firebase/app @react-native-firebase/firestore @react-native-firebase/messaging
+npm install @react-native-firebase/app @react-native-firebase/firestore @react-native-firebase/messaging --workspace @lider/mobile
 ```
 
 Конфигурация:

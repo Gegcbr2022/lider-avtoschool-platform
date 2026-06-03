@@ -19,7 +19,7 @@
 - **Переклади uk/ru/en**: homepage, форма, мобільне меню, sticky footer — повністю перекладені.
 - **Privacy/Terms сторінки**: ✅ **повністю перероблено** — повноцінні тексти на uk/ru/en з 13 (privacy) та 16 (terms) розділами, структурованими буллетами та оглавленням. Потребує фінального юридичного підтвердження.
 - **Згода у формах**: ✅ чекбокс тепер містить клікабельні посилання на `/privacy` та `/terms` з правильними локалізованими текстами.
-- **Cloudflare Turnstile**: ✅ клієнтський віджет `TurnstileWidget` компонент + server-side верифікація у `/api/leads`. Graceful fallback: якщо `TURNSTILE_SECRET_KEY` не задано — перевірка пропускається. Фронтенд приховує віджет якщо `NEXT_PUBLIC_TURNSTILE_SITE_KEY` не задано.
+- **Smart CAPTCHA / Cloudflare Turnstile**: ✅ risk-based flow готовий. Нормальний користувач відправляє коротку форму без CAPTCHA; suspicious/high-risk заявки отримують `captcha_required`, frontend показує Turnstile і повторює submit з токеном. Додано honeypot `companyWebsite`, `formStartedAt`, sessionStorage-сигнали без PII, server-side risk scoring, phone/IP hash buckets, gross rate-limit reject і очищення службових captcha-полів перед persistence/Telegram/email. Ключі `NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` залишаються зовнішніми production ENV.
 - **Admin DEMO-режим**: ✅ доданий жовтий банер що чітко вказує на зразкові дані, змінено "production workspace" → "DEMO — зразкові дані", додано `ADMIN_ROLES_GUIDE.md` з інструкцією по підключенню Firebase Admin SDK і призначенню ролей.
 - **MOBILE_RELEASE_GUIDE_RU.md**: ✅ створено — повний гайд по збірці APK/AAB/IPA, EAS профілях, ENV змінних, Google Play і App Store.
 - **Відгуки**: тільки реальний `ReviewsCarousel`, блок фейкових карток прибраний.
@@ -43,7 +43,7 @@
 | Telegram bot | `TELEGRAM_BOT_TOKEN` і `TELEGRAM_LOG_CHAT_ID` в Firebase Functions secrets |
 | Email (Resend) | `RESEND_API_KEY` + `LEAD_EMAIL_ENABLED=true` + `LEAD_EMAIL_TO=...` + `LEAD_EMAIL_FROM=...` в Firebase Functions |
 | Email (SMTP) | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` замість `RESEND_API_KEY` |
-| CAPTCHA (anti-spam) | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` — ✅ інтеграція готова, потрібні лише ключі |
+| CAPTCHA (anti-spam) | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` — ✅ smart/risk-based інтеграція готова, потрібні лише production keys |
 | Real payments | LiqPay / Fondy / Monobank keys в ENV |
 
 ### Vercel (Web)

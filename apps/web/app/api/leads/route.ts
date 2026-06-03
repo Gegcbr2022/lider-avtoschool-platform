@@ -1,13 +1,15 @@
-import { createLeadSchema } from "@lider/shared";
+import { assessLeadRisk, createLeadSchema, hashLeadRiskKey, stripLeadProtectionFields } from "@lider/shared";
 import { NextResponse } from "next/server";
 
 const requestBuckets = new Map<string, { count: number; resetAt: number }>();
+const leadIpBuckets = new Map<string, { count: number; resetAt: number }>();
+const leadPhoneBuckets = new Map<string, { count: number; resetAt: number }>();
 
 export async function POST(request: Request) {
   const rateLimitResult = checkRateLimit(request);
 
   if (!rateLimitResult.ok) {
-    return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
+    return NextResponse.json({ error: "too_many_requests" }, { status: 429 });
   }
 
   let body: unknown;
@@ -18,15 +20,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
   }
 
-  // Extract and verify Turnstile token (graceful: skipped if key not configured)
-  const rawPayload = typeof body === "object" && body !== null ? (body as Record<string, unknown>) : {};
-  const { turnstileToken, ...leadPayload } = rawPayload;
-  const turnstileResult = await verifyTurnstile(turnstileToken as string | undefined, request);
-  if (!turnstileResult.success) {
-    return NextResponse.json({ error: "CAPTCHA verification failed. Please try again." }, { status: 422 });
+  const payload = typeof body === "object" && body !== null ? (body as Record<string, unknown>) : {};
+  const activity = recordLeadRiskActivity(payload, request);
+  const risk = assessLeadRisk({
+    payload,
+    ipAttempts: activity.ipAttempts,
+    phoneAttempts: activity.phoneAttempts,
+    userAgent: request.headers.get("user-agent") ?? undefined
+  });
+
+  if (risk.honeypotFilled) {
+    console.warn("Lead honeypot rejected at web edge", { reasons: risk.reasons, score: risk.score });
+    return NextResponse.json({ id: `web-spam-${Date.now()}`, status: "accepted" }, { status: 202 });
   }
 
-  const enrichedBody = enrichLeadBody(leadPayload, request);
+  if (risk.reject) {
+    console.warn("Lead rejected by web risk limit", { reasons: risk.reasons, score: risk.score });
+    return NextResponse.json({ error: "too_many_requests" }, { status: 429 });
+  }
+
+  if (risk.captchaRequired && !readString(payload.turnstileToken)) {
+    console.warn("Lead captcha required at web edge", { reasons: risk.reasons, score: risk.score });
+    return NextResponse.json({ error: "captcha_required" }, { status: 403 });
+  }
+
+  const enrichedBody = enrichLeadBody(payload, request);
   const parsed = createLeadSchema.safeParse(enrichedBody);
 
   if (!parsed.success) {
@@ -42,19 +60,25 @@ export async function POST(request: Request) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(parsed.data)
-    });
+    }).catch(() => null);
 
-    if (!apiResponse.ok) {
+    if (!apiResponse) {
       return NextResponse.json({ error: "Lead API is unavailable" }, { status: 502 });
     }
 
-    return NextResponse.json(await apiResponse.json(), { status: apiResponse.status });
+    const apiPayload = await readApiPayload(apiResponse);
+
+    if (!apiResponse.ok) {
+      return NextResponse.json(apiPayload ?? { error: "Lead API is unavailable" }, { status: apiResponse.status });
+    }
+
+    return NextResponse.json(apiPayload ?? {}, { status: apiResponse.status });
   }
 
   return NextResponse.json({
     id: `web-${Date.now()}`,
     status: "accepted",
-    lead: parsed.data
+    lead: stripLeadProtectionFields(parsed.data)
   });
 }
 
@@ -75,46 +99,8 @@ function enrichLeadBody(body: unknown, request: Request) {
   };
 }
 
-async function verifyTurnstile(token: string | undefined, request: Request): Promise<{ success: boolean; skipped?: boolean }> {
-  const secretKey = process.env.TURNSTILE_SECRET_KEY;
-
-  if (!secretKey) {
-    return { success: true, skipped: true };
-  }
-
-  if (!token) {
-    return { success: false };
-  }
-
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    request.headers.get("x-real-ip") ??
-    undefined;
-
-  try {
-    const formData = new FormData();
-    formData.append("secret", secretKey);
-    formData.append("response", token);
-    if (ip) formData.append("remoteip", ip);
-
-    const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-      method: "POST",
-      body: formData
-    });
-
-    if (!res.ok) return { success: true, skipped: true };
-
-    const data = await res.json() as { success?: boolean };
-    return { success: Boolean(data.success) };
-  } catch {
-    return { success: true, skipped: true };
-  }
-}
-
 function checkRateLimit(request: Request) {
-  const key =
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    request.headers.get("x-real-ip") ??
-    "unknown";
+  const key = hashLeadRiskKey(getRequestIp(request) ?? "unknown", "ip") ?? "ip_unknown";
   const now = Date.now();
   const current = requestBuckets.get(key);
 
@@ -129,4 +115,43 @@ function checkRateLimit(request: Request) {
 
   current.count += 1;
   return { ok: true };
+}
+
+function recordLeadRiskActivity(payload: Record<string, unknown>, request: Request) {
+  const ipKey = hashLeadRiskKey(getRequestIp(request) ?? "unknown", "ip") ?? "ip_unknown";
+  const phoneKey = hashLeadRiskKey(payload.phone, "phone");
+
+  return {
+    ipAttempts: bumpBucket(leadIpBuckets, ipKey, 60_000),
+    phoneAttempts: phoneKey ? bumpBucket(leadPhoneBuckets, phoneKey, 10 * 60_000) : 0
+  };
+}
+
+function bumpBucket(bucket: Map<string, { count: number; resetAt: number }>, key: string, windowMs: number) {
+  const now = Date.now();
+  const current = bucket.get(key);
+
+  if (!current || current.resetAt < now) {
+    bucket.set(key, { count: 1, resetAt: now + windowMs });
+    return 1;
+  }
+
+  current.count += 1;
+  return current.count;
+}
+
+function getRequestIp(request: Request) {
+  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? request.headers.get("x-real-ip") ?? undefined;
+}
+
+function readString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+async function readApiPayload(response: Response) {
+  try {
+    return (await response.json()) as Record<string, unknown>;
+  } catch {
+    return undefined;
+  }
 }

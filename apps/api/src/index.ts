@@ -6,11 +6,14 @@ import { getStorage } from "firebase-admin/storage";
 import { onRequest } from "firebase-functions/v2/https";
 import nodemailer from "nodemailer";
 import {
+  assessLeadRisk,
   bookingRequestSchema,
   branches,
   createLeadSchema,
+  hashLeadRiskKey,
   paymentIntentSchema,
-  sampleKpiSnapshot
+  sampleKpiSnapshot,
+  stripLeadProtectionFields
 } from "../../../packages/shared/src/index";
 import {
   aiChatSchema,
@@ -25,6 +28,8 @@ const firebaseApp = getApps().length ? getApps()[0] : initializeApp();
 const db = getFirestore(firebaseApp);
 const app = express();
 const requestCounts = new Map<string, { count: number; resetAt: number }>();
+const leadIpBuckets = new Map<string, { count: number; resetAt: number }>();
+const leadPhoneBuckets = new Map<string, { count: number; resetAt: number }>();
 
 type EmailNotificationResult = {
   status: "sent" | "skipped" | "failed";
@@ -157,6 +162,50 @@ app.get("/health/email/test-lead", async (_request, response) => {
 });
 
 app.post("/leads", async (request, response) => {
+  const rawPayload = typeof request.body === "object" && request.body !== null ? (request.body as Record<string, unknown>) : {};
+  const activity = recordLeadRiskActivity(rawPayload, request);
+  const risk = assessLeadRisk({
+    payload: rawPayload,
+    ipAttempts: activity.ipAttempts,
+    phoneAttempts: activity.phoneAttempts,
+    userAgent: request.header("user-agent")
+  });
+
+  if (risk.honeypotFilled) {
+    console.warn("Lead honeypot rejected", { reasons: risk.reasons, score: risk.score });
+    response.status(202).json({ id: `spam-${Date.now()}`, status: "accepted" });
+    return;
+  }
+
+  if (risk.reject) {
+    console.warn("Lead rejected by risk limit", { reasons: risk.reasons, score: risk.score });
+    response.status(429).json({ error: "too_many_requests" });
+    return;
+  }
+
+  if (risk.captchaRequired) {
+    const token = readProtectionString(rawPayload.turnstileToken);
+
+    if (!token) {
+      console.warn("Lead captcha required", { reasons: risk.reasons, score: risk.score });
+      response.status(403).json({ error: "captcha_required" });
+      return;
+    }
+
+    const turnstileResult = await verifyTurnstile(token, request);
+
+    if (!turnstileResult.success) {
+      console.warn("Lead captcha verification failed", {
+        reason: turnstileResult.reason,
+        reasons: risk.reasons,
+        score: risk.score
+      });
+      const error = turnstileResult.reason === "failed" ? "captcha_failed" : "captcha_unavailable";
+      response.status(error === "captcha_unavailable" ? 503 : 422).json({ error });
+      return;
+    }
+  }
+
   const parsed = createLeadSchema.safeParse(enrichLeadPayload(request));
 
   if (!parsed.success) {
@@ -164,14 +213,15 @@ app.post("/leads", async (request, response) => {
     return;
   }
 
-  const createdAt = parsed.data.createdAt ?? new Date().toISOString();
+  const leadData = stripLeadProtectionFields(parsed.data);
+  const createdAt = leadData.createdAt ?? new Date().toISOString();
   const lead = {
-    ...parsed.data,
-    status: parsed.data.status ?? "new",
-    source: parsed.data.source ?? "website",
-    preferredContactMethod: parsed.data.preferredContactMethod ?? parsed.data.contactMethod,
+    ...leadData,
+    status: leadData.status ?? "new",
+    source: leadData.source ?? "website",
+    preferredContactMethod: leadData.preferredContactMethod ?? leadData.contactMethod,
     createdAt,
-    updatedAt: parsed.data.updatedAt ?? createdAt
+    updatedAt: leadData.updatedAt ?? createdAt
   };
 
   const persistence = await persist("leads", lead);
@@ -414,9 +464,73 @@ async function recordLeadEmailNotification(
   }));
 }
 
+function recordLeadRiskActivity(payload: Record<string, unknown>, request: express.Request) {
+  const ipKey = hashLeadRiskKey(getRequestIp(request) ?? "unknown", "ip") ?? "ip_unknown";
+  const phoneKey = hashLeadRiskKey(payload.phone, "phone");
+
+  return {
+    ipAttempts: bumpBucket(leadIpBuckets, ipKey, 60_000),
+    phoneAttempts: phoneKey ? bumpBucket(leadPhoneBuckets, phoneKey, 10 * 60_000) : 0
+  };
+}
+
+async function verifyTurnstile(token: string, request: express.Request): Promise<{ success: boolean; reason?: string }> {
+  const secretKey = process.env.TURNSTILE_SECRET_KEY;
+
+  if (!secretKey) {
+    return { success: false, reason: "missing_secret" };
+  }
+
+  try {
+    const formData = new URLSearchParams();
+    formData.set("secret", secretKey);
+    formData.set("response", token);
+
+    const ip = getRequestIp(request);
+    if (ip) {
+      formData.set("remoteip", ip);
+    }
+
+    const cloudflareResponse = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      body: formData
+    });
+
+    if (!cloudflareResponse.ok) {
+      return { success: false, reason: "unavailable" };
+    }
+
+    const result = (await cloudflareResponse.json()) as { success?: boolean };
+    return result.success ? { success: true } : { success: false, reason: "failed" };
+  } catch {
+    return { success: false, reason: "unavailable" };
+  }
+}
+
+function bumpBucket(bucket: Map<string, { count: number; resetAt: number }>, key: string, windowMs: number) {
+  const now = Date.now();
+  const current = bucket.get(key);
+
+  if (!current || current.resetAt < now) {
+    bucket.set(key, { count: 1, resetAt: now + windowMs });
+    return 1;
+  }
+
+  current.count += 1;
+  return current.count;
+}
+
+function readProtectionString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function getRequestIp(request: express.Request) {
+  return request.header("x-forwarded-for")?.split(",")[0]?.trim() ?? request.ip ?? undefined;
+}
+
 function enrichLeadPayload(request: express.Request) {
   const payload = typeof request.body === "object" && request.body !== null ? request.body : {};
-  const rawIp = request.ip ?? request.header("x-forwarded-for")?.split(",")[0]?.trim();
+  const rawIp = getRequestIp(request);
 
   return {
     ...payload,
@@ -435,7 +549,7 @@ function createLeadFromAiPayload(payload: Record<string, unknown>, request: expr
   const phone = normalizeText(payload.phone) || normalizeText(payload.telegram);
   const createdAt = normalizeDate(payload.createdAt);
   const contactMethod = normalizeText(payload.telegram) ? "telegram" : "phone";
-  const rawIp = request.ip ?? request.header("x-forwarded-for")?.split(",")[0]?.trim();
+  const rawIp = getRequestIp(request);
 
   return {
     name: normalizeText(payload.name) || "AI chat lead",
@@ -556,7 +670,7 @@ function hashIp(value: string | undefined) {
 }
 
 function rateLimit(request: express.Request, response: express.Response, next: express.NextFunction) {
-  const key = request.ip ?? "unknown";
+  const key = hashLeadRiskKey(getRequestIp(request) ?? "unknown", "ip") ?? "ip_unknown";
   const now = Date.now();
   const current = requestCounts.get(key);
 

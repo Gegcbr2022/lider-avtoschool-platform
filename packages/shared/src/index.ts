@@ -900,6 +900,9 @@ export const leadFormSchema = z.object({
   language: z.enum(["uk", "ru", "en"]).default("uk"),
   page: z.string().trim().max(260).optional(),
   device: z.string().trim().max(80).optional(),
+  formStartedAt: z.number().int().positive().optional(),
+  companyWebsite: z.string().trim().max(260).optional(),
+  turnstileToken: z.string().trim().max(4096).optional(),
   consentAccepted: z.boolean().refine((value) => value, "consent_required")
 });
 
@@ -963,3 +966,148 @@ export const aiChatRequestSchema = z.object({
   lead: aiLeadSchema.optional(),
   intent: z.enum(["consultation", "category-picker", "pdr-explain", "first-lesson"]).optional()
 });
+
+export type LeadRiskAssessmentInput = {
+  payload: Record<string, unknown>;
+  now?: number;
+  ipAttempts?: number;
+  phoneAttempts?: number;
+  lastSubmitAt?: number;
+  popupOpens?: number;
+  validationErrors?: number;
+  userAgent?: string;
+};
+
+export type LeadRiskAssessment = {
+  score: number;
+  reasons: string[];
+  captchaRequired: boolean;
+  reject: boolean;
+  honeypotFilled: boolean;
+};
+
+const leadProtectionFieldNames = ["companyWebsite", "formStartedAt", "turnstileToken"] as const;
+
+export function assessLeadRisk({
+  payload,
+  now = Date.now(),
+  ipAttempts = 0,
+  phoneAttempts = 0,
+  lastSubmitAt,
+  popupOpens = 0,
+  validationErrors = 0,
+  userAgent
+}: LeadRiskAssessmentInput): LeadRiskAssessment {
+  const reasons: string[] = [];
+  let score = 0;
+
+  const add = (reason: string, value: number) => {
+    reasons.push(reason);
+    score += value;
+  };
+
+  if (readLeadRiskString(payload.companyWebsite)) {
+    return {
+      score: 100,
+      reasons: ["honeypot_filled"],
+      captchaRequired: false,
+      reject: true,
+      honeypotFilled: true
+    };
+  }
+
+  const startedAt = readLeadRiskTimestamp(payload.formStartedAt);
+  if (startedAt) {
+    const elapsed = now - startedAt;
+
+    if (elapsed >= 0 && elapsed < 2_500) {
+      add("submit_too_fast", 3);
+    } else if (elapsed < -5_000) {
+      add("future_form_started_at", 2);
+    } else if (elapsed > 24 * 60 * 60 * 1_000) {
+      add("stale_form_started_at", 1);
+    }
+  }
+
+  if (lastSubmitAt && now - lastSubmitAt < 60_000) {
+    add("recent_submit", 2);
+  }
+
+  if (ipAttempts >= 2) add("ip_recent_attempts", 3);
+  if (ipAttempts >= 8) add("ip_high_attempts", 3);
+  if (phoneAttempts >= 2) add("phone_recent_attempts", 3);
+  if (popupOpens >= 5) add("many_popup_opens", 2);
+  if (validationErrors >= 2) add("repeated_validation_errors", 2);
+
+  const source = readLeadRiskString(payload.source)?.toLowerCase();
+  if (source && !isKnownLeadSource(source)) {
+    add("unknown_source", 2);
+  } else if (source === "admin") {
+    add("public_admin_source", 2);
+  }
+
+  const agent = readLeadRiskString(userAgent ?? payload.userAgent);
+  if (!agent || agent.length < 8) {
+    add("missing_user_agent", 1);
+  } else if (/(bot|crawler|spider|scrapy|curl|wget|python|httpclient|libwww)/i.test(agent)) {
+    add("bot_like_user_agent", 3);
+  }
+
+  return {
+    score,
+    reasons,
+    captchaRequired: score >= 3 || ipAttempts >= 2 || phoneAttempts >= 2,
+    reject: ipAttempts >= 16 || phoneAttempts >= 6,
+    honeypotFilled: false
+  };
+}
+
+export function stripLeadProtectionFields<T extends Record<string, unknown>>(payload: T) {
+  const clean = { ...payload };
+
+  for (const field of leadProtectionFieldNames) {
+    delete clean[field];
+  }
+
+  return clean as Omit<T, (typeof leadProtectionFieldNames)[number]>;
+}
+
+export function hashLeadRiskKey(value: unknown, prefix = "risk") {
+  const normalized = readLeadRiskString(value)?.toLowerCase();
+
+  if (!normalized) {
+    return undefined;
+  }
+
+  let hash = 5381;
+
+  for (let index = 0; index < normalized.length; index += 1) {
+    hash = (hash * 33) ^ normalized.charCodeAt(index);
+  }
+
+  return `${prefix}_${Math.abs(hash >>> 0).toString(36)}`;
+}
+
+function readLeadRiskString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function readLeadRiskTimestamp(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) {
+      return numeric;
+    }
+  }
+
+  return undefined;
+}
+
+function isKnownLeadSource(source: string) {
+  const candidates = [source, source.replace(/_/g, "-"), source.replace(/-/g, "_")];
+  return candidates.some((candidate) => (leadSources as readonly string[]).includes(candidate));
+}
