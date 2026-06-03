@@ -1,5 +1,15 @@
 import { useState } from "react";
-import { FlatList, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  FlatList,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   Card,
@@ -10,6 +20,7 @@ import {
   ProgressBar,
   Row
 } from "../../components/mobile-ui";
+import { askLidyk } from "../../lib/api";
 import {
   type ClubStory,
   clubAwards,
@@ -26,6 +37,8 @@ import {
   todayChallenge
 } from "../../lib/mobile-data";
 import { colors } from "../../lib/theme";
+
+const MASCOT = require("../../assets/mascot.png") as number;
 
 const AWARD_FILTER_LABELS: Record<string, string> = {
   all: "Всі",
@@ -44,7 +57,9 @@ function StoryRing({ story, onPress }: { story: ClubStory; onPress: () => void }
   return (
     <TouchableOpacity style={styles.storyRing} onPress={onPress}>
       <View style={[styles.storyAvatar, { borderColor: bg }]}>
-        <Text style={[styles.storyInitial, { backgroundColor: bg }]}>{story.initials}</Text>
+        <View style={[styles.storyInitialBox, { backgroundColor: bg }]}>
+          <Text style={styles.storyInitial}>{story.initials}</Text>
+        </View>
       </View>
       <Text style={styles.storyName} numberOfLines={1}>{story.authorName}</Text>
     </TouchableOpacity>
@@ -55,7 +70,7 @@ function AddStoryRing({ onPress }: { onPress: () => void }) {
   return (
     <TouchableOpacity style={styles.storyRing} onPress={onPress}>
       <View style={[styles.storyAvatar, { borderColor: colors.yellow }]}>
-        <View style={[styles.storyInitial, { backgroundColor: "#ffd60033" }]}>
+        <View style={[styles.storyInitialBox, { backgroundColor: "#ffd60033" }]}>
           <Text style={styles.addStoryPlus}>+</Text>
         </View>
       </View>
@@ -73,11 +88,9 @@ function StoryViewer({ story, onClose }: { story: ClubStory; onClose: () => void
     <Modal visible animationType="slide" onRequestClose={onClose}>
       <View style={[styles.storyFull, { backgroundColor: bg }]}>
         <SafeAreaView style={styles.storyFullInner}>
-          {/* progress bar */}
           <View style={styles.storyProgress}>
             <View style={styles.storyProgressBar} />
           </View>
-          {/* header */}
           <View style={styles.storyHeader}>
             <View style={styles.storyHeaderLeft}>
               <View style={[styles.storyMiniAvatar, { backgroundColor: "rgba(255,255,255,0.25)" }]}>
@@ -92,17 +105,14 @@ function StoryViewer({ story, onClose }: { story: ClubStory; onClose: () => void
               <Text style={[styles.storyCloseText, { color: textColor }]}>✕</Text>
             </TouchableOpacity>
           </View>
-          {/* caption */}
           <View style={styles.storyCaption}>
             <Text style={[styles.storyCaptionText, { color: textColor }]}>{story.caption}</Text>
           </View>
-          {/* music */}
           {story.musicTitle ? (
             <View style={styles.storyMusic}>
               <Text style={[styles.storyMusicText, { color: textColor }]}>🎵 {story.musicTitle}</Text>
             </View>
           ) : null}
-          {/* reactions */}
           <View style={styles.storyReactions}>
             <Text style={[styles.storyReactionCount, { color: textColor }]}>♥ {story.reactions}</Text>
             {story.tags.map((tag) => (
@@ -117,15 +127,20 @@ function StoryViewer({ story, onClose }: { story: ClubStory; onClose: () => void
   );
 }
 
-// ─── Create story prototype modal ────────────────────────────────────────────
+// ─── Create story sheet ───────────────────────────────────────────────────────
 
 function CreateStorySheet({ onClose }: { onClose: () => void }) {
   return (
     <Modal visible animationType="slide" transparent onRequestClose={onClose}>
       <TouchableOpacity style={styles.sheetOverlay} onPress={onClose} activeOpacity={1}>
         <View style={styles.sheetBody}>
-          <Text style={styles.sheetTitle}>Поділитися успіхом</Text>
-          <Text style={styles.sheetSubtitle}>Обери шаблон і натхни інших учнів Клубу</Text>
+          <View style={styles.sheetMascotRow}>
+            <Image source={MASCOT} style={styles.sheetMascot} resizeMode="contain" />
+            <View style={styles.sheetMascotText}>
+              <Text style={styles.sheetTitle}>Поділитися успіхом</Text>
+              <Text style={styles.sheetSubtitle}>Обери шаблон — і натхни інших учнів!</Text>
+            </View>
+          </View>
           <View style={styles.templateGrid}>
             {(["📚 Я склав теорію", "🚗 Перший урок", "🎓 Я отримав права", "🚙 Моя машина", "🅿️ Паркування переможено", "💡 Порада новачкам"] as const).map((tpl) => (
               <TouchableOpacity key={tpl} style={styles.templateCard}>
@@ -135,7 +150,7 @@ function CreateStorySheet({ onClose }: { onClose: () => void }) {
           </View>
           <View style={styles.sheetNote}>
             <Text style={styles.sheetNoteText}>
-              📎 Завантаження фото/відео — після підключення backend
+              📎 Фото/відео та публікація — після підключення backend і модерації
             </Text>
           </View>
           <TouchableOpacity style={styles.sheetCancel} onPress={onClose}>
@@ -151,40 +166,91 @@ function CreateStorySheet({ onClose }: { onClose: () => void }) {
 
 function LidykAssistant() {
   const [expanded, setExpanded] = useState(false);
-  const [activePrompt, setActivePrompt] = useState<string | null>(null);
+  const [customQ, setCustomQ] = useState("");
+  const [response, setResponse] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [isFallback, setIsFallback] = useState(false);
+
+  async function handleAsk(question: string) {
+    if (!question.trim()) return;
+    setLoading(true);
+    setResponse(null);
+    setCustomQ("");
+    const result = await askLidyk(question);
+    setResponse(result.answer);
+    setIsFallback(result.mode === "fallback");
+    setLoading(false);
+  }
 
   return (
     <Card>
       <TouchableOpacity style={styles.aiHeader} onPress={() => setExpanded((v) => !v)}>
-        <Text style={styles.aiEmoji}>🚗</Text>
+        <Image source={MASCOT} style={styles.aiMascotImg} resizeMode="contain" />
         <View style={styles.aiHeaderText}>
           <Text style={styles.aiTitle}>Запитай Лідика</Text>
           <Text style={styles.aiSub}>AI-помічник для навчання та підготовки</Text>
         </View>
         <Text style={styles.aiChevron}>{expanded ? "▲" : "▼"}</Text>
       </TouchableOpacity>
+
       {expanded ? (
         <View style={styles.aiBody}>
+          {/* Quick prompts */}
           <View style={styles.aiPrompts}>
             {mascotQuickPrompts.map((prompt) => (
               <TouchableOpacity
                 key={prompt}
-                style={[styles.aiPromptBtn, activePrompt === prompt && styles.aiPromptBtnActive]}
-                onPress={() => setActivePrompt(activePrompt === prompt ? null : prompt)}
+                style={styles.aiPromptBtn}
+                onPress={() => handleAsk(prompt)}
+                disabled={loading}
               >
-                <Text style={[styles.aiPromptText, activePrompt === prompt && styles.aiPromptTextActive]}>
-                  {prompt}
-                </Text>
+                <Text style={styles.aiPromptText}>{prompt}</Text>
               </TouchableOpacity>
             ))}
           </View>
-          {activePrompt ? (
-            <View style={styles.aiResponse}>
-              <Text style={styles.aiResponseText}>{mascotAiResponses[activePrompt]}</Text>
+
+          {/* Custom input */}
+          <View style={styles.aiInputRow}>
+            <TextInput
+              style={styles.aiInput}
+              value={customQ}
+              onChangeText={setCustomQ}
+              placeholder="Запитай щось..."
+              placeholderTextColor={colors.muted}
+              returnKeyType="send"
+              onSubmitEditing={() => handleAsk(customQ)}
+              editable={!loading}
+              multiline={false}
+            />
+            <TouchableOpacity
+              style={[styles.aiSendBtn, loading && { opacity: 0.5 }]}
+              onPress={() => handleAsk(customQ)}
+              disabled={loading || !customQ.trim()}
+            >
+              <Text style={styles.aiSendText}>→</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Loading state */}
+          {loading ? (
+            <View style={styles.aiLoadingRow}>
+              <Image source={MASCOT} style={styles.aiLoadingMascot} resizeMode="contain" />
+              <Text style={styles.aiLoadingText}>Лідик думає...</Text>
             </View>
           ) : null}
+
+          {/* Response */}
+          {response && !loading ? (
+            <View style={[styles.aiResponse, isFallback && styles.aiResponseFallback]}>
+              <Image source={MASCOT} style={styles.aiResponseMascot} resizeMode="contain" />
+              <Text style={styles.aiResponseText}>{response}</Text>
+            </View>
+          ) : null}
+
           <Text style={styles.aiDisclaimer}>
-            Повноцінний AI-помічник — після підключення OpenAI API
+            {isFallback
+              ? "Підключи інтернет для відповідей від реального Лідика"
+              : "Лідик допомагає з ПДР і навчанням · Не замінює інструктора"}
           </Text>
         </View>
       ) : null}
@@ -209,9 +275,7 @@ export default function ClubTab() {
   const isCorrect = selectedAnswer === todayChallenge.correctIndex;
 
   const filteredAwards =
-    awardFilter === "all"
-      ? clubAwards
-      : clubAwards.filter((a) => a.group === awardFilter);
+    awardFilter === "all" ? clubAwards : clubAwards.filter((a) => a.group === awardFilter);
   const earnedAwards = filteredAwards.filter((a) => a.earned);
   const lockedAwards = filteredAwards.filter((a) => !a.earned);
 
@@ -237,7 +301,7 @@ export default function ClubTab() {
           <Text style={styles.subtitle}>Тести, нагороди, stories та спільнота</Text>
         </View>
 
-        {/* Stories row */}
+        {/* Stories */}
         <View>
           <Text style={styles.sectionHeading}>Лідер Stories</Text>
           <FlatList
@@ -246,20 +310,19 @@ export default function ClubTab() {
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item) => item.id}
             ListHeaderComponent={<AddStoryRing onPress={() => setShowCreateStory(true)} />}
-            renderItem={({ item }) => (
-              <StoryRing story={item} onPress={() => setActiveStory(item)} />
-            )}
+            renderItem={({ item }) => <StoryRing story={item} onPress={() => setActiveStory(item)} />}
             contentContainerStyle={styles.storiesRow}
           />
         </View>
 
-        {/* Mascot card */}
-        <MascotMessage
-          emoji={mascot.emoji}
-          title="Лідик"
-          message={mascot.message}
-          tone={mascot.mood === "excited" || mascot.mood === "happy" ? "success" : mascot.mood === "gentle-reminder" ? "warning" : "neutral"}
-        />
+        {/* Mascot */}
+        <View style={styles.mascotCard}>
+          <Image source={MASCOT} style={styles.mascotImg} resizeMode="contain" />
+          <View style={styles.mascotBubble}>
+            <Text style={styles.mascotName}>Лідик</Text>
+            <Text style={styles.mascotMessage}>{mascot.message}</Text>
+          </View>
+        </View>
 
         {/* Streak */}
         <Card tone="green">
@@ -320,7 +383,7 @@ export default function ClubTab() {
           ) : null}
         </Card>
 
-        {/* Lidyk AI assistant */}
+        {/* Lidyk AI */}
         <LidykAssistant />
 
         {/* Club feed */}
@@ -359,7 +422,6 @@ export default function ClubTab() {
         {/* Awards */}
         <View>
           <Text style={styles.sectionHeading}>Нагороди Лідер Клубу</Text>
-          {/* Filter tabs */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow}>
             {Object.keys(AWARD_FILTER_LABELS).map((key) => (
               <TouchableOpacity
@@ -414,17 +476,17 @@ export default function ClubTab() {
           )}
 
           {filteredAwards.length === 0 ? (
-            <MascotMessage emoji="🅿️" title="Тут ще пусто" message="Пройди перший тест — і нагороди почнуть з'являтися." tone="neutral" />
+            <MascotMessage emoji="🅿️" title="Тут ще пусто" message="Пройди перший тест — і нагороди почнуть з'являтися." />
           ) : null}
         </View>
 
-        {/* Tip of the day */}
+        {/* Tip */}
         <Card tone="yellow">
           <Label>Підказка дня</Label>
           <Text style={styles.tipText}>{roadTips[tipIndex]}</Text>
         </Card>
 
-        {/* Driver checklist */}
+        {/* Checklist */}
         <Card>
           <Label>Чек-лист водія</Label>
           {driverChecklist.map((item) => (
@@ -462,22 +524,20 @@ const styles = StyleSheet.create({
   subtitle: { marginTop: 6, color: colors.muted, fontSize: 15, lineHeight: 22 },
   sectionHeading: { fontSize: 20, fontWeight: "900", color: colors.graphite, letterSpacing: -0.3, marginBottom: 10 },
 
+  // Mascot card (header)
+  mascotCard: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.white, borderRadius: 20, borderWidth: 1, borderColor: colors.line, padding: 16 },
+  mascotImg: { width: 56, height: 56 },
+  mascotBubble: { flex: 1 },
+  mascotName: { fontSize: 11, fontWeight: "900", color: colors.green, letterSpacing: 0.8, textTransform: "uppercase" },
+  mascotMessage: { marginTop: 4, fontSize: 14, fontWeight: "600", color: colors.graphite, lineHeight: 20 },
+
   // Stories
   storiesRow: { paddingRight: 8, gap: 12 },
   storyRing: { alignItems: "center", width: 64 },
-  storyAvatar: {
-    width: 56, height: 56, borderRadius: 28,
-    borderWidth: 2.5, alignItems: "center", justifyContent: "center"
-  },
-  storyInitial: {
-    width: 48, height: 48, borderRadius: 24,
-    textAlign: "center", textAlignVertical: "center",
-    fontSize: 20, fontWeight: "900", color: colors.white, overflow: "hidden"
-  },
-  addStoryPlus: {
-    fontSize: 26, fontWeight: "900", color: colors.warning,
-    textAlign: "center", lineHeight: 48
-  },
+  storyAvatar: { width: 56, height: 56, borderRadius: 28, borderWidth: 2.5, alignItems: "center", justifyContent: "center" },
+  storyInitialBox: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center" },
+  storyInitial: { fontSize: 20, fontWeight: "900", color: colors.white },
+  addStoryPlus: { fontSize: 26, fontWeight: "900", color: colors.warning },
   storyName: { marginTop: 6, fontSize: 11, fontWeight: "700", color: colors.muted, textAlign: "center" },
 
   // Story viewer
@@ -505,8 +565,11 @@ const styles = StyleSheet.create({
   // Create story sheet
   sheetOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
   sheetBody: { backgroundColor: colors.white, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 48 },
+  sheetMascotRow: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 4 },
+  sheetMascot: { width: 52, height: 52 },
+  sheetMascotText: { flex: 1 },
   sheetTitle: { fontSize: 22, fontWeight: "900", color: colors.graphite },
-  sheetSubtitle: { marginTop: 6, fontSize: 14, color: colors.muted, lineHeight: 20 },
+  sheetSubtitle: { marginTop: 4, fontSize: 14, color: colors.muted, lineHeight: 20 },
   templateGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 18 },
   templateCard: { borderRadius: 14, borderWidth: 1.5, borderColor: colors.line, paddingHorizontal: 14, paddingVertical: 10 },
   templateText: { fontSize: 13, fontWeight: "800", color: colors.graphite },
@@ -517,7 +580,7 @@ const styles = StyleSheet.create({
 
   // AI assistant
   aiHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
-  aiEmoji: { fontSize: 32 },
+  aiMascotImg: { width: 48, height: 48 },
   aiHeaderText: { flex: 1 },
   aiTitle: { fontSize: 16, fontWeight: "900", color: colors.graphite },
   aiSub: { marginTop: 2, fontSize: 12, color: colors.muted, fontWeight: "600" },
@@ -525,11 +588,18 @@ const styles = StyleSheet.create({
   aiBody: { marginTop: 16, gap: 10 },
   aiPrompts: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   aiPromptBtn: { borderRadius: 999, borderWidth: 1.5, borderColor: colors.line, paddingHorizontal: 14, paddingVertical: 8 },
-  aiPromptBtnActive: { borderColor: colors.green, backgroundColor: "#e8f5ee" },
   aiPromptText: { fontSize: 13, fontWeight: "700", color: colors.muted },
-  aiPromptTextActive: { color: colors.green },
-  aiResponse: { backgroundColor: "#f0f8f6", borderRadius: 16, padding: 14 },
-  aiResponseText: { fontSize: 14, fontWeight: "600", color: colors.graphite, lineHeight: 22 },
+  aiInputRow: { flexDirection: "row", gap: 8, alignItems: "center" },
+  aiInput: { flex: 1, borderRadius: 14, borderWidth: 1.5, borderColor: colors.line, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, fontWeight: "600", color: colors.graphite, backgroundColor: colors.background },
+  aiSendBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.green, alignItems: "center", justifyContent: "center" },
+  aiSendText: { fontSize: 20, color: colors.white, fontWeight: "900" },
+  aiLoadingRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  aiLoadingMascot: { width: 32, height: 32 },
+  aiLoadingText: { fontSize: 14, fontWeight: "700", color: colors.muted },
+  aiResponse: { flexDirection: "row", alignItems: "flex-start", gap: 10, backgroundColor: "#f0f8f6", borderRadius: 16, padding: 14 },
+  aiResponseFallback: { backgroundColor: "#fff8ec" },
+  aiResponseMascot: { width: 32, height: 32, marginTop: 2 },
+  aiResponseText: { flex: 1, fontSize: 14, fontWeight: "600", color: colors.graphite, lineHeight: 22 },
   aiDisclaimer: { fontSize: 11, color: colors.muted, fontWeight: "600", textAlign: "center" },
 
   // Streak
@@ -590,7 +660,7 @@ const styles = StyleSheet.create({
   // Tip
   tipText: { marginTop: 8, fontSize: 14, fontWeight: "700", color: colors.graphite, lineHeight: 22 },
 
-  // Insight row
+  // Insight
   insightRow: { flexDirection: "row", gap: 12 },
   insightCard: { flex: 1, borderRadius: 18, padding: 16 },
   insightTitle: { color: colors.white, fontSize: 17, fontWeight: "900" },

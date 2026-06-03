@@ -84,13 +84,19 @@
 - **Push-повідомлення**: `expo-notifications` + FCM token registration.
 - **Реальна синхронізація Driver Club**: streak, нагороди, checklist, stories → Firestore після запуску в stores. Типи `ClubAward`, `ClubStory`, `ClubThreadPost`, `MascotStateId` готові.
 - **Firebase мобільний**: `google-services.json` / `GoogleService-Info.plist` потрібні для production build.
-- **metro.config.js**: перевірити або створити для monorepo watchFolders — детально у `LOCAL_ANDROID_BUILD_RU.md`.
-- **AI API**: підключити OpenAI або Claude для повноцінного Lidyk AI-помічника (зараз mock відповіді).
-- **Media upload for Stories**: Firebase Storage для фото/відео в stories (зараз disabled placeholder).
-- **Модерація**: Stories і лента потребують перегляду перед публічним запуском.
-- **Music licensing**: зараз тільки mock назви треків — потрібні royalty-free треки або партнерство.
+- **AI API**: ✅ OpenAI підключено через Firebase Functions `/ai/lidyk` + Vercel proxy. Ключ у `.env.lider-avtoschool`. Модель: `gpt-4o-mini` (fallback від `OPENAI_MODEL`).
+- **Media upload for Stories**: Firebase Storage для фото/відео — після модерації.
+- **Модерація**: Stories і лента потребують перегляду перед публічним запуском. Кнопка "Поскаржитись" + панель у admin.
+- **Music licensing**: зараз тільки mock назви, `expo-av` не встановлено. Детально: `MOBILE_MUSIC_STORIES_RU.md`.
+- **APK build**: перенести проект на шлях без скобок (`C:\projects\lider-app\`) — детально `LOCAL_ANDROID_BUILD_RU.md`.
 - **APP_ICON_PROMPT_RU.md**: ✅ промт для генерації іконки додатку (4 варіанти: мінімал, динамік, преміум, маскот).
 - **MOBILE_PRODUCT_ROADMAP_RU.md**: ✅ дорожня карта 10 фаз: MVP → Driver Club → Stories → Push → Firestore → Модерація → Монетизація → Telegram → Privacy → Release.
+- **Маскот реальна картинка**: ✅ `maskot_test.png` та `app_logo_test.png` скопійовано в `apps/mobile/assets/`. `app.config.ts` оновлено: `icon`, `splash`, `adaptiveIcon.foregroundImage`. Маскот Лідик — червоний автомобіль з очима — використовується у MascotCard, LidykAssistant header, loading/response states, Create Story sheet.
+- **Lidyk AI — реальний endpoint**: ✅ Firebase Functions `/ai/lidyk` — приймає питання, викликає OpenAI GPT-4o-mini з system prompt Лідика, повертає `{answer, mode}`. Vercel proxy `/api/ai/lidyk` з rate limit 15 req/хв/IP. Mobile `askLidyk()` у `apps/mobile/lib/api.ts` — 15s timeout, fallback на мережеву помилку. UI: TextInput + quick prompts + loading state + response з маскотом.
+- **MOBILE_MUSIC_STORIES_RU.md**: ✅ пояснення чому не можна вбудувати Spotify/Apple Music як TikTok (немає лицензій), варіанти (royalty-free, Spotify deep link, Epidemic Sound), архітектура `StoryMusicTrack` типів, план підключення `expo-av`.
+- **StoryMusicTrack типи**: ✅ `StoryMusicSource`, `StoryMusicTrack` з `license`, `mood`, `previewUrl` — готово до Firestore та `expo-av`.
+- **Club Feed розширено**: ✅ 6 постів (мем "не заглохнемо", новини набору Краматорськ) + 2 нові шаблони в clubFeedPosts.
+- **Локальна збірка APK**: ✅ Тестовано. Встановлено: Node v22, Java JDK 17, Android SDK, ADB. `expo prebuild` — успішно. `gradlew assembleDebug` — **FAILED**: `)` у шляху `C:\Users\Nice Try)\` ламає Gradle Ivy URL parser. Рішення: перенести проект на `C:\projects\lider-app\`. Детально у `LOCAL_ANDROID_BUILD_RU.md`.
 
 ### Telegram-бот
 

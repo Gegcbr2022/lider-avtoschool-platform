@@ -7,14 +7,22 @@ const config: ExpoConfig = {
   version: "0.1.0",
   orientation: "portrait",
   userInterfaceStyle: "light",
+  icon: "./assets/icon.png",
+  splash: {
+    image: "./assets/icon.png",
+    resizeMode: "contain",
+    backgroundColor: "#004d40"
+  },
   assetBundlePatterns: ["**/*"],
   ios: {
     supportsTablet: true,
-    bundleIdentifier: "ua.lider.avtoschool"
+    bundleIdentifier: "ua.lider.avtoschool",
+    icon: "./assets/icon.png"
   },
   android: {
     package: "ua.lider.avtoschool",
     adaptiveIcon: {
+      foregroundImage: "./assets/adaptive-icon.png",
       backgroundColor: "#004d40"
     }
   },

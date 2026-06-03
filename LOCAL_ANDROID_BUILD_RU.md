@@ -5,6 +5,54 @@
 
 ---
 
+## ⚠️ КРИТИЧНО: Путь проекта не должен содержать спецсимволы
+
+**Проблема:** Gradle / Ivy URL parser ломается, если путь к проекту содержит скобки `(`, `)`, пробелы или другие спецсимволы.
+
+**Ошибка:**
+```
+invalid end of optional part at position N in pattern /C:/Users/Nice Try)/...
+```
+
+**Почему:** Expo autolinking генерирует maven repo URLs вида:
+```
+file:///C:/Users/Nice Try)/Downloads/Avtoschool_APP/node_modules/expo-linking/local-maven-repo
+```
+Символ `)` в пути интерпретируется Ivy как закрывающая скобка optional-части шаблона → Build FAILED.
+
+**Решение — перенести проект в путь без спецсимволов:**
+
+```powershell
+# 1. Клонировать/скопировать в чистый путь
+xcopy /E /H /Y "C:\Users\Nice Try)\Downloads\Avtoschool_APP" "C:\projects\lider-app\"
+
+# 2. Или просто клонировать свежей командой:
+git clone <repo-url> C:\projects\lider-app
+
+# 3. Установить зависимости
+cd C:\projects\lider-app
+npm install -g pnpm
+pnpm install
+
+# 4. Дальше следовать инструкции ниже
+```
+
+Пути, которые **работают:**
+- `C:\projects\lider-app\` ✅
+- `C:\lider-avtoschool\` ✅
+- `D:\work\lider\` ✅
+
+Пути, которые **ломают** Gradle:
+- `C:\Users\Nice Try)\...` ❌ (скобка)
+- `C:\Users\My Project\...` ❌ (пробел в начале имени)
+- `C:\папка з кирилицею\...` ❌ (кириллица)
+
+**Проверено на текущем проекте:** сборка из `C:\Users\Nice Try)\Downloads\Avtoschool_APP` завершается ошибкой Ivy — даже через `subst L:` или junction, потому что Node.js резолвит реальный путь.
+
+---
+
+---
+
 ## 1. Что нужно установить
 
 ### Node.js LTS
@@ -302,6 +350,25 @@ apps\mobile\android\app\build\outputs\apk\release\app-release-unsigned.apk
 ## Быстрая команда «собери и запусти в BlueStacks»
 
 ```powershell
-cd c:\Users\...\Avtoschool_APP\apps\mobile\android
+# Из чистого пути (без спецсимволов!) например C:\projects\lider-app\
+cd C:\projects\lider-app\apps\mobile\android
 .\gradlew.bat assembleDebug ; adb connect 127.0.0.1:5555 ; adb install -r app\build\outputs\apk\debug\app-debug.apk
 ```
+
+---
+
+## Результаты тестирования на текущем проекте (2026-06-03)
+
+| Проверка | Результат |
+|---|---|
+| Node.js v22.14.0 | ✅ установлен |
+| Java JDK 17.0.19 (Temurin) | ✅ установлен |
+| ANDROID_HOME = C:\Android\SDK | ✅ задан |
+| JAVA_HOME = C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot\ | ✅ задан |
+| ADB version 1.0.41 | ✅ работает |
+| expo prebuild --platform android | ✅ успешно |
+| gradlew.bat assembleDebug | ❌ FAILED — `)` в пути `C:\Users\Nice Try)\` |
+| Workaround subst L: | ❌ не помогает — Node.js резолвит реальный путь |
+| Workaround junction | ❌ не помогает — Node.js резолвит реальный путь |
+
+**Вывод:** Для локальной сборки нужно перенести проект на `C:\projects\lider-app\` или аналогичный путь без скобок.

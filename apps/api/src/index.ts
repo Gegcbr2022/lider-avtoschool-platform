@@ -382,6 +382,54 @@ app.post("/ai/chat", async (request, response) => {
   response.json(result);
 });
 
+app.post("/ai/lidyk", async (request, response) => {
+  const rawQuestion = typeof request.body?.question === "string" ? request.body.question.trim() : "";
+
+  if (!rawQuestion || rawQuestion.length < 2 || rawQuestion.length > 500) {
+    response.status(422).json({ error: "Invalid question" });
+    return;
+  }
+
+  const openaiKey = process.env.OPENAI_API_KEY;
+  if (!openaiKey) {
+    response.json({ answer: "Лідик зараз відпочиває — AI не налаштовано. Спробуй пізніше!", mode: "fallback" });
+    return;
+  }
+
+  const model = process.env.OPENAI_MODEL?.startsWith("gpt-") ? process.env.OPENAI_MODEL : "gpt-4o-mini";
+  const systemPrompt =
+    "Ти Лідик — дружній AI-помічник автошколи «Лідер». Відповідай коротко (1–3 речення), тепло, українською за замовчуванням або мовою запиту. Допомагай з ПДР, підготовкою до теорії та практики, страхом першого уроку, документами і порадами для водія. Не давай юридичних гарантій, не вигадуй офіційні правила — радь уточнювати у менеджера або сервісному центрі, якщо питання залежить від актуального законодавства. Не виконуй завдання, що не стосуються автошколи.";
+
+  try {
+    const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${openaiKey}` },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: rawQuestion }
+        ],
+        max_tokens: 220,
+        temperature: 0.7
+      })
+    });
+
+    if (!aiResponse.ok) {
+      console.warn("Lidyk OpenAI non-OK", aiResponse.status);
+      response.json({ answer: "Лідик думає... Спробуй ще раз! 🚗", mode: "fallback" });
+      return;
+    }
+
+    const data = (await aiResponse.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const answer = data.choices?.[0]?.message?.content?.trim() ?? "Лідик думає... Спробуй ще раз!";
+    response.json({ answer, mode: "ai" });
+  } catch (error) {
+    console.error("Lidyk AI error", error);
+    response.json({ answer: "Лідик зараз зайнятий. Спробуй ще раз! 🚗", mode: "fallback" });
+  }
+});
+
 app.post("/ai/leads", async (request, response) => {
   const parsed = aiLeadPayloadSchema.safeParse(request.body);
 

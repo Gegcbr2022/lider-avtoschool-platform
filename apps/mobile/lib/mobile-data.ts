@@ -497,6 +497,28 @@ export const clubFeedPosts: ClubPost[] = [
     timeAgo: "3 дні тому",
     likes: 31,
     hasLiked: false
+  },
+  {
+    id: "post-meme-1",
+    author: "Андрій С.",
+    role: "Учень • Краматорськ",
+    content: "Не заглохнемо — медитуємо на зчепленні 🧘 5 хвилин вранці подумати про перший урок — і вже не страшно.",
+    tag: "Мем",
+    tagColor: "#fef3f2",
+    timeAgo: "4 дні тому",
+    likes: 44,
+    hasLiked: false
+  },
+  {
+    id: "post-news-1",
+    author: "Автошкола Лідер",
+    role: "Офіційний канал",
+    content: "Новий набір у Краматорську — старт 10 червня. Категорії A, B, C. Менеджер на зв'язку: @LiderDriveBot 🚀",
+    tag: "Новини",
+    tagColor: "#e8f5ee",
+    timeAgo: "5 днів тому",
+    likes: 19,
+    hasLiked: false
   }
 ];
 
@@ -698,4 +720,43 @@ export const clubThreadPosts: ClubThreadPost[] = [
     reactions: { like: 31, fire: 25, clap: 14 }, commentsCount: 16,
     createdAt: "2026-05-31T18:00:00Z"
   },
+  {
+    id: "t5", authorName: "Андрій С.", authorInitials: "А", role: "student",
+    text: "Не заглохнемо — медитуємо на зчепленні 🧘 Серйозно, 5 хвилин вранці подумати про перший урок — і вже не страшно.",
+    tags: ["мем", "лайфхак"],
+    reactions: { like: 44, fire: 31, clap: 18 }, commentsCount: 22,
+    createdAt: "2026-05-30T09:00:00Z"
+  },
+  {
+    id: "t6", authorName: "Автошкола Лідер", authorInitials: "Л", role: "school",
+    text: "Новий набір у Краматорську — старт 10 червня. Категорії A, B, C. Менеджер на зв'язку в Telegram: @LiderDriveBot 🚀",
+    tags: ["набір", "краматорськ"],
+    reactions: { like: 19, fire: 12, clap: 7 }, commentsCount: 5,
+    createdAt: "2026-05-29T14:00:00Z"
+  },
+];
+
+// ─── Music for Stories ────────────────────────────────────────────────────────
+
+export type StoryMusicSource = "local" | "royalty_free" | "spotify_link" | "apple_music_link" | "custom_upload";
+
+export type StoryMusicTrack = {
+  id: string;
+  title: string;
+  artist?: string;
+  source: StoryMusicSource;
+  previewUrl?: string;
+  externalUrl?: string;
+  durationSec?: number;
+  license: "mock" | "royalty_free" | "licensed" | "external_link_only";
+  mood: "drive" | "calm" | "victory" | "city" | "meme";
+};
+
+export const storyMusicTracks: StoryMusicTrack[] = [
+  { id: "drive-mood",   title: "Drive Mood",       artist: "Mock Track",  source: "local",        durationSec: 30, license: "mock", mood: "drive"   },
+  { id: "first-ride",   title: "First Ride",        artist: "Mock Track",  source: "local",        durationSec: 28, license: "mock", mood: "calm"    },
+  { id: "misto-che",    title: "Місто чекає",       artist: "Mock Track",  source: "local",        durationSec: 32, license: "mock", mood: "city"    },
+  { id: "no-panic",     title: "No Panic Parking",  artist: "Mock Track",  source: "local",        durationSec: 25, license: "mock", mood: "meme"    },
+  { id: "prava-v-dii",  title: "Права в Дії",       artist: "Mock Track",  source: "local",        durationSec: 30, license: "mock", mood: "victory" },
+  { id: "pixabay-road", title: "Road Trip",         artist: "Pixabay",     source: "royalty_free", durationSec: 60, license: "royalty_free", mood: "drive", externalUrl: "https://pixabay.com/music" },
 ];
