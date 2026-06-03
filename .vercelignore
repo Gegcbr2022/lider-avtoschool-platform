@@ -10,7 +10,8 @@ packages/*/node_modules/
 .gradle/
 apps/web/.next/
 apps/*/dist/
-apps/*/lib/
+apps/api/lib/
+apps/admin/lib/
 new_reference/
 output/
 o-nas/
