@@ -5,8 +5,8 @@ const requestBuckets = new Map<string, { count: number; resetAt: number }>();
 const leadIpBuckets = new Map<string, { count: number; resetAt: number }>();
 const leadPhoneBuckets = new Map<string, { count: number; resetAt: number }>();
 
-// All valid lead sources — inline here so this route works regardless of
-// which version of @lider/shared is installed in the Vercel build cache.
+// All valid lead sources — inlined here so this route works independently of
+// which version of @lider/shared the Vercel build cache contains.
 const VALID_LEAD_SOURCES = new Set([
   "website", "popup", "telegram", "referral", "walk-in", "mobile",
   "ai-chat", "admin", "category-page", "documents-page", "contacts-page",
@@ -14,16 +14,26 @@ const VALID_LEAD_SOURCES = new Set([
   "floating_phone", "sticky_mobile", "footer", "cta_link", "documents", "about",
 ]);
 
-function safeLeadSource(raw: unknown): string {
-  if (typeof raw === "string" && VALID_LEAD_SOURCES.has(raw)) return raw;
-  // Try dashes↔underscores variant
-  if (typeof raw === "string") {
-    const alt1 = raw.replace(/_/g, "-");
-    const alt2 = raw.replace(/-/g, "_");
-    if (VALID_LEAD_SOURCES.has(alt1)) return alt1;
-    if (VALID_LEAD_SOURCES.has(alt2)) return alt2;
+// Values that all schema versions (including the old 11-value cache) accept.
+// Used as the Zod-validated source so the schema never rejects on new CTA names.
+const SCHEMA_SAFE_SOURCES = new Set([
+  "website", "popup", "telegram", "referral", "walk-in", "mobile",
+  "ai-chat", "admin", "category-page", "documents-page", "contacts-page",
+]);
+
+function safeLeadSource(raw: unknown): { normalized: string; schemaSafe: string } {
+  if (typeof raw !== "string" || !raw.trim()) {
+    return { normalized: "website", schemaSafe: "website" };
   }
-  return "website";
+  const s = raw.trim();
+  const candidates = [s, s.replace(/_/g, "-"), s.replace(/-/g, "_")];
+  let normalized = "website";
+  for (const c of candidates) {
+    if (VALID_LEAD_SOURCES.has(c)) { normalized = c; break; }
+  }
+  // For Zod validation, always use a value the cached schema accepts
+  const schemaSafe = SCHEMA_SAFE_SOURCES.has(normalized) ? normalized : "website";
+  return { normalized, schemaSafe };
 }
 
 export async function POST(request: Request) {
@@ -66,20 +76,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "captcha_required" }, { status: 403 });
   }
 
-  const enrichedBody = enrichLeadBody(payload, request);
+  const { normalized: normalizedSource, schemaSafe } = safeLeadSource(payload.source);
+  const rawSource = typeof payload.source === "string" ? payload.source : undefined;
+
+  // Validate with schema-safe source so old cached @lider/shared enum never rejects.
+  const enrichedBody = enrichLeadBody(payload, request, schemaSafe);
   const parsed = createLeadSchema.safeParse(enrichedBody);
 
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid lead payload", issues: parsed.error.flatten() }, { status: 422 });
   }
 
+  // Replace schemaSafe source with the real normalized source for storage/forwarding.
+  const finalData = {
+    ...parsed.data,
+    source: normalizedSource,
+    ...(rawSource && rawSource !== normalizedSource ? { sourceDetail: rawSource } : {}),
+  };
+
   if (process.env.NODE_ENV === "production") {
     if (!process.env.API_URL) {
       return NextResponse.json({ error: "API_URL is not configured" }, { status: 503 });
     }
 
-    // Forward real user IP and UA so Firebase Functions can rate-limit per user,
-    // not per Vercel egress IP (which would block all users after 2 requests).
     const proxyHeaders: Record<string, string> = { "Content-Type": "application/json" };
     const forwardedFor = request.headers.get("x-forwarded-for");
     const realIp = request.headers.get("x-real-ip");
@@ -91,7 +110,7 @@ export async function POST(request: Request) {
     const apiResponse = await fetch(`${process.env.API_URL.replace(/\/$/, "")}/leads`, {
       method: "POST",
       headers: proxyHeaders,
-      body: JSON.stringify(parsed.data)
+      body: JSON.stringify(finalData)
     }).catch(() => null);
 
     if (!apiResponse) {
@@ -110,25 +129,22 @@ export async function POST(request: Request) {
   return NextResponse.json({
     id: `web-${Date.now()}`,
     status: "accepted",
-    lead: stripLeadProtectionFields(parsed.data)
+    lead: stripLeadProtectionFields(finalData as Parameters<typeof stripLeadProtectionFields>[0])
   });
 }
 
-function enrichLeadBody(body: unknown, request: Request) {
+function enrichLeadBody(body: unknown, request: Request, source: string) {
   const payload = typeof body === "object" && body !== null ? (body as Record<string, unknown>) : {};
   const referer = request.headers.get("referer") ?? undefined;
   const userAgent = request.headers.get("user-agent") ?? undefined;
   const language = typeof payload.language === "string" ? payload.language : request.headers.get("accept-language")?.slice(0, 2);
-  const rawSource = payload.source;
 
   return {
     ...payload,
     page: payload.page ?? referer,
     userAgent,
     language: language === "ru" || language === "en" ? language : "uk",
-    // Normalize source BEFORE Zod validation — works regardless of @lider/shared version
-    source: safeLeadSource(rawSource),
-    sourceDetail: typeof rawSource === "string" && rawSource !== safeLeadSource(rawSource) ? rawSource : undefined,
+    source, // always a value the Zod schema accepts
     preferredContactMethod: payload.preferredContactMethod ?? payload.contactMethod,
     updatedAt: new Date().toISOString()
   };
