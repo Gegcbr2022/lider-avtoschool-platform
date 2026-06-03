@@ -1033,9 +1033,9 @@ export function assessLeadRisk({
     add("recent_submit", 2);
   }
 
-  if (ipAttempts >= 2) add("ip_recent_attempts", 3);
-  if (ipAttempts >= 8) add("ip_high_attempts", 3);
-  if (phoneAttempts >= 2) add("phone_recent_attempts", 3);
+  if (ipAttempts >= 5) add("ip_recent_attempts", 3);
+  if (ipAttempts >= 12) add("ip_high_attempts", 3);
+  if (phoneAttempts >= 4) add("phone_recent_attempts", 3);
   if (popupOpens >= 5) add("many_popup_opens", 2);
   if (validationErrors >= 2) add("repeated_validation_errors", 2);
 
@@ -1056,8 +1056,8 @@ export function assessLeadRisk({
   return {
     score,
     reasons,
-    captchaRequired: score >= 3 || ipAttempts >= 2 || phoneAttempts >= 2,
-    reject: ipAttempts >= 16 || phoneAttempts >= 6,
+    captchaRequired: score >= 5 || ipAttempts >= 5 || phoneAttempts >= 4,
+    reject: ipAttempts >= 20 || phoneAttempts >= 10,
     honeypotFilled: false
   };
 }

@@ -183,7 +183,8 @@ app.post("/leads", async (request, response) => {
     return;
   }
 
-  if (risk.captchaRequired) {
+  const captchaEnabled = process.env.LEAD_CAPTCHA_ENABLED === "true";
+  if (captchaEnabled && risk.captchaRequired) {
     const token = readProtectionString(rawPayload.turnstileToken);
 
     if (!token) {

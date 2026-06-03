@@ -39,7 +39,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "too_many_requests" }, { status: 429 });
   }
 
-  if (risk.captchaRequired && !readString(payload.turnstileToken)) {
+  const captchaEnabled = process.env.LEAD_CAPTCHA_ENABLED === "true";
+  if (captchaEnabled && risk.captchaRequired && !readString(payload.turnstileToken)) {
     console.warn("Lead captcha required at web edge", { reasons: risk.reasons, score: risk.score });
     return NextResponse.json({ error: "captcha_required" }, { status: 403 });
   }

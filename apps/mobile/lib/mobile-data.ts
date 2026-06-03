@@ -129,6 +129,40 @@ export type DriverClubStreak = {
   lastActiveDate: string;
 };
 
+export type ClubAwardGroup = "streak" | "tests" | "community" | "safety" | "graduation";
+
+export type ClubAward = {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  earned: boolean;
+  progress?: number;
+  maxProgress?: number;
+  earnedAt?: string;
+  group: ClubAwardGroup;
+};
+
+export type ClubMascotMood = "happy" | "excited" | "gentle-reminder" | "encouraging";
+
+export type ClubMascot = {
+  mood: ClubMascotMood;
+  message: string;
+  emoji: string;
+};
+
+export type ClubPost = {
+  id: string;
+  author: string;
+  role: string;
+  content: string;
+  tag: string;
+  tagColor: string;
+  timeAgo: string;
+  likes: number;
+  hasLiked: boolean;
+};
+
 export const driverClubStreak: DriverClubStreak = {
   current: 4,
   best: 12,
@@ -151,6 +185,204 @@ export const clubBadges: DriverClubBadge[] = [
   { id: "streak-30",    title: "Місяць",           description: "30 днів у Клубі водія",               earned: false, icon: "🏆" },
   { id: "referral-1",   title: "Перший друг",      description: "Один друг записався за вашим кодом",  earned: false, icon: "👥" },
   { id: "checklist",    title: "Готовий водій",    description: "Виконано чек-лист водія",             earned: false, icon: "✅" }
+];
+
+export const clubAwards: ClubAward[] = [
+  {
+    id: "first-start",
+    title: "Перший старт",
+    description: "Пройдено перший щоденний тест ПДР",
+    icon: "🏁",
+    earned: true,
+    earnedAt: "2026-06-01",
+    group: "tests"
+  },
+  {
+    id: "streak-3",
+    title: "Серія 3 дні",
+    description: "3 дні поспіль у Клубі водія",
+    icon: "🔥",
+    earned: true,
+    earnedAt: "2026-06-03",
+    group: "streak"
+  },
+  {
+    id: "streak-7",
+    title: "Серія 7 днів",
+    description: "7 днів регулярного навчання",
+    icon: "⭐",
+    earned: false,
+    progress: 4,
+    maxProgress: 7,
+    group: "streak"
+  },
+  {
+    id: "expert-sign",
+    title: "Знак знавця",
+    description: "10 правильних відповідей поспіль",
+    icon: "🎯",
+    earned: false,
+    progress: 3,
+    maxProgress: 10,
+    group: "tests"
+  },
+  {
+    id: "safe-driver",
+    title: "Спокійний водій",
+    description: "Пройшов блок про безпечне водіння",
+    icon: "🛡️",
+    earned: false,
+    group: "safety"
+  },
+  {
+    id: "parking-master",
+    title: "Майстер паркування",
+    description: "Пройшов тест про паркування на 100%",
+    icon: "🅿️",
+    earned: false,
+    group: "tests"
+  },
+  {
+    id: "friend-of-lider",
+    title: "Друг Лідера",
+    description: "Запросив друга за реферальним кодом",
+    icon: "👥",
+    earned: false,
+    group: "community"
+  },
+  {
+    id: "pdr-ninja",
+    title: "ПДР-ніндзя",
+    description: "Пройшов 50 тестів ПДР",
+    icon: "🥷",
+    earned: false,
+    progress: 4,
+    maxProgress: 50,
+    group: "tests"
+  },
+  {
+    id: "no-panic",
+    title: "Без паніки",
+    description: "Правильно вирішив ситуацію дня",
+    icon: "😎",
+    earned: false,
+    group: "safety"
+  },
+  {
+    id: "road-colleague",
+    title: "Дорожній колега",
+    description: "30 днів у Клубі водія",
+    icon: "🏆",
+    earned: false,
+    progress: 4,
+    maxProgress: 30,
+    group: "streak"
+  },
+  {
+    id: "theory-champion",
+    title: "Чемпіон теорії",
+    description: "100% у тижневому тесті",
+    icon: "📚",
+    earned: false,
+    group: "tests"
+  },
+  {
+    id: "graduate",
+    title: "Випускник клубу",
+    description: "Отримав права і залишився в додатку",
+    icon: "🎓",
+    earned: false,
+    group: "graduation"
+  }
+];
+
+export function getMascotState(streak: DriverClubStreak): ClubMascot {
+  const { current, best } = streak;
+
+  if (current === 0) {
+    return {
+      mood: "gentle-reminder",
+      message: "Гей! Я Лідик — твій провідник у Клубі 🚗  Не страшно, якщо пропустив. Починаємо сьогодні!",
+      emoji: "🚗"
+    };
+  }
+
+  if (current >= best && best > 3) {
+    return {
+      mood: "excited",
+      message: `Неймовірно! ${current} днів — це новий особистий рекорд! Я пишаюся тобою 🏆`,
+      emoji: "🏆"
+    };
+  }
+
+  if (current >= 7) {
+    return {
+      mood: "happy",
+      message: `${current} днів поспіль! Ти справжній Дорожній Лідер. Так тримати! 🔥`,
+      emoji: "🔥"
+    };
+  }
+
+  if (current >= 3) {
+    return {
+      mood: "happy",
+      message: `${current} дні поспіль — відмінний ритм! До рекорду ще ${best - current} днів 💪`,
+      emoji: "⭐"
+    };
+  }
+
+  return {
+    mood: "encouraging",
+    message: `День ${current}! Молодець, що повернувся 🚗  Кожен тест — крок до впевненого водіння.`,
+    emoji: "🚗"
+  };
+}
+
+export const clubFeedPosts: ClubPost[] = [
+  {
+    id: "post-situation-1",
+    author: "Інструктор Віталій",
+    role: "Інструктор • Київ",
+    content: "Ситуація дня: їдете вулицею, попереду пішохідний перехід. Справа стоїть автобус. Хто має перевагу і як правильно діяти?",
+    tag: "Ситуація",
+    tagColor: "#e8f5ee",
+    timeAgo: "2 год тому",
+    likes: 14,
+    hasLiked: false
+  },
+  {
+    id: "post-reminder-1",
+    author: "Автошкола Лідер",
+    role: "Офіційний канал",
+    content: "Нагадуємо: перевірте термін дії страховки ОСЦПВ. Без чинного поліса — штраф і ризик. Законодавчий мінімум — поліс на рік.",
+    tag: "Нагадування",
+    tagColor: "#fff8ec",
+    timeAgo: "вчора",
+    likes: 8,
+    hasLiked: true
+  },
+  {
+    id: "post-tip-1",
+    author: "Інструктор Наталія",
+    role: "Інструктор • Дніпро",
+    content: "Порада: якщо боїтесь рушати на підйомі — потренуйтесь на пустому паркінгу. 20 хвилин щодня дають впевненість за тиждень.",
+    tag: "Порада",
+    tagColor: "#eaf4f1",
+    timeAgo: "2 дні тому",
+    likes: 22,
+    hasLiked: false
+  },
+  {
+    id: "post-graduate-1",
+    author: "Марія К.",
+    role: "Випускник • Категорія B • Київ",
+    content: "Сьогодні отримала права! 🎉 Дякую інструктору і всьому клубу за підтримку. Наступний крок — перша самостійна поїздка.",
+    tag: "Випускник",
+    tagColor: "#f0edff",
+    timeAgo: "3 дні тому",
+    likes: 31,
+    hasLiked: false
+  }
 ];
 
 export const driverChecklist = [
