@@ -1,2 +1,17 @@
 design-references/
 Images_with_prava/
+node_modules/
+apps/mobile/android/
+apps/mobile/.expo/
+apps/*/node_modules/
+packages/*/node_modules/
+*.apk
+*.aab
+.gradle/
+apps/web/.next/
+apps/*/dist/
+apps/*/lib/
+new_reference/
+output/
+o-nas/
+
