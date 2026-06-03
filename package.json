@@ -7,6 +7,10 @@
     "apps/*",
     "packages/*"
   ],
+  "overrides": {
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
+  },
   "scripts": {
     "dev:web": "npm --workspace @lider/web run dev",
     "dev:admin": "npm --workspace @lider/admin run dev",
@@ -23,5 +27,9 @@
     "@types/node": "^22.15.3",
     "prettier": "^3.5.3",
     "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
   }
 }

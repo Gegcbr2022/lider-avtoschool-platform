@@ -98,6 +98,8 @@
 - **MOBILE_MUSIC_STORIES_RU.md**: ✅ оновлено — музика НЕ входить у MVP, Stories робляться без музики як Telegram Stories. Майбутня музика — тільки через royalty-free/licensed каталог, без Spotify/Apple Music embedding.
 - **Club Feed розширено**: ✅ 6 постів (мем "не заглохнемо", новини набору Краматорськ) + 2 нові шаблони в clubFeedPosts.
 - **Локальна збірка APK**: ✅ **BUILD SUCCESSFUL** (2026-06-03). `expo prebuild --clean` + `gradlew assembleDebug` з `C:\Avtoschool_APP\`. APK: `apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk` (144 MB). Встановлення: `adb connect 127.0.0.1:5555 && adb install -r <шлях до APK>`. Детально у `LOCAL_ANDROID_BUILD_RU.md`.
+- **BlueStacks standalone APK (2026-06-04)**: ✅ зібрано автономний release APK без Metro. Шлях: `C:\Avtoschool_APP\apps\mobile\android\app\build\outputs\apk\release\app-release.apk`. Для monorepo release build використовується `EXPO_NO_METRO_WORKSPACE_ROOT=1`.
+- **Помилка `Unable to load script`**: ✅ причина зафіксована — це запуск debug APK без Metro/embedded bundle. Для автономного запуску в BlueStacks використовується саме release APK.
 
 ### Telegram-бот
 

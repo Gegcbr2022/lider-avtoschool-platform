@@ -163,12 +163,33 @@ cd apps/mobile/android
 apps\mobile\android\app\build\outputs\apk\debug\app-debug.apk
 ```
 
+### Важно: debug APK и Metro
+
+- `app-debug.apk` рассчитан на dev-режим и обычно требует Metro.
+- Ошибка `Unable to load script` в BlueStacks означает, что установлен debug APK без запущенного Metro или без embedded JS bundle.
+
+### Рекомендуемо для BlueStacks: автономный release APK
+
+```powershell
+cd apps/mobile/android
+$env:NODE_ENV="production"
+$env:EXPO_NO_METRO_WORKSPACE_ROOT="1"
+.\gradlew.bat assembleRelease
+```
+
+Рабочий автономный APK:
+```
+C:\Avtoschool_APP\apps\mobile\android\app\build\outputs\apk\release\app-release.apk
+```
+
+Примечание: в этом проекте release временно подписан debug keystore (test-only), это допустимо для локального тестирования в BlueStacks, но не для Google Play.
+
 ---
 
 ## 6. Установка в BlueStacks
 
 ### Вариант 1: перетащить APK в окно BlueStacks
-Просто перетащите `app-debug.apk` в открытое окно BlueStacks.
+Просто перетащите `app-release.apk` (рекомендуется) или `app-debug.apk` в открытое окно BlueStacks.
 
 ### Вариант 2: через ADB
 
@@ -183,7 +204,13 @@ adb devices
 adb connect 127.0.0.1:5555
 
 # Установить APK
-adb install -r apps\mobile\android\app\build\outputs\apk\debug\app-debug.apk
+adb -s 127.0.0.1:5555 install -r apps\mobile\android\app\build\outputs\apk\release\app-release.apk
+```
+
+Если нужно установить debug APK:
+
+```powershell
+adb -s 127.0.0.1:5555 install -r apps\mobile\android\app\build\outputs\apk\debug\app-debug.apk
 ```
 
 Флаг `-r` заменяет уже установленное приложение.
@@ -239,7 +266,10 @@ adb install apps\mobile\android\app\build\outputs\apk\debug\app-debug.apk
 ```
 
 ### `Could not connect to development server`
-Если Metro не запущен — APK работает автономно с bundled JS (release build).  
+Если Metro не запущен:
+- debug APK покажет `Unable to load script`.
+- release APK работает автономно с bundled JS.
+
 Для debug build убедиться что Metro запущен: `pnpm exec expo start`.
 
 ### Gradle застрял / не запускается
