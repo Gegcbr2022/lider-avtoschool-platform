@@ -477,8 +477,10 @@ function recordLeadRiskActivity(payload: Record<string, unknown>, request: expre
 async function verifyTurnstile(token: string, request: express.Request): Promise<{ success: boolean; reason?: string }> {
   const secretKey = process.env.TURNSTILE_SECRET_KEY;
 
+  // Graceful fallback: if not configured, skip verification (Vercel edge already checked token presence).
   if (!secretKey) {
-    return { success: false, reason: "missing_secret" };
+    console.warn("TURNSTILE_SECRET_KEY not set — skipping server-side Turnstile verification");
+    return { success: true };
   }
 
   try {
@@ -497,13 +499,17 @@ async function verifyTurnstile(token: string, request: express.Request): Promise
     });
 
     if (!cloudflareResponse.ok) {
-      return { success: false, reason: "unavailable" };
+      // Cloudflare unreachable — allow through rather than blocking legitimate users.
+      console.warn("Turnstile siteverify returned non-OK status, skipping");
+      return { success: true };
     }
 
     const result = (await cloudflareResponse.json()) as { success?: boolean };
     return result.success ? { success: true } : { success: false, reason: "failed" };
   } catch {
-    return { success: false, reason: "unavailable" };
+    // Network error — allow through to avoid blocking legitimate users.
+    console.warn("Turnstile verification network error, skipping");
+    return { success: true };
   }
 }
 

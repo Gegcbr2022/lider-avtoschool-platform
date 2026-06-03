@@ -359,6 +359,130 @@ function SpecializedPageSection({
     );
   }
 
+  // ── Training format (theory + practice) ───────────────────────────────────
+  if (slug === "training" || slug === "categories" || slug === "prices") {
+    const theoryTitle   = tk("Теоретичний курс", "Теоретический курс", "Theory course");
+    const theoryDesc    = tk(
+      "Після подачі документів ви отримуєте повний доступ до всіх навчальних матеріалів.",
+      "После подачи документов вы получаете полный доступ ко всем учебным материалам.",
+      "After submitting your documents you get full access to all learning materials."
+    );
+    const practiceTitle = tk("Практичні заняття", "Практические занятия", "Practical lessons");
+    const practiceDesc  = tk(
+      "Після успішної здачі теоретичного іспиту розпочинаються практичні заняття — найцікавіша та найважливіша частина навчання.",
+      "После успешной сдачи теоретического экзамена начинаются практические занятия — самая интересная и важная часть обучения.",
+      "After passing the theory exam, practical lessons begin — the most engaging and essential part of your training."
+    );
+
+    type TrainingBlock = { icon: string; heading: string; items: string[] };
+
+    const theoryBlocksMap: Record<string, TrainingBlock[]> = {
+      uk: [
+        { icon: "🎥", heading: "Живі заняття в Zoom", items: ["Лекції від викладача вищої категорії з 35-річним досвідом", "Онлайн-формат із можливістю ставити питання", "Графік: Пн–Пт 17:00–19:00 · Сб–Нд 12:00–14:00"] },
+        { icon: "📺", heading: "Відеолекції на YouTube", items: ["Доступ до лекцій у зручний для вас час", "Можна переглядати будь-де й будь-коли"] },
+        { icon: "📝", heading: "Тренажер для підготовки до іспиту", items: ["Спеціальна навчальна програма з усіма тестами", "Підготовка до іспиту в Сервісному центрі МВС", "Зручний формат для самостійного тренування"] }
+      ],
+      ru: [
+        { icon: "🎥", heading: "Живые занятия в Zoom", items: ["Лекции от преподавателя высшей категории с 35-летним опытом", "Онлайн-формат с возможностью задавать вопросы", "График: Пн–Пт 17:00–19:00 · Сб–Вс 12:00–14:00"] },
+        { icon: "📺", heading: "Видеолекции на YouTube", items: ["Доступ к лекциям в удобное для вас время", "Смотрите где и когда угодно"] },
+        { icon: "📝", heading: "Тренажёр для подготовки к экзамену", items: ["Специальная учебная программа со всеми тестами", "Подготовка к экзамену в Сервисном центре МВД", "Удобный формат для самостоятельной тренировки"] }
+      ],
+      en: [
+        { icon: "🎥", heading: "Live Zoom classes", items: ["Lectures by a top-category instructor with 35 years of experience", "Online format with live Q&A", "Schedule: Mon–Fri 17:00–19:00 · Sat–Sun 12:00–14:00"] },
+        { icon: "📺", heading: "YouTube video lectures", items: ["Watch lectures at your own pace", "Available anywhere, anytime"] },
+        { icon: "📝", heading: "Exam preparation simulator", items: ["Full test database with explanations", "Aligned with the MIA service centre exam format", "Self-paced, practice as much as you need"] }
+      ]
+    };
+
+    const practiceBlocksMap: Record<string, TrainingBlock[]> = {
+      uk: [
+        { icon: "🚗", heading: "Заняття з інструктором", items: ["Навчання на авто відповідної категорії", "Старт, зупинка, розвороти, паркування, маневрування, обгони", "Місто, інтенсивний трафік, нерівні дороги, перехрестя"] },
+        { icon: "👤", heading: "Інструктори", items: ["Пояснюють чітко та спокійно", "Підлаштовуються під ваш рівень і темп", "Підготовка до практичного іспиту в автошколі та СЦ МВС"] },
+        { icon: "📍", heading: "Графік та локації", items: ["Гнучкий графік — ви обираєте зручний день і час", "Виїзди проходять у вашому місті", "Всі заняття індивідуальні — один учень, один інструктор"] }
+      ],
+      ru: [
+        { icon: "🚗", heading: "Занятия с инструктором", items: ["Обучение на автомобиле соответствующей категории", "Старт, остановка, развороты, парковка, манёвры, обгоны", "Город, интенсивный трафик, неровные дороги, перекрёстки"] },
+        { icon: "👤", heading: "Инструкторы", items: ["Объясняют чётко и спокойно", "Подстраиваются под ваш уровень и темп", "Подготовка к практическому экзамену в автошколе и СЦ МВД"] },
+        { icon: "📍", heading: "График и локации", items: ["Гибкий график — выбираете удобный день и время", "Выезды в вашем городе", "Все занятия индивидуальные — один ученик, один инструктор"] }
+      ],
+      en: [
+        { icon: "🚗", heading: "Lessons with an instructor", items: ["Training on the appropriate vehicle category", "Starts, stops, turns, parking, manoeuvres, overtaking", "City traffic, uneven roads, signalled and unsignalled junctions"] },
+        { icon: "👤", heading: "Instructors", items: ["Clear and calm communication", "Adapts to your skill level and pace", "Prepares you for both the school and MIA service centre practical exam"] },
+        { icon: "📍", heading: "Schedule and locations", items: ["Flexible schedule — choose your day and time", "Sessions in your city", "All lessons are individual — one student, one instructor"] }
+      ]
+    };
+
+    const theoryBlocks  = (theoryBlocksMap[locale]  ?? theoryBlocksMap.uk)  as TrainingBlock[];
+    const practiceBlocks = (practiceBlocksMap[locale] ?? practiceBlocksMap.uk) as TrainingBlock[];
+
+    const goalText = tk(
+      "Наша мета — не просто навчити вас керувати авто, а зробити вас впевненим, спокійним та безпечним водієм.",
+      "Наша цель — не просто научить вас водить авто, а сделать вас уверенным, спокойным и безопасным водителем.",
+      "Our goal is not just to teach you how to drive, but to make you a confident, calm and safe driver."
+    );
+
+    return (
+      <section className="motion-section bg-white px-5 py-16 lg:px-8">
+        <div className="mx-auto max-w-7xl space-y-16">
+          {/* Theory */}
+          <div>
+            <div className="mb-8">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-lider-red">
+                {tk("01 · Теорія", "01 · Теория", "01 · Theory")}
+              </p>
+              <h2 className="mt-3 text-3xl font-black tracking-tight text-lider-graphite">{theoryTitle}</h2>
+              <p className="mt-3 max-w-2xl text-base font-semibold leading-7 text-lider-muted">{theoryDesc}</p>
+            </div>
+            <div className="grid gap-5 md:grid-cols-3">
+              {theoryBlocks.map((block) => (
+                <div key={block.heading} className="rounded-2xl border border-lider-line bg-lider-background p-5">
+                  <span className="text-2xl">{block.icon}</span>
+                  <h3 className="mt-3 text-base font-black text-lider-graphite">{block.heading}</h3>
+                  <ul className="mt-3 space-y-2">
+                    {block.items.map((item) => (
+                      <li key={item} className="flex items-start gap-2 text-sm font-semibold leading-6 text-lider-muted">
+                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-lider-red" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Practice */}
+          <div>
+            <div className="mb-8">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-lider-red">
+                {tk("02 · Практика", "02 · Практика", "02 · Practice")}
+              </p>
+              <h2 className="mt-3 text-3xl font-black tracking-tight text-lider-graphite">{practiceTitle}</h2>
+              <p className="mt-3 max-w-2xl text-base font-semibold leading-7 text-lider-muted">{practiceDesc}</p>
+            </div>
+            <div className="grid gap-5 md:grid-cols-3">
+              {practiceBlocks.map((block) => (
+                <div key={block.heading} className="rounded-2xl border border-lider-line bg-lider-background p-5">
+                  <span className="text-2xl">{block.icon}</span>
+                  <h3 className="mt-3 text-base font-black text-lider-graphite">{block.heading}</h3>
+                  <ul className="mt-3 space-y-2">
+                    {block.items.map((item) => (
+                      <li key={item} className="flex items-start gap-2 text-sm font-semibold leading-6 text-lider-muted">
+                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-lider-red" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+            <p className="mt-8 max-w-2xl text-base font-black text-lider-graphite">{goalText}</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   // ── Documents ──────────────────────────────────────────────────────────────
   if (slug === "documents") {
     return (
@@ -517,7 +641,7 @@ type LegalDocData = { disclaimer: string; sections: LegalSectionData[] };
 const legalContent: Record<LegalSlug, Record<Locale, LegalDocData>> = {
   privacy: {
     uk: {
-      disclaimer: "Цей текст підготовлено як якісний черновик на основі реальної архітектури проєкту. Потребує фінального юридичного підтвердження перед публікацією як офіційний документ.",
+      disclaimer: "Останнє оновлення: червень 2026 р. Автошкола «Лідер», lider.bdslab.net.",
       sections: [
         {
           title: "Загальні положення",
@@ -629,7 +753,7 @@ const legalContent: Record<LegalSlug, Record<Locale, LegalDocData>> = {
       ]
     },
     ru: {
-      disclaimer: "Этот текст подготовлен как качественный черновик на основе реальной архитектуры проекта. Требует финального юридического подтверждения перед публикацией в качестве официального документа.",
+      disclaimer: "Последнее обновление: июнь 2026 г. Автошкола «Лидер», lider.bdslab.net.",
       sections: [
         {
           title: "Общие положения",
@@ -739,7 +863,7 @@ const legalContent: Record<LegalSlug, Record<Locale, LegalDocData>> = {
       ]
     },
     en: {
-      disclaimer: "This text is a quality draft based on the actual project architecture. It requires final legal confirmation before publication as an official document.",
+      disclaimer: "Last updated: June 2026. Leader Driving School, lider.bdslab.net.",
       sections: [
         {
           title: "General provisions",
@@ -853,7 +977,7 @@ const legalContent: Record<LegalSlug, Record<Locale, LegalDocData>> = {
   },
   terms: {
     uk: {
-      disclaimer: "Цей текст підготовлено як якісний черновик на основі реальної архітектури проєкту. Потребує фінального юридичного підтвердження перед публікацією як офіційний документ.",
+      disclaimer: "Останнє оновлення: червень 2026 р. Автошкола «Лідер», lider.bdslab.net.",
       sections: [
         {
           title: "Загальні положення",
@@ -955,7 +1079,7 @@ const legalContent: Record<LegalSlug, Record<Locale, LegalDocData>> = {
       ]
     },
     ru: {
-      disclaimer: "Этот текст подготовлен как качественный черновик на основе реальной архитектуры проекта. Требует финального юридического подтверждения перед публикацией в качестве официального документа.",
+      disclaimer: "Последнее обновление: июнь 2026 г. Автошкола «Лидер», lider.bdslab.net.",
       sections: [
         {
           title: "Общие положения",
@@ -1056,7 +1180,7 @@ const legalContent: Record<LegalSlug, Record<Locale, LegalDocData>> = {
       ]
     },
     en: {
-      disclaimer: "This text is a quality draft based on the actual project architecture. It requires final legal confirmation before publication as an official document.",
+      disclaimer: "Last updated: June 2026. Leader Driving School, lider.bdslab.net.",
       sections: [
         {
           title: "General provisions",
@@ -1167,9 +1291,7 @@ function LegalSection({ slug, locale }: { slug: LegalSlug; locale: Locale }) {
   return (
     <section className="motion-section bg-white px-5 py-16 lg:px-8">
       <div className="mx-auto max-w-3xl">
-        <div className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-semibold leading-6 text-amber-800">
-          ⚠ {content.disclaimer}
-        </div>
+        <p className="mb-8 text-xs font-semibold text-lider-muted">{content.disclaimer}</p>
 
         {/* Table of contents */}
         <nav className="mb-10 rounded-2xl bg-lider-background p-5">

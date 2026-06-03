@@ -56,9 +56,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "API_URL is not configured" }, { status: 503 });
     }
 
+    // Forward real user IP and UA so Firebase Functions can rate-limit per user,
+    // not per Vercel egress IP (which would block all users after 2 requests).
+    const proxyHeaders: Record<string, string> = { "Content-Type": "application/json" };
+    const forwardedFor = request.headers.get("x-forwarded-for");
+    const realIp = request.headers.get("x-real-ip");
+    const userAgent = request.headers.get("user-agent");
+    if (forwardedFor) proxyHeaders["x-forwarded-for"] = forwardedFor;
+    else if (realIp) proxyHeaders["x-forwarded-for"] = realIp;
+    if (userAgent) proxyHeaders["user-agent"] = userAgent;
+
     const apiResponse = await fetch(`${process.env.API_URL.replace(/\/$/, "")}/leads`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: proxyHeaders,
       body: JSON.stringify(parsed.data)
     }).catch(() => null);
 

@@ -13,22 +13,26 @@
 - Firestore rules/indexes для публічного створення лідів і KPI read-only. **Задеплоєно в production**.
 - Storage rules: додано шлях `lead-documents/{leadId}` для анонімного upload документів заявки. **Задеплоєно в production**.
 - **Firebase Functions задеплоєно**: `https://europe-west1-lider-avtoschool.cloudfunctions.net/api`
-- **Firebase Storage upload реалізовано**: форма завантажує файли в `lead-documents/{leadId}` через Firebase Storage SDK. Потрібні `NEXT_PUBLIC_FIREBASE_*` ENV у Vercel.
+- **Firebase Storage upload реалізовано**: форма завантажує файли в `lead-documents/{leadId}` через Firebase Storage SDK.
 - **Telegram-документи**: після загрузки файлів у Storage — `PATCH /leads/:id/documents` запускає `sendDocumentsToTelegram` у API.
-- **Email-уведомлення**: `sendLeadEmail()` у API — підтримує Resend і прямий SMTP, не блокує Telegram/створення ліда при помилці, зберігає `emailNotificationStatus`. Активується `LEAD_EMAIL_ENABLED=true`.
-- **Переклади uk/ru/en**: homepage, форма, мобільне меню, sticky footer — повністю перекладені.
-- **Privacy/Terms сторінки**: ✅ **повністю перероблено** — повноцінні тексти на uk/ru/en з 13 (privacy) та 16 (terms) розділами, структурованими буллетами та оглавленням. Потребує фінального юридичного підтвердження.
-- **Згода у формах**: ✅ чекбокс тепер містить клікабельні посилання на `/privacy` та `/terms` з правильними локалізованими текстами.
-- **Smart CAPTCHA / Cloudflare Turnstile**: ✅ risk-based flow готовий. Нормальний користувач відправляє коротку форму без CAPTCHA; suspicious/high-risk заявки отримують `captcha_required`, frontend показує Turnstile і повторює submit з токеном. Додано honeypot `companyWebsite`, `formStartedAt`, sessionStorage-сигнали без PII, server-side risk scoring, phone/IP hash buckets, gross rate-limit reject і очищення службових captcha-полів перед persistence/Telegram/email. Ключі `NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` залишаються зовнішніми production ENV.
-- **Admin DEMO-режим**: ✅ доданий жовтий банер що чітко вказує на зразкові дані, змінено "production workspace" → "DEMO — зразкові дані", додано `ADMIN_ROLES_GUIDE.md` з інструкцією по підключенню Firebase Admin SDK і призначенню ролей.
-- **MOBILE_RELEASE_GUIDE_RU.md**: ✅ створено — повний гайд по збірці APK/AAB/IPA, EAS профілях, ENV змінних, Google Play і App Store.
-- **Відгуки**: тільки реальний `ReviewsCarousel`, блок фейкових карток прибраний.
-- **Admin CRM**: CSV-export лідів, фільтри за містом і джерелом, кнопки копіювання номера і виклику.
-- **ENV_GUIDE_RU.md**: детальна інструкція для кожної ENV змінної, включно з email та Turnstile.
-- **Головна сторінка спрощена**: блок категорій показує лише 4 картки з кнопкою "Усі категорії та ціни" → `/categories`.
-- **Мобільний sticky CTA**: один головний CTA "Залишити заявку", з'являється після скролу.
-- **Footer**: прибраний номер телефону, компактні іконки соцмереж включно з TikTok; privacy/terms/email залишені дрібним текстом.
-- **Адреси філіалів оновлено**: Київ (ТРК «Аркадія», 2-й поверх), Слов'янськ (Дім Побуту, 1-й поверх), Краматорськ (буд. 56), Дніпро (82Г, 3-й поверх, кім. 11).
+- **Email-уведомлення**: `sendLeadEmail()` у API — Resend і SMTP, graceful fallback, `emailNotificationStatus`. Активується `LEAD_EMAIL_ENABLED=true`.
+- **Переклади uk/ru/en**: homepage, форма, мобільне меню, sticky footer.
+- **Privacy/Terms сторінки**: повноцінні тексти uk/ru/en, 13 та 16 розділів, оглавлення.
+- **Публічний дисклеймер прибраний**: ✅ `/privacy` та `/terms` показують нейтральну відмітку дати оновлення без попереджень. Юридичний sign-off — бізнес-задача власника.
+- **Відправка заявок виправлена**: ✅ Vercel тепер пересилає `x-forwarded-for` та `user-agent` у Firebase Functions — rate-limit більше не блокує всіх після 2-ї заявки. `verifyTurnstile` gracefully пропускає якщо ключ не задано.
+- **Згода у формах**: клікабельні посилання на `/privacy` та `/terms`.
+- **Smart CAPTCHA / Cloudflare Turnstile**: risk-based flow. Нормальний користувач без CAPTCHA; підозрілий отримує Turnstile.
+- **Admin DEMO-режим**: жовтий банер, "DEMO — зразкові дані", `ADMIN_ROLES_GUIDE.md`.
+- **MOBILE_RELEASE_GUIDE_RU.md**: повний гайд по збірці APK/AAB/IPA.
+- **Driver Club (мобільний killer feature)**: ✅ нова вкладка «Клуб» — щоденний тест ПДР, streak, бейджі, підказка дня, чек-лист водія, реферальний блок. Mock-дані готові до підключення backend.
+- **Контент теорії та практики**: ✅ на `/categories` додано блок — Zoom-заняття, YouTube-лекції, тренажер ПДР, практичні заняття з інструктором. uk/ru/en.
+- **CLIENT_DB_ARCHITECTURE_RU.md**: ✅ архітектура спільної клієнтської БД — 12 колекцій, Telegram-sync поля, matching по телефону, Security Rules, roadmap бота.
+- **DEPLOY_STRATEGY_RU.md**: ✅ порівняння Vercel+Firebase vs VPS vs гібрид, рекомендація та тригери переходу.
+- **Відгуки**: тільки реальний `ReviewsCarousel`.
+- **Admin CRM**: CSV-export, фільтри, кнопки дзвінка.
+- **ENV_GUIDE_RU.md**: детальна інструкція для кожної ENV змінної.
+- **Головна сторінка**: 4 картки категорій + "Усі категорії та ціни".
+- **Мобільний sticky CTA**, **Footer**, **Адреси філіалів** оновлено.
 
 ---
 
@@ -38,20 +42,19 @@
 
 | Пункт | Що потрібно |
 |---|---|
-| Firebase public config | `NEXT_PUBLIC_FIREBASE_*` у Vercel — отримати з Firebase Console → Project Settings → Web app |
-| `FIREBASE_STORAGE_BUCKET` | `lider-avtoschool.firebasestorage.app` — задати у Firebase Functions env |
+| Firebase public config | `NEXT_PUBLIC_FIREBASE_*` у Vercel — Firebase Console → Project Settings → Web app |
+| `FIREBASE_STORAGE_BUCKET` | `lider-avtoschool.firebasestorage.app` — Firebase Functions env |
 | Telegram bot | `TELEGRAM_BOT_TOKEN` і `TELEGRAM_LOG_CHAT_ID` в Firebase Functions secrets |
-| Email (Resend) | `RESEND_API_KEY` + `LEAD_EMAIL_ENABLED=true` + `LEAD_EMAIL_TO=...` + `LEAD_EMAIL_FROM=...` в Firebase Functions |
-| Email (SMTP) | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` замість `RESEND_API_KEY` |
-| CAPTCHA (anti-spam) | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` + `TURNSTILE_SECRET_KEY` — ✅ smart/risk-based інтеграція готова, потрібні лише production keys |
+| Email (Resend) | `RESEND_API_KEY` + `LEAD_EMAIL_ENABLED=true` + `LEAD_EMAIL_TO` + `LEAD_EMAIL_FROM` в Firebase Functions |
+| CAPTCHA | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (Vercel) + `TURNSTILE_SECRET_KEY` (Firebase Functions) |
 | Real payments | LiqPay / Fondy / Monobank keys в ENV |
 
 ### Vercel (Web)
 
 | Пункт | Що потрібно |
 |---|---|
-| ENV у Vercel dashboard | Усі `NEXT_PUBLIC_FIREBASE_*` + `OPENAI_API_KEY` + `TELEGRAM_*` — детально в `ENV_GUIDE_RU.md` |
-| Custom domain | Прив'язати `lider.bdslab.net` у Vercel → Domains |
+| ENV у Vercel dashboard | Усі `NEXT_PUBLIC_FIREBASE_*` + `OPENAI_API_KEY` + `TURNSTILE_*` — детально в `ENV_GUIDE_RU.md` |
+| Custom domain | `lider.bdslab.net` прив'язано |
 | Analytics | `NEXT_PUBLIC_GA4_ID`, `NEXT_PUBLIC_META_PIXEL_ID`, `NEXT_PUBLIC_TIKTOK_PIXEL_ID` |
 
 ---
@@ -60,26 +63,32 @@
 
 ### Admin
 
-- **Firebase Admin SDK**: встановлення + service account ключ. Інструкція у `docs/ADMIN_ROLES_GUIDE.md`.
-- **Авторизація**: Firebase Auth + middleware auth guard. Архітектура та гайд у `docs/ADMIN_ROLES_GUIDE.md`.
-- **Реальний Firestore CRUD**: підключення після Firebase Admin SDK.
-- **Ролі admin/manager**: призначення custom claims через Firebase Admin SDK (скрипт у `ADMIN_ROLES_GUIDE.md`).
+- **Firebase Admin SDK**: service account ключ. Інструкція у `docs/ADMIN_ROLES_GUIDE.md`.
+- **Авторизація**: Firebase Auth + middleware auth guard.
+- **Реальний Firestore CRUD**: після Firebase Admin SDK.
+- **Ролі admin/manager**: `setCustomUserClaims` (скрипт у `ADMIN_ROLES_GUIDE.md`).
 
 ### Mobile
 
-- **EAS credentials**: потрібні акаунти Google Play / App Store Connect і підписи. Гайд: `MOBILE_RELEASE_GUIDE_RU.md`.
+- **EAS credentials**: Google Play / App Store Connect і підписи. Гайд: `MOBILE_RELEASE_GUIDE_RU.md`.
 - **Push-повідомлення**: `expo-notifications` + FCM token registration.
-- **Реальна синхронізація**: розклад, оплати, прогрес з production Firestore.
+- **Реальна синхронізація Driver Club**: mock → Firestore після запуску в stores.
 - **Firebase мобільний**: `google-services.json` / `GoogleService-Info.plist`.
+
+### Telegram-бот
+
+- **Код бота**: після отримання — аналіз БД і інтеграція за `CLIENT_DB_ARCHITECTURE_RU.md`.
+- **Migration**: стара БД бота → Firestore `botUsers`.
+- **Webhook**: бот → Firebase Functions → спільний Firestore.
 
 ---
 
 ## Legal та бізнес
 
-- **Тексти privacy policy та terms of use**: ✅ якісні черновики готові (uk/ru/en, 13 та 16 розділів). Потрібен **фінальний юридичний review** перед публікацією як офіційні документи.
-- Фінальне підтвердження цін, строків і умов CE під час воєнного стану.
-- Графіки роботи і канали зв'язку філіалів потребують підтвердження від власника.
-- Підтвердження від власника для використання реальних фотографій у «Гордість Лідера».
+- **Privacy/terms**: тексти готові, дисклеймер прибраний. Потрібен **підпис власника** для офіційного статусу.
+- Підтвердження цін, строків CE під час воєнного стану.
+- Графіки роботи і контакти філіалів.
+- Підтвердження використання реальних фотографій у «Гордість Лідера».
 
 ---
 
