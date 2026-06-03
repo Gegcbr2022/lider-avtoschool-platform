@@ -1,9 +1,30 @@
-import { assessLeadRisk, createLeadSchema, hashLeadRiskKey, normalizeLeadSource, stripLeadProtectionFields } from "@lider/shared";
+import { assessLeadRisk, createLeadSchema, hashLeadRiskKey, stripLeadProtectionFields } from "@lider/shared";
 import { NextResponse } from "next/server";
 
 const requestBuckets = new Map<string, { count: number; resetAt: number }>();
 const leadIpBuckets = new Map<string, { count: number; resetAt: number }>();
 const leadPhoneBuckets = new Map<string, { count: number; resetAt: number }>();
+
+// All valid lead sources — inline here so this route works regardless of
+// which version of @lider/shared is installed in the Vercel build cache.
+const VALID_LEAD_SOURCES = new Set([
+  "website", "popup", "telegram", "referral", "walk-in", "mobile",
+  "ai-chat", "admin", "category-page", "documents-page", "contacts-page",
+  "branch_card", "category_card", "service_card", "hero_cta",
+  "floating_phone", "sticky_mobile", "footer", "cta_link", "documents", "about",
+]);
+
+function safeLeadSource(raw: unknown): string {
+  if (typeof raw === "string" && VALID_LEAD_SOURCES.has(raw)) return raw;
+  // Try dashes↔underscores variant
+  if (typeof raw === "string") {
+    const alt1 = raw.replace(/_/g, "-");
+    const alt2 = raw.replace(/-/g, "_");
+    if (VALID_LEAD_SOURCES.has(alt1)) return alt1;
+    if (VALID_LEAD_SOURCES.has(alt2)) return alt2;
+  }
+  return "website";
+}
 
 export async function POST(request: Request) {
   const rateLimitResult = checkRateLimit(request);
@@ -98,14 +119,16 @@ function enrichLeadBody(body: unknown, request: Request) {
   const referer = request.headers.get("referer") ?? undefined;
   const userAgent = request.headers.get("user-agent") ?? undefined;
   const language = typeof payload.language === "string" ? payload.language : request.headers.get("accept-language")?.slice(0, 2);
+  const rawSource = payload.source;
 
   return {
     ...payload,
     page: payload.page ?? referer,
     userAgent,
     language: language === "ru" || language === "en" ? language : "uk",
-    source: normalizeLeadSource(payload.source),
-    sourceDetail: typeof payload.source === "string" ? payload.source : undefined,
+    // Normalize source BEFORE Zod validation — works regardless of @lider/shared version
+    source: safeLeadSource(rawSource),
+    sourceDetail: typeof rawSource === "string" && rawSource !== safeLeadSource(rawSource) ? rawSource : undefined,
     preferredContactMethod: payload.preferredContactMethod ?? payload.contactMethod,
     updatedAt: new Date().toISOString()
   };
