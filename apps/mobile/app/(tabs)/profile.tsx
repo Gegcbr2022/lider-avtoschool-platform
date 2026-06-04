@@ -149,9 +149,9 @@ export default function ProfileTab() {
       <Card>
         <Label>Налаштування</Label>
         <Row title="Діагностика" detail="Стан API та Firebase" icon="🔧" onPress={() => router.push("/diagnostic")} />
-        <Row title="Підтримка" detail="Написати в чат" icon="💬" onPress={() => {}} />
-        <Row title="FAQ" detail="Часті запитання" icon="❓" onPress={() => {}} />
-        <Row title="Умови використання" detail="Правила та конфіденційність" icon="📄" onPress={() => {}} />
+        <Row title="Підтримка" detail="Написати Лідику в чат" icon="💬" onPress={() => router.push("/(tabs)/club")} />
+        <Row title="ПДР тести" detail="Почати тренування" icon="✅" onPress={() => router.push("/(tabs)/tests")} />
+        <Row title="Про додаток" detail="Версія 0.1.0 · Автошкола Лідер" icon="ℹ️" onPress={() => router.push("/diagnostic")} />
       </Card>
 
       {/* Network status */}

@@ -1,4 +1,5 @@
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
+import { router } from "expo-router";
 import {
   Card,
   Label,
@@ -79,8 +80,8 @@ export default function LearningTab() {
             key={service.id}
             title={service.title}
             detail={`${service.duration} · від ${service.priceFrom.toLocaleString("uk-UA")} грн`}
-            right={<Pill tone="default">Записатись</Pill>}
-            onPress={() => {}}
+            right={<Pill tone="red">Записатись</Pill>}
+            onPress={() => router.push("/auth?mode=register")}
           />
         ))}
       </Card>
