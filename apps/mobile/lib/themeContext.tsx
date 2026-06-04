@@ -51,41 +51,41 @@ export const darkColors = {
 
 export const lightColors = {
   // Brand
-  red:        "#ff1e1e",
-  redDark:    "#cc0000",
-  redSoft:    "rgba(255,30,30,0.08)",
-  redGlow:    "rgba(255,30,30,0.2)",
-  // Backgrounds
-  bg:         "#f8f9fb",
+  red:        "#e8000e",
+  redDark:    "#b50009",
+  redSoft:    "rgba(232,0,14,0.07)",
+  redGlow:    "rgba(232,0,14,0.18)",
+  // Backgrounds — clean white, subtle hierarchy
+  bg:         "#f5f5f7",
   bgCard:     "#ffffff",
-  bgElevated: "#f0f2f5",
+  bgElevated: "#ededf0",
   bgSheet:    "#ffffff",
-  // Text
-  textPrimary:   "#0d0d0d",
-  textSecondary: "#5a5a6a",
-  textTertiary:  "#9a9aaa",
+  // Text — deep charcoal not pure black (premium feel)
+  textPrimary:   "#1a1a1f",
+  textSecondary: "#4a4a5a",
+  textTertiary:  "#8a8a9a",
   textInverse:   "#ffffff",
-  // UI
-  border:     "#e2e4ea",
-  divider:    "#eceef3",
-  icon:       "#8a8aa0",
-  iconActive: "#ff1e1e",
+  // UI — soft borders
+  border:     "#dcdde5",
+  divider:    "#e8e9f0",
+  icon:       "#7a7a8a",
+  iconActive: "#e8000e",
   // Semantic
-  success:     "#16a34a",
-  successSoft: "rgba(22,163,74,0.1)",
-  warning:     "#d97706",
-  warningSoft: "rgba(217,119,6,0.1)",
-  info:        "#2563eb",
-  infoSoft:    "rgba(37,99,235,0.1)",
+  success:     "#15803d",
+  successSoft: "rgba(21,128,61,0.09)",
+  warning:     "#c2620a",
+  warningSoft: "rgba(194,98,10,0.09)",
+  info:        "#1d4ed8",
+  infoSoft:    "rgba(29,78,216,0.08)",
   // Compat aliases
   white:      "#ffffff",
   black:      "#000000",
-  muted:      "#9a9aaa",
-  line:       "#e2e4ea",
-  green:      "#16a34a",
-  yellow:     "#d97706",
-  graphite:   "#1a1a2e",
-  background: "#f8f9fb",
+  muted:      "#8a8a9a",
+  line:       "#dcdde5",
+  green:      "#15803d",
+  yellow:     "#c2620a",
+  graphite:   "#2a2a3a",
+  background: "#f5f5f7",
 } as const;
 
 export type ThemeColors = typeof darkColors;

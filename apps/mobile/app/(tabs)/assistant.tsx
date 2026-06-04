@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { askLidyk } from "../../lib/api";
 import { useTheme, radii, spacing } from "../../lib/theme";
+import { useNetworkStatus } from "../../lib/useNetwork";
 
 type Message = { role: "user" | "assistant"; text: string; fallback?: boolean; ts: number };
 type MascotState = "idle" | "thinking" | "happy" | "sad" | "offline";
@@ -45,6 +46,8 @@ const QUICK_PROMPTS = [
 export default function AssistantTab() {
   const { colors } = useTheme();
   const scrollRef = useRef<ScrollView>(null);
+  const networkStatus = useNetworkStatus();
+  const isOffline = networkStatus === "offline";
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -60,6 +63,17 @@ export default function AssistantTab() {
   async function send(question: string) {
     const q = question.trim();
     if (!q || loading) return;
+
+    if (isOffline) {
+      setMessages((prev) => [...prev,
+        { role: "user", text: q, ts: Date.now() },
+        { role: "assistant", text: "Лідик offline 📡 Немає з'єднання з інтернетом. Перевір мережу і спробуй ще раз.", fallback: true, ts: Date.now() },
+      ]);
+      setMascotState("offline");
+      setTimeout(() => setMascotState("idle"), 3000);
+      return;
+    }
+
     setInput("");
     setMessages((prev) => [...prev, { role: "user", text: q, ts: Date.now() }]);
     setLoading(true);
@@ -121,6 +135,16 @@ export default function AssistantTab() {
             <ActivityIndicator color={colors.red} size="small" style={{ marginRight: 4 }} />
           ) : null}
         </View>
+
+        {/* Offline banner */}
+        {isOffline ? (
+          <View style={{ backgroundColor: colors.warningSoft, borderBottomWidth: 1, borderBottomColor: colors.warning + "44", paddingHorizontal: spacing.md, paddingVertical: 10, flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Text style={{ fontSize: 18 }}>📡</Text>
+            <Text style={{ color: colors.warning, fontWeight: "700", fontSize: 13, flex: 1 }}>
+              Немає інтернету — Лідик не може відповідати
+            </Text>
+          </View>
+        ) : null}
 
         {/* Messages */}
         <ScrollView
@@ -192,14 +216,14 @@ export default function AssistantTab() {
         {/* Input */}
         <View style={s.inputRow}>
           <TextInput
-            style={s.input}
+            style={[s.input, isOffline && { opacity: 0.5 }]}
             value={input}
             onChangeText={setInput}
-            placeholder="Запитай Лідика..."
+            placeholder={isOffline ? "Немає інтернету..." : "Запитай Лідика..."}
             placeholderTextColor={colors.textTertiary}
             returnKeyType="send"
             onSubmitEditing={() => send(input)}
-            editable={!loading}
+            editable={!loading && !isOffline}
             multiline={false}
             autoCorrect={false}
           />
