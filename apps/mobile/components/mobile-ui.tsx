@@ -1,113 +1,459 @@
 import type { ReactNode } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors, radii } from "../lib/theme";
+import { useTheme, darkColors as colors, radii, shadows, spacing } from "../lib/theme";
 
-export function Screen({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
+// colors = darkColors for StyleSheet.create (static, module init)
+// useTheme() for dynamic theme in component renders
+
+// ─── Screen wrapper ──────────────────────────────────────────────────────────
+
+export function Screen({
+  title,
+  subtitle,
+  children,
+  noPadding = false,
+  headerRight,
+}: {
+  title?: string;
+  subtitle?: string;
+  children: ReactNode;
+  noPadding?: boolean;
+  headerRight?: ReactNode;
+}) {
+  const { colors: tc } = useTheme();
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <View>
-          <Text style={styles.title}>{title}</Text>
-          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
-        </View>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: tc.bg }]}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.container, noPadding && styles.noPaddingContainer]}
+      >
+        {title ? (
+          <View style={styles.header}>
+            <View style={styles.headerText}>
+              <Text style={[styles.title, { color: tc.textPrimary }]}>{title}</Text>
+              {subtitle ? <Text style={[styles.subtitle, { color: tc.textSecondary }]}>{subtitle}</Text> : null}
+            </View>
+            {headerRight ? <View>{headerRight}</View> : null}
+          </View>
+        ) : null}
         {children}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-export function Card({ children, tone = "light" }: { children: ReactNode; tone?: "light" | "green" | "yellow" }) {
+// ─── Cards ───────────────────────────────────────────────────────────────────
+
+export function Card({
+  children,
+  tone = "default",
+  style,
+}: {
+  children: ReactNode;
+  tone?: "default" | "red" | "success" | "warning" | "dark";
+  style?: object;
+}) {
+  const { colors: tc } = useTheme();
+  const toneStyle =
+    tone === "red"     ? styles.cardRed :
+    tone === "success" ? { backgroundColor: tc.successSoft, borderWidth: 1, borderColor: tc.success + "44" } :
+    tone === "warning" ? { backgroundColor: tc.warningSoft, borderWidth: 1, borderColor: tc.warning + "44" } :
+    tone === "dark"    ? { backgroundColor: tc.bgElevated, borderWidth: 1, borderColor: tc.border } :
+    { backgroundColor: tc.bgCard, borderWidth: 1, borderColor: tc.border };
+  const toneShadow = tone === "red" ? shadows.red : shadows.card;
+
   return (
-    <View style={[styles.card, tone === "green" && styles.greenCard, tone === "yellow" && styles.yellowCard]}>
+    <View style={[styles.card, toneStyle, toneShadow, style]}>
       {children}
     </View>
   );
 }
 
-export function Label({ children, inverse = false }: { children: ReactNode; inverse?: boolean }) {
-  return <Text style={[styles.label, inverse && styles.inverseLabel]}>{children}</Text>;
-}
-
-export function ProgressBar({ value, color = colors.yellow }: { value: number; color?: string }) {
+export function GradientCard({
+  children,
+  colors: gradColors = [colors.red, colors.redDark],
+  style,
+}: {
+  children: ReactNode;
+  colors?: string[];
+  style?: object;
+}) {
+  // Simulate gradient with dark red card
   return (
-    <View style={styles.progressTrack}>
-      <View style={[styles.progressBar, { width: `${Math.max(0, Math.min(100, value))}%`, backgroundColor: color }]} />
+    <View style={[styles.card, { backgroundColor: gradColors[0] }, shadows.red, style]}>
+      {children}
     </View>
   );
 }
 
-export function PrimaryButton({ children, onPress }: { children: ReactNode; onPress?: () => void }) {
+// ─── Typography ──────────────────────────────────────────────────────────────
+
+export function Label({
+  children,
+  variant = "default",
+}: {
+  children: ReactNode;
+  variant?: "default" | "inverse" | "red" | "muted";
+}) {
   return (
-    <Pressable onPress={onPress} style={styles.button}>
-      <Text style={styles.buttonText}>{children}</Text>
+    <Text style={[
+      styles.label,
+      variant === "inverse" && styles.labelInverse,
+      variant === "red" && styles.labelRed,
+      variant === "muted" && styles.labelMuted,
+    ]}>
+      {children}
+    </Text>
+  );
+}
+
+export function Heading({
+  children,
+  size = "md",
+  color,
+}: {
+  children: ReactNode;
+  size?: "sm" | "md" | "lg" | "xl";
+  color?: string;
+}) {
+  const sizeStyle =
+    size === "xl" ? styles.headingXl :
+    size === "lg" ? styles.headingLg :
+    size === "sm" ? styles.headingSm :
+    styles.headingMd;
+  return (
+    <Text style={[sizeStyle, color ? { color } : undefined]}>{children}</Text>
+  );
+}
+
+// ─── Buttons ─────────────────────────────────────────────────────────────────
+
+export function PrimaryButton({
+  children,
+  onPress,
+  disabled,
+  style,
+  size = "md",
+}: {
+  children: ReactNode;
+  onPress?: () => void;
+  disabled?: boolean;
+  style?: object;
+  size?: "sm" | "md" | "lg";
+}) {
+  const sizeStyle =
+    size === "lg" ? styles.btnLg :
+    size === "sm" ? styles.btnSm :
+    styles.btnMd;
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => [
+        styles.btn, styles.btnRed, sizeStyle, style,
+        pressed && styles.btnPressed,
+        disabled && styles.btnDisabled,
+      ]}
+    >
+      <Text style={[styles.btnText, size === "sm" && styles.btnTextSm]}>
+        {children}
+      </Text>
     </Pressable>
   );
 }
 
-export function Row({ title, detail, right }: { title: string; detail: string; right?: ReactNode }) {
+export function SecondaryButton({
+  children,
+  onPress,
+  style,
+}: {
+  children: ReactNode;
+  onPress?: () => void;
+  style?: object;
+}) {
   return (
-    <View style={styles.row}>
-      <View style={styles.rowText}>
-        <Text style={styles.rowTitle}>{title}</Text>
-        <Text style={styles.rowDetail}>{detail}</Text>
-      </View>
-      {right}
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.btn, styles.btnOutline, styles.btnMd, style, pressed && styles.btnPressed]}
+    >
+      <Text style={styles.btnOutlineText}>{children}</Text>
+    </Pressable>
+  );
+}
+
+export function GhostButton({
+  children,
+  onPress,
+  style,
+}: {
+  children: ReactNode;
+  onPress?: () => void;
+  style?: object;
+}) {
+  return (
+    <Pressable onPress={onPress} style={[styles.ghostBtn, style]}>
+      <Text style={styles.ghostBtnText}>{children}</Text>
+    </Pressable>
+  );
+}
+
+// ─── Progress ────────────────────────────────────────────────────────────────
+
+export function ProgressBar({
+  value,
+  color = colors.red,
+  height = 8,
+}: {
+  value: number;
+  color?: string;
+  height?: number;
+}) {
+  return (
+    <View style={[styles.progressTrack, { height }]}>
+      <View
+        style={[
+          styles.progressFill,
+          {
+            width: `${Math.max(0, Math.min(100, value))}%`,
+            backgroundColor: color,
+            height,
+          },
+        ]}
+      />
     </View>
   );
 }
+
+export function CircleProgress({
+  value,
+  size = 72,
+  label,
+}: {
+  value: number;
+  size?: number;
+  label?: string;
+}) {
+  return (
+    <View style={[styles.circleProgress, { width: size, height: size, borderRadius: size / 2 }]}>
+      <Text style={styles.circleProgressValue}>{value}%</Text>
+      {label ? <Text style={styles.circleProgressLabel}>{label}</Text> : null}
+    </View>
+  );
+}
+
+// ─── Rows & Lists ────────────────────────────────────────────────────────────
+
+export function Row({
+  title,
+  detail,
+  right,
+  icon,
+  onPress,
+}: {
+  title: string;
+  detail?: string;
+  right?: ReactNode;
+  icon?: string;
+  onPress?: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.row, pressed && onPress && styles.rowPressed]}
+    >
+      {icon ? <Text style={styles.rowIcon}>{icon}</Text> : null}
+      <View style={styles.rowText}>
+        <Text style={styles.rowTitle}>{title}</Text>
+        {detail ? <Text style={styles.rowDetail}>{detail}</Text> : null}
+      </View>
+      {right}
+      {onPress && !right ? <Text style={styles.rowChevron}>›</Text> : null}
+    </Pressable>
+  );
+}
+
+// ─── Badges & Pills ──────────────────────────────────────────────────────────
 
 export function Pill({
   children,
-  tone = "neutral"
+  tone = "default",
 }: {
   children: ReactNode;
-  tone?: "neutral" | "success" | "warning";
+  tone?: "default" | "red" | "success" | "warning" | "info";
 }) {
+  const toneStyle =
+    tone === "red"     ? styles.pillRed :
+    tone === "success" ? styles.pillSuccess :
+    tone === "warning" ? styles.pillWarning :
+    tone === "info"    ? styles.pillInfo :
+    styles.pillDefault;
+  const textStyle =
+    tone === "red"     ? styles.pillTextRed :
+    tone === "success" ? styles.pillTextSuccess :
+    tone === "warning" ? styles.pillTextWarning :
+    tone === "info"    ? styles.pillTextInfo :
+    styles.pillTextDefault;
   return (
-    <View style={[styles.pill, tone === "success" && styles.successPill, tone === "warning" && styles.warningPill]}>
-      <Text
-        style={[styles.pillText, tone === "success" && styles.successText, tone === "warning" && styles.warningText]}
-      >
-        {children}
-      </Text>
+    <View style={[styles.pill, toneStyle]}>
+      <Text style={[styles.pillText, textStyle]}>{children}</Text>
     </View>
   );
 }
 
-export function InsightCard({
+export function Badge({ value, color = colors.red }: { value: string | number; color?: string }) {
+  return (
+    <View style={[styles.badge, { backgroundColor: color }]}>
+      <Text style={styles.badgeText}>{value}</Text>
+    </View>
+  );
+}
+
+// ─── Stat cards ──────────────────────────────────────────────────────────────
+
+export function StatCard({
+  value,
+  label,
+  icon,
+  accent = false,
+}: {
+  value: string;
+  label: string;
+  icon?: string;
+  accent?: boolean;
+}) {
+  return (
+    <View style={[styles.statCard, accent && styles.statCardAccent, shadows.card]}>
+      {icon ? <Text style={styles.statIcon}>{icon}</Text> : null}
+      <Text style={[styles.statValue, accent && styles.statValueAccent]}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
+// ─── Mascot ──────────────────────────────────────────────────────────────────
+
+const MASCOT = require("../assets/mascot.png") as number;
+
+// Lidyk emotional states
+export type LidykState =
+  | "happy"        // ✅ test passed, success
+  | "sad"          // ❌ test failed, error
+  | "thinking"     // 🤔 loading, AI processing
+  | "excited"      // 🎉 new record, achievement
+  | "offline"      // 📡 no internet
+  | "error"        // 🔴 critical error
+  | "sleeping"     // 💤 idle, no activity
+  | "nervous"      // 😰 exam mode
+  | "celebrating"; // 🏆 graduation, milestone
+
+export const LIDYK_EMOJI: Record<LidykState, string> = {
+  happy:       "🚗💨",
+  sad:         "🚗😢",
+  thinking:    "🚗🤔",
+  excited:     "🚗✨",
+  offline:     "🚗📡",
+  error:       "🚗🔴",
+  sleeping:    "🚗💤",
+  nervous:     "🚗😰",
+  celebrating: "🚗🏆",
+};
+
+export const LIDYK_MESSAGES: Record<LidykState, { title: string; sub: string }> = {
+  happy:       { title: "Лідик радіє!",          sub: "Так тримати! 💪" },
+  sad:         { title: "Лідик засмучений",       sub: "Але не здавайся! Спробуй ще." },
+  thinking:    { title: "Лідик думає...",         sub: "Зачекай трохи, готую відповідь" },
+  excited:     { title: "Новий рекорд!",          sub: "Ти переміг! Лідик пишається 🎉" },
+  offline:     { title: "Лідик offline 📡",       sub: "Немає з'єднання. Функції обмежені." },
+  error:       { title: "Щось пішло не так",      sub: "Лідик вже повідомив команду 🔧" },
+  sleeping:    { title: "Лідик дрімає 💤",        sub: "Час повернутися до навчання!" },
+  nervous:     { title: "Спокійно, ти зможеш!",  sub: "Лідик вірить у тебе 🚗" },
+  celebrating: { title: "Вітаємо!",              sub: "Ти отримав права! Вітання від Лідика 🏆" },
+};
+
+export function MascotCard({
   title,
-  detail,
-  accent = "green"
+  message,
+  tone = "default",
+  state,
+  action,
+  onAction,
 }: {
   title: string;
-  detail: string;
-  accent?: "green" | "yellow";
+  message: string;
+  tone?: "default" | "success" | "warning" | "error";
+  state?: LidykState;
+  action?: string;
+  onAction?: () => void;
 }) {
+  const { colors: tc } = useTheme();
+  const bg =
+    tone === "success" ? tc.successSoft :
+    tone === "warning" ? tc.warningSoft :
+    tone === "error"   ? tc.redSoft :
+    tc.bgCard;
+
+  const displayTitle = state ? LIDYK_MESSAGES[state].title : title;
+  const displayMsg   = state ? (message || LIDYK_MESSAGES[state].sub) : message;
+
   return (
-    <View style={[styles.insight, accent === "yellow" && styles.yellowInsight]}>
-      <Text style={[styles.insightTitle, accent === "yellow" && styles.yellowInsightTitle]}>{title}</Text>
-      <Text style={[styles.insightDetail, accent === "yellow" && styles.yellowInsightDetail]}>{detail}</Text>
+    <View style={[styles.mascotCard, { backgroundColor: bg, borderColor: tc.border }, shadows.card]}>
+      {state ? (
+        <Text style={{ fontSize: 36 }}>{LIDYK_EMOJI[state]}</Text>
+      ) : (
+        <Image source={MASCOT} style={styles.mascotImg} resizeMode="contain" />
+      )}
+      <View style={styles.mascotBody}>
+        <Text style={[styles.mascotTitle, { color: tc.textPrimary }]}>{displayTitle}</Text>
+        <Text style={[styles.mascotMessage, { color: tc.textSecondary }]}>{displayMsg}</Text>
+        {action && onAction ? (
+          <Pressable onPress={onAction} style={styles.mascotBtn}>
+            <Text style={styles.mascotBtnText}>{action}</Text>
+          </Pressable>
+        ) : null}
+      </View>
     </View>
   );
 }
 
-export function SkeletonBlock() {
-  return (
-    <View style={styles.skeletonCard}>
-      <View style={[styles.skeletonLine, styles.skeletonWide]} />
-      <View style={styles.skeletonLine} />
-      <View style={[styles.skeletonLine, styles.skeletonShort]} />
-    </View>
-  );
-}
+// ─── Standalone Lidyk state banner ───────────────────────────────────────────
 
-export function EmptyState({ title, detail }: { title: string; detail: string }) {
+export function LidykBanner({
+  state,
+  message,
+  action,
+  onAction,
+}: {
+  state: LidykState;
+  message?: string;
+  action?: string;
+  onAction?: () => void;
+}) {
+  const { colors: tc } = useTheme();
+  const info = LIDYK_MESSAGES[state];
+  const bg =
+    state === "happy" || state === "excited" || state === "celebrating"
+      ? tc.successSoft
+      : state === "offline" || state === "error" || state === "sad"
+      ? tc.redSoft
+      : state === "nervous"
+      ? tc.warningSoft
+      : tc.bgCard;
+
   return (
-    <View style={styles.emptyState}>
-      <Text style={styles.emptyIcon}>+</Text>
-      <Text style={styles.emptyTitle}>{title}</Text>
-      <Text style={styles.emptyDetail}>{detail}</Text>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: bg, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: tc.border, ...shadows.card }}>
+      <Text style={{ fontSize: 36 }}>{LIDYK_EMOJI[state]}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: tc.textPrimary, fontWeight: "800", fontSize: 15 }}>{info.title}</Text>
+        <Text style={{ color: tc.textSecondary, fontSize: 13, marginTop: 3, lineHeight: 18 }}>
+          {message || info.sub}
+        </Text>
+        {action && onAction ? (
+          <Pressable onPress={onAction} style={{ marginTop: 10, backgroundColor: colors.red, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14, alignSelf: "flex-start" }}>
+            <Text style={{ color: colors.white, fontSize: 13, fontWeight: "800" }}>{action}</Text>
+          </Pressable>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -116,7 +462,7 @@ export function MascotMessage({
   emoji,
   title,
   message,
-  tone = "neutral"
+  tone = "neutral",
 }: {
   emoji: string;
   title: string;
@@ -124,220 +470,249 @@ export function MascotMessage({
   tone?: "neutral" | "success" | "warning" | "error";
 }) {
   const bg =
-    tone === "success" ? "#e8f5ee" :
-    tone === "warning" ? "#fff8ec" :
-    tone === "error"   ? "#fef3f2" :
-    "#f0f8f6";
+    tone === "success" ? colors.successSoft :
+    tone === "warning" ? colors.warningSoft :
+    tone === "error"   ? colors.redSoft :
+    colors.bgCard;
 
   return (
-    <View style={[styles.mascotMsg, { backgroundColor: bg }]}>
+    <View style={[styles.mascotMsg, { backgroundColor: bg }, shadows.card]}>
       <Text style={styles.mascotMsgEmoji}>{emoji}</Text>
-      <View style={styles.mascotMsgBody}>
+      <View style={styles.mascotMsgText}>
         <Text style={styles.mascotMsgTitle}>{title}</Text>
-        <Text style={styles.mascotMsgText}>{message}</Text>
+        <Text style={styles.mascotMsgBody}>{message}</Text>
       </View>
     </View>
   );
 }
 
+// ─── Empty & loading states ──────────────────────────────────────────────────
+
+export function EmptyState({
+  title,
+  detail,
+  emoji = "🚘",
+  action,
+  onAction,
+}: {
+  title: string;
+  detail: string;
+  emoji?: string;
+  action?: string;
+  onAction?: () => void;
+}) {
+  return (
+    <View style={styles.empty}>
+      <Text style={styles.emptyEmoji}>{emoji}</Text>
+      <Text style={styles.emptyTitle}>{title}</Text>
+      <Text style={styles.emptyDetail}>{detail}</Text>
+      {action && onAction ? (
+        <PrimaryButton onPress={onAction} style={{ marginTop: 16 }}>
+          {action}
+        </PrimaryButton>
+      ) : null}
+    </View>
+  );
+}
+
+export function SkeletonBlock() {
+  return (
+    <View style={[styles.card, styles.cardDefault, { gap: 10 }]}>
+      <View style={[styles.skeletonLine, { width: "80%" }]} />
+      <View style={[styles.skeletonLine, { width: "60%" }]} />
+      <View style={[styles.skeletonLine, { width: "40%" }]} />
+    </View>
+  );
+}
+
+// ─── Section header ──────────────────────────────────────────────────────────
+
+export function SectionHeader({
+  title,
+  action,
+  onAction,
+}: {
+  title: string;
+  action?: string;
+  onAction?: () => void;
+}) {
+  return (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {action ? (
+        <Pressable onPress={onAction}>
+          <Text style={styles.sectionAction}>{action}</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+// ─── Divider ─────────────────────────────────────────────────────────────────
+
+export function Divider() {
+  return <View style={styles.divider} />;
+}
+
+// ─── Insight / mini-stat ─────────────────────────────────────────────────────
+
+export function InsightCard({
+  title,
+  detail,
+  accent = "default",
+}: {
+  title: string;
+  detail: string;
+  accent?: "default" | "red" | "success" | "warning";
+}) {
+  const bg =
+    accent === "red"     ? colors.redSoft :
+    accent === "success" ? colors.successSoft :
+    accent === "warning" ? colors.warningSoft :
+    colors.bgCard;
+  return (
+    <View style={[styles.insight, { backgroundColor: bg }, shadows.card]}>
+      <Text style={[styles.insightTitle, accent === "red" && { color: colors.red }]}>{title}</Text>
+      <Text style={styles.insightDetail}>{detail}</Text>
+    </View>
+  );
+}
+
+// ─── ProgressBar (legacy alias) ──────────────────────────────────────────────
+
+export function ProgressRing({ value, label }: { value: number; label?: string }) {
+  return <CircleProgress value={value} label={label} />;
+}
+
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.background
+  // Screen
+  safeArea: { flex: 1, backgroundColor: colors.bg },
+  container: { padding: spacing.md, paddingBottom: 120, gap: spacing.md },
+  noPaddingContainer: { padding: 0, paddingBottom: 120 },
+  header: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
+  headerText: { flex: 1 },
+  title: { color: colors.textPrimary, fontSize: 28, fontWeight: "900", letterSpacing: -0.5 },
+  subtitle: { marginTop: 4, color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
+
+  // Cards
+  card: { borderRadius: radii.md, padding: 18, overflow: "hidden" },
+  cardDefault: { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border },
+  cardRed: { backgroundColor: colors.red },
+  cardSuccess: { backgroundColor: colors.successSoft, borderWidth: 1, borderColor: colors.success + "44" },
+  cardWarning: { backgroundColor: colors.warningSoft, borderWidth: 1, borderColor: colors.warning + "44" },
+  cardDark: { backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border },
+
+  // Labels
+  label: { color: colors.textTertiary, fontSize: 11, fontWeight: "700", letterSpacing: 0.8, textTransform: "uppercase" },
+  labelInverse: { color: "rgba(255,255,255,0.6)" },
+  labelRed: { color: colors.red },
+  labelMuted: { color: colors.textTertiary },
+
+  // Headings
+  headingXl: { color: colors.textPrimary, fontSize: 32, fontWeight: "900", letterSpacing: -1 },
+  headingLg: { color: colors.textPrimary, fontSize: 24, fontWeight: "800", letterSpacing: -0.5 },
+  headingMd: { color: colors.textPrimary, fontSize: 18, fontWeight: "700" },
+  headingSm: { color: colors.textPrimary, fontSize: 15, fontWeight: "700" },
+
+  // Buttons
+  btn: { alignItems: "center", justifyContent: "center", borderRadius: radii.sm },
+  btnRed: { backgroundColor: colors.red },
+  btnOutline: { backgroundColor: "transparent", borderWidth: 1.5, borderColor: colors.border },
+  btnLg: { paddingVertical: 18, paddingHorizontal: 24 },
+  btnMd: { paddingVertical: 14, paddingHorizontal: 20 },
+  btnSm: { paddingVertical: 10, paddingHorizontal: 16 },
+  btnPressed: { opacity: 0.8 },
+  btnDisabled: { opacity: 0.4 },
+  btnText: { color: colors.white, fontSize: 16, fontWeight: "800" },
+  btnTextSm: { fontSize: 14 },
+  btnOutlineText: { color: colors.textSecondary, fontSize: 15, fontWeight: "700" },
+  ghostBtn: { alignItems: "center", paddingVertical: 12 },
+  ghostBtnText: { color: colors.textSecondary, fontSize: 14, fontWeight: "600" },
+
+  // Progress
+  progressTrack: { borderRadius: radii.full, backgroundColor: colors.border, overflow: "hidden" },
+  progressFill: { borderRadius: radii.full },
+  circleProgress: {
+    alignItems: "center", justifyContent: "center",
+    backgroundColor: colors.redSoft, borderWidth: 3, borderColor: colors.red,
   },
-  container: {
-    padding: 20,
-    paddingBottom: 110,
-    gap: 16
-  },
-  title: {
-    color: colors.graphite,
-    fontSize: 30,
-    fontWeight: "900",
-    letterSpacing: -0.5
-  },
-  subtitle: {
-    marginTop: 6,
-    color: colors.muted,
-    fontSize: 15,
-    lineHeight: 22
-  },
-  card: {
-    borderRadius: radii.md,
-    padding: 18,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.line
-  },
-  greenCard: {
-    backgroundColor: colors.green,
-    borderColor: colors.green
-  },
-  yellowCard: {
-    backgroundColor: colors.yellow,
-    borderColor: colors.yellow
-  },
-  label: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-    textTransform: "uppercase"
-  },
-  inverseLabel: {
-    color: "rgba(255,255,255,0.68)"
-  },
-  progressTrack: {
-    height: 10,
-    borderRadius: 999,
-    backgroundColor: "#edf5f2",
-    overflow: "hidden"
-  },
-  progressBar: {
-    height: "100%",
-    borderRadius: 999
-  },
-  button: {
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 18,
-    backgroundColor: colors.yellow,
-    alignItems: "center"
-  },
-  buttonText: {
-    color: colors.graphite,
-    fontSize: 16,
-    fontWeight: "900"
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    paddingVertical: 13,
-    borderBottomWidth: 1,
-    borderBottomColor: "#edf5f2"
-  },
-  rowText: {
-    flex: 1,
-    gap: 4
-  },
-  rowTitle: {
-    color: colors.graphite,
-    fontWeight: "800"
-  },
-  rowDetail: {
-    color: colors.muted,
-    lineHeight: 20
-  },
-  pill: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: "#edf5f2"
-  },
-  successPill: {
-    backgroundColor: "#e2f7ea"
-  },
-  warningPill: {
-    backgroundColor: "#fff5be"
-  },
-  pillText: {
-    color: colors.green,
-    fontSize: 12,
-    fontWeight: "800"
-  },
-  successText: {
-    color: colors.success
-  },
-  warningText: {
-    color: colors.warning
-  },
-  insight: {
-    flex: 1,
-    borderRadius: radii.md,
-    padding: 16,
-    backgroundColor: colors.green
-  },
-  yellowInsight: {
-    backgroundColor: colors.yellow
-  },
-  insightTitle: {
-    color: colors.white,
-    fontSize: 18,
-    fontWeight: "900"
-  },
-  yellowInsightTitle: {
-    color: colors.graphite
-  },
-  insightDetail: {
-    marginTop: 8,
-    color: "rgba(255,255,255,0.74)",
-    lineHeight: 20
-  },
-  yellowInsightDetail: {
-    color: colors.graphite
-  },
-  skeletonCard: {
-    borderRadius: radii.md,
-    padding: 18,
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.line,
-    gap: 10
-  },
-  skeletonLine: {
-    height: 12,
-    width: "72%",
-    borderRadius: 999,
-    backgroundColor: "#edf5f2"
-  },
-  skeletonWide: {
-    width: "88%"
-  },
-  skeletonShort: {
-    width: "48%"
-  },
-  emptyState: {
-    borderRadius: radii.md,
-    padding: 18,
-    alignItems: "center",
-    backgroundColor: "#edf5f2"
-  },
-  emptyIcon: {
-    height: 36,
-    width: 36,
-    borderRadius: 18,
-    textAlign: "center",
-    textAlignVertical: "center",
-    overflow: "hidden",
-    backgroundColor: colors.white,
-    color: colors.green,
-    fontSize: 24,
-    fontWeight: "900"
-  },
-  emptyTitle: {
-    marginTop: 12,
-    color: colors.graphite,
-    fontSize: 18,
-    fontWeight: "900",
-    textAlign: "center"
-  },
-  emptyDetail: {
-    marginTop: 6,
-    color: colors.muted,
-    lineHeight: 22,
-    textAlign: "center"
-  },
-  mascotMsg: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    borderRadius: radii.md,
-    padding: 14
-  },
+  circleProgressValue: { color: colors.red, fontSize: 18, fontWeight: "900" },
+  circleProgressLabel: { color: colors.textSecondary, fontSize: 10, fontWeight: "600" },
+
+  // Rows
+  row: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.divider },
+  rowPressed: { backgroundColor: colors.bgElevated },
+  rowIcon: { fontSize: 20, width: 28, textAlign: "center" },
+  rowText: { flex: 1, gap: 2 },
+  rowTitle: { color: colors.textPrimary, fontSize: 15, fontWeight: "700" },
+  rowDetail: { color: colors.textSecondary, fontSize: 13, lineHeight: 18 },
+  rowChevron: { color: colors.textTertiary, fontSize: 20, fontWeight: "300" },
+
+  // Pills
+  pill: { borderRadius: radii.full, paddingHorizontal: 10, paddingVertical: 5, alignSelf: "flex-start" },
+  pillDefault: { backgroundColor: colors.bgElevated },
+  pillRed: { backgroundColor: colors.redSoft },
+  pillSuccess: { backgroundColor: colors.successSoft },
+  pillWarning: { backgroundColor: colors.warningSoft },
+  pillInfo: { backgroundColor: colors.infoSoft },
+  pillText: { fontSize: 12, fontWeight: "700" },
+  pillTextDefault: { color: colors.textSecondary },
+  pillTextRed: { color: colors.red },
+  pillTextSuccess: { color: colors.success },
+  pillTextWarning: { color: colors.warning },
+  pillTextInfo: { color: colors.info },
+  badge: { minWidth: 20, height: 20, borderRadius: 10, alignItems: "center", justifyContent: "center", paddingHorizontal: 5 },
+  badgeText: { color: colors.white, fontSize: 11, fontWeight: "800" },
+
+  // Stat cards
+  statCard: { flex: 1, alignItems: "center", padding: 14, borderRadius: radii.md, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border },
+  statCardAccent: { backgroundColor: colors.redSoft, borderColor: colors.red + "40" },
+  statIcon: { fontSize: 24, marginBottom: 4 },
+  statValue: { color: colors.textPrimary, fontSize: 22, fontWeight: "900" },
+  statValueAccent: { color: colors.red },
+  statLabel: { color: colors.textSecondary, fontSize: 12, fontWeight: "600", textAlign: "center", marginTop: 2 },
+
+  // Mascot
+  mascotCard: { flexDirection: "row", borderRadius: radii.md, padding: 16, alignItems: "center", gap: 12, borderWidth: 1, borderColor: colors.border },
+  mascotImg: { width: 60, height: 60 },
+  mascotBody: { flex: 1 },
+  mascotTitle: { color: colors.textPrimary, fontSize: 15, fontWeight: "800" },
+  mascotMessage: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 3 },
+  mascotBtn: { marginTop: 10, backgroundColor: colors.red, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14, alignSelf: "flex-start" },
+  mascotBtnText: { color: colors.white, fontSize: 13, fontWeight: "800" },
+  mascotMsg: { flexDirection: "row", alignItems: "center", gap: 12, borderRadius: radii.md, padding: 14, borderWidth: 1, borderColor: colors.border },
   mascotMsgEmoji: { fontSize: 32 },
-  mascotMsgBody: { flex: 1 },
-  mascotMsgTitle: { fontSize: 14, fontWeight: "900", color: colors.graphite },
-  mascotMsgText:  { marginTop: 3, fontSize: 13, fontWeight: "600", color: colors.muted, lineHeight: 19 }
+  mascotMsgText: { flex: 1 },
+  mascotMsgTitle: { color: colors.textPrimary, fontSize: 14, fontWeight: "800" },
+  mascotMsgBody: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 3 },
+
+  // Empty
+  empty: { alignItems: "center", padding: spacing.xl },
+  emptyEmoji: { fontSize: 56, marginBottom: 12 },
+  emptyTitle: { color: colors.textPrimary, fontSize: 20, fontWeight: "800", textAlign: "center" },
+  emptyDetail: { color: colors.textSecondary, fontSize: 14, lineHeight: 20, textAlign: "center", marginTop: 6 },
+
+  // Skeleton
+  skeletonLine: { height: 12, borderRadius: radii.full, backgroundColor: colors.bgElevated },
+
+  // Section header
+  sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  sectionTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: "800" },
+  sectionAction: { color: colors.red, fontSize: 14, fontWeight: "700" },
+
+  // Divider
+  divider: { height: 1, backgroundColor: colors.divider, marginVertical: 4 },
+
+  // Insight
+  insight: { flex: 1, borderRadius: radii.md, padding: 14, borderWidth: 1, borderColor: colors.border },
+  insightTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: "900" },
+  insightDetail: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 4 },
+
+  // successSoft / warningSoft / infoSoft / redSoft
+  successSoft: { backgroundColor: colors.successSoft },
+  warningSoft: { backgroundColor: colors.warningSoft },
+  infoSoft: { backgroundColor: colors.infoSoft },
+  redSoft: { backgroundColor: colors.redSoft },
 });

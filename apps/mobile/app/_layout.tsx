@@ -1,64 +1,312 @@
-import { Stack } from "expo-router";
+import {
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  signInAnonymously,
+  signInWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  updateProfile,
+  type User as FirebaseUser,
+} from "firebase/auth";
+import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Animated,
+  Easing,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { firebaseAuth } from "../lib/firebase";
+import { AuthContext } from "../lib/auth";
+import type { AuthContextValue, AuthMode, SignUpData, User } from "../lib/auth";
+import { GUEST_USER } from "../lib/auth";
+import { API_BASE } from "../lib/api";
+import { ThemeProvider, darkColors as colors, radii, spacing } from "../lib/theme";
 
-// Expo Router built-in ErrorBoundary: export this component and expo-router
-// will use it as the error boundary for this layout segment.
+// ─── Convert Firebase user to our User type ───────────────────────────────────
+
+function toAppUser(fb: FirebaseUser): User {
+  const displayName = fb.displayName ?? fb.email?.split("@")[0] ?? "Учень";
+  return {
+    id: fb.uid,
+    name: displayName,
+    phone: fb.phoneNumber ?? "",
+    email: fb.email ?? undefined,
+    avatarInitials: displayName.slice(0, 2).toUpperCase(),
+    isGuest: fb.isAnonymous,
+  };
+}
+
+// ─── Error boundary ───────────────────────────────────────────────────────────
+
 export function ErrorBoundary({ error, retry }: { error: Error; retry: () => void }) {
   return (
-    <View style={styles.errWrap}>
-      <Text style={styles.errEmoji}>🚧</Text>
-      <Text style={styles.errTitle}>Лідик загубив конус</Text>
-      <Text style={styles.errMsg}>Щось пішло не так. Спробуй перезапустити додаток.</Text>
-      <ScrollView style={styles.errDetail}>
-        <Text style={styles.errDetailText}>{error.message}</Text>
+    <View style={errStyles.wrap}>
+      <Text style={errStyles.emoji}>🚧</Text>
+      <Text style={errStyles.title}>Лідик загубив конус</Text>
+      <Text style={errStyles.msg}>Щось пішло не так. Спробуй перезапустити.</Text>
+      <ScrollView style={errStyles.detail}>
+        <Text style={errStyles.detailText}>{error.message}</Text>
       </ScrollView>
-      <TouchableOpacity style={styles.errBtn} onPress={retry}>
-        <Text style={styles.errBtnText}>Спробувати ще раз</Text>
-      </TouchableOpacity>
+      <Pressable style={errStyles.btn} onPress={retry}>
+        <Text style={errStyles.btnText}>Спробувати ще раз</Text>
+      </Pressable>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  errWrap: {
-    flex: 1,
-    backgroundColor: "#f7fbf9",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 32,
-  },
-  errEmoji: { fontSize: 56, marginBottom: 16 },
-  errTitle: { fontSize: 22, fontWeight: "900", color: "#004d40", marginBottom: 8 },
-  errMsg: { fontSize: 15, color: "#555", textAlign: "center", marginBottom: 16 },
-  errDetail: {
-    maxHeight: 120,
-    width: "100%",
-    backgroundColor: "rgba(255,255,255,0.3)",
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 20,
-  },
-  errDetailText: { fontSize: 11, color: "#b00000" },
-  errBtn: {
-    backgroundColor: "#004d40",
-    borderRadius: 14,
-    paddingHorizontal: 28,
-    paddingVertical: 14,
-  },
-  errBtnText: { color: "#ffd600", fontWeight: "900", fontSize: 15 },
-});
+// ─── Root layout ──────────────────────────────────────────────────────────────
 
 export default function RootLayout() {
+  const [mode, setMode] = useState<AuthMode>("unauthenticated");
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [authGateVisible, setAuthGateVisible] = useState(false);
+  const authGateCallback = useRef<() => void>();
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  // ─── Listen to Firebase auth state (persists across restarts) ─────────────
+  useEffect(() => {
+    const unsub = onAuthStateChanged(firebaseAuth, (fbUser) => {
+      if (fbUser) {
+        const appUser = toAppUser(fbUser);
+        setUser(appUser);
+        setMode(fbUser.isAnonymous ? "guest" : "authenticated");
+      } else {
+        setUser(null);
+        setMode("unauthenticated");
+      }
+      setIsLoading(false);
+    });
+    return unsub;
+  }, []);
+
+  // ─── Navigate once auth state is resolved ─────────────────────────────────
+  useEffect(() => {
+    if (isLoading) return;
+    if (mode === "unauthenticated") {
+      router.replace("/onboarding");
+    } else {
+      router.replace("/(tabs)");
+    }
+  }, [isLoading, mode]);
+
+  // ─── Auth actions ──────────────────────────────────────────────────────────
+
+  const signInAsGuest = useCallback(async () => {
+    try {
+      // 5-second timeout — Firebase anonymous auth may fail on restricted networks (emulators)
+      await Promise.race([
+        signInAnonymously(firebaseAuth),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Guest auth timeout")), 5000)
+        ),
+      ]);
+      // onAuthStateChanged handles navigation
+    } catch {
+      // Fallback: local guest mode (no Firebase session — works offline)
+      setUser(GUEST_USER);
+      setMode("guest");
+      setIsLoading(false);
+      router.replace("/(tabs)");
+    }
+  }, []);
+
+  const signIn = useCallback(async (email: string, password: string): Promise<boolean> => {
+    try {
+      await signInWithEmailAndPassword(firebaseAuth, email, password);
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const signUp = useCallback(async (data: SignUpData): Promise<boolean> => {
+    try {
+      // 1. Create Firebase account
+      const cred = await createUserWithEmailAndPassword(
+        firebaseAuth,
+        data.email,
+        data.password
+      );
+      // 2. Update display name
+      await updateProfile(cred.user, { displayName: data.name });
+      // 3. Submit lead to API (fire-and-forget, non-blocking)
+      fetch(`${API_BASE}/leads`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: data.name,
+          phone: data.phone,
+          city: data.city,
+          category: data.category,
+          contactMethod: data.contactMethod,
+          source: "mobile",
+          branchId: "kyiv",
+          consentAccepted: true,
+        }),
+      }).catch(() => {
+        // Lead submission failure is non-critical — auth already succeeded
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const signOut = useCallback(async () => {
+    try {
+      await firebaseSignOut(firebaseAuth);
+    } catch {
+      // Force local reset even if Firebase fails
+      setUser(null);
+      setMode("unauthenticated");
+      router.replace("/onboarding");
+    }
+  }, []);
+
+  const requireAuth = useCallback(
+    (onSuccess: () => void) => {
+      if (mode === "authenticated") {
+        onSuccess();
+        return;
+      }
+      authGateCallback.current = onSuccess;
+      setAuthGateVisible(true);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 200,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start();
+    },
+    [mode, fadeAnim]
+  );
+
+  const closeAuthGate = useCallback(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 150,
+      useNativeDriver: true,
+    }).start(() => setAuthGateVisible(false));
+  }, [fadeAnim]);
+
+  const authValue: AuthContextValue = {
+    mode,
+    user,
+    isLoading,
+    signInAsGuest,
+    signIn,
+    signUp,
+    signOut,
+    requireAuth,
+  };
+
+  if (isLoading) {
+    return (
+      <View style={splashStyles.wrap}>
+        <Text style={splashStyles.logo}>🚗</Text>
+        <Text style={splashStyles.brand}>Лідер</Text>
+      </View>
+    );
+  }
+
   return (
-    <>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: "#f7fbf9" },
-        }}
-      />
-      <StatusBar style="dark" />
-    </>
+    <ThemeProvider>
+    <SafeAreaProvider>
+      <AuthContext.Provider value={authValue}>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="onboarding" />
+          <Stack.Screen name="auth" />
+          <Stack.Screen name="diagnostic" />
+          <Stack.Screen name="(tabs)" />
+        </Stack>
+        <StatusBar style="light" />
+
+        {/* Auth gate modal */}
+        <Modal
+          visible={authGateVisible}
+          transparent
+          animationType="none"
+          onRequestClose={closeAuthGate}
+        >
+          <Animated.View style={[gateStyles.overlay, { opacity: fadeAnim }]}>
+            <Pressable style={gateStyles.backdrop} onPress={closeAuthGate} />
+            <View style={gateStyles.sheet}>
+              <View style={gateStyles.handle} />
+              <Text style={gateStyles.emoji}>🔐</Text>
+              <Text style={gateStyles.title}>Увійдіть, щоб продовжити</Text>
+              <Text style={gateStyles.msg}>
+                Ця функція доступна зареєстрованим учням. Вхід займає 30 секунд.
+              </Text>
+              <Pressable
+                style={gateStyles.btnPrimary}
+                onPress={() => { closeAuthGate(); router.push("/auth?mode=register"); }}
+              >
+                <Text style={gateStyles.btnPrimaryText}>Зареєструватись</Text>
+              </Pressable>
+              <Pressable
+                style={gateStyles.btnSecondary}
+                onPress={() => { closeAuthGate(); router.push("/auth?mode=login"); }}
+              >
+                <Text style={gateStyles.btnSecondaryText}>Увійти</Text>
+              </Pressable>
+              <Pressable style={gateStyles.btnGhost} onPress={closeAuthGate}>
+                <Text style={gateStyles.btnGhostText}>Залишитись як гість</Text>
+              </Pressable>
+            </View>
+          </Animated.View>
+        </Modal>
+      </AuthContext.Provider>
+    </SafeAreaProvider>
+    </ThemeProvider>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const splashStyles = StyleSheet.create({
+  wrap: { flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center", gap: 12 },
+  logo: { fontSize: 56 },
+  brand: { color: colors.textPrimary, fontSize: 28, fontWeight: "900", letterSpacing: -0.5 },
+});
+
+const errStyles = StyleSheet.create({
+  wrap: { flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center", padding: 32 },
+  emoji: { fontSize: 56, marginBottom: 16 },
+  title: { color: colors.textPrimary, fontSize: 22, fontWeight: "900", marginBottom: 8 },
+  msg: { color: colors.textSecondary, fontSize: 15, textAlign: "center", marginBottom: 16 },
+  detail: { maxHeight: 120, width: "100%", backgroundColor: colors.bgCard, borderRadius: 10, padding: 10, marginBottom: 20 },
+  detailText: { color: colors.red, fontSize: 11 },
+  btn: { backgroundColor: colors.red, borderRadius: radii.md, paddingHorizontal: 28, paddingVertical: 14 },
+  btnText: { color: colors.white, fontWeight: "900", fontSize: 15 },
+});
+
+const gateStyles = StyleSheet.create({
+  overlay: { flex: 1, justifyContent: "flex-end" },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.7)" },
+  sheet: {
+    backgroundColor: colors.bgSheet,
+    borderTopLeftRadius: radii.xl,
+    borderTopRightRadius: radii.xl,
+    padding: spacing.xl,
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, marginBottom: spacing.sm },
+  emoji: { fontSize: 48, marginBottom: spacing.xs },
+  title: { color: colors.textPrimary, fontSize: 22, fontWeight: "900", textAlign: "center" },
+  msg: { color: colors.textSecondary, fontSize: 14, lineHeight: 20, textAlign: "center", marginBottom: spacing.md },
+  btnPrimary: { width: "100%", backgroundColor: colors.red, borderRadius: radii.md, paddingVertical: 16, alignItems: "center" },
+  btnPrimaryText: { color: colors.white, fontWeight: "800", fontSize: 16 },
+  btnSecondary: { width: "100%", borderWidth: 1.5, borderColor: colors.border, borderRadius: radii.md, paddingVertical: 14, alignItems: "center" },
+  btnSecondaryText: { color: colors.textSecondary, fontWeight: "700", fontSize: 15 },
+  btnGhost: { paddingVertical: 10 },
+  btnGhostText: { color: colors.textTertiary, fontSize: 13 },
+});

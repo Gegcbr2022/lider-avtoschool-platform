@@ -6,12 +6,12 @@ const config: ExpoConfig = {
   scheme: "lider",
   version: "0.1.0",
   orientation: "portrait",
-  userInterfaceStyle: "light",
+  userInterfaceStyle: "automatic",
   icon: "./assets/icon.png",
   splash: {
     image: "./assets/icon.png",
     resizeMode: "contain",
-    backgroundColor: "#004d40"
+    backgroundColor: "#0d0d0d"
   },
   assetBundlePatterns: ["**/*"],
   ios: {
@@ -23,10 +23,10 @@ const config: ExpoConfig = {
     package: "ua.lider.avtoschool",
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
-      backgroundColor: "#004d40"
+      backgroundColor: "#0d0d0d"
     }
   },
-  plugins: ["expo-router"],
+  plugins: ["expo-router", "expo-secure-store"],
   experiments: {
     typedRoutes: true
   },

@@ -6,7 +6,11 @@ const FIREBASE_API = "https://api-jd6b6vy57a-ew.a.run.app";
 export const API_BASE =
   (Constants.expoConfig?.extra?.apiUrl as string | undefined) ?? FIREBASE_API;
 
-export type LidykResponse = { answer: string; mode?: "ai" | "fallback" };
+export type LidykResponse = {
+  answer: string;
+  mode?: "openai" | "openai-fallback" | "local-fallback" | "guard" | "fallback";
+  model?: string;
+};
 
 export async function askLidyk(question: string): Promise<LidykResponse> {
   try {

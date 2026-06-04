@@ -1,252 +1,342 @@
-import Constants from "expo-constants";
-import { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { Card, Label, PrimaryButton, Screen } from "../../components/mobile-ui";
-import { colors } from "../../lib/theme";
+// Лідик AI — full-screen chat with theme support and mascot states
+import { useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { askLidyk } from "../../lib/api";
+import { useTheme, radii, spacing } from "../../lib/theme";
 
-type ChatMessage = {
-  role: "user" | "assistant";
-  content: string;
+type Message = { role: "user" | "assistant"; text: string; fallback?: boolean; ts: number };
+type MascotState = "idle" | "thinking" | "happy" | "sad" | "offline";
+
+const MASCOT_EMOJI: Record<MascotState, string> = {
+  idle: "🚗",
+  thinking: "🤔",
+  happy: "😄",
+  sad: "😔",
+  offline: "📡",
 };
 
-const quickPrompts = ["Підібрати категорію", "Пояснити документи", "Скільки триває B?", "Де найближча філія?"] as const;
+const MASCOT_LABEL: Record<MascotState, string> = {
+  idle: "Лідик",
+  thinking: "Думає...",
+  happy: "Відповів!",
+  sad: "Помилка",
+  offline: "Офлайн режим",
+};
 
-const categoryQuestions = [
-  "Права потрібні для себе чи роботи?",
-  "Є вже відкрита категорія?",
-  "Плануєте легкове авто, мото чи вантажний транспорт?",
-  "У якому місті зручно проходити практику?"
-] as const;
+const QUICK_PROMPTS = [
+  "Яка категорія B?",
+  "Скільки коштує навчання?",
+  "Де знаходиться філія?",
+  "Правило перешкоди справа",
+  "Які документи потрібні?",
+];
 
 export default function AssistantTab() {
-  const [messages, setMessages] = useState<ChatMessage[]>([
+  const { colors } = useTheme();
+  const scrollRef = useRef<ScrollView>(null);
+
+  const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "Я онлайн-помічник автошколи. Запитайте про категорії, документи, ціни, філії або ПДР."
-    }
+      text: "Привіт! Я Лідик — AI-помічник автошколи «Лідер». 🚗\n\nЗапитай про ПДР, категорії прав, ціни, філії або запис на навчання.",
+      ts: Date.now(),
+    },
   ]);
   const [input, setInput] = useState("");
-  const [isSending, setIsSending] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [mascotState, setMascotState] = useState<MascotState>("idle");
 
-  async function sendMessage(prompt = input) {
-    const content = prompt.trim();
-
-    if (!content || isSending) {
-      return;
-    }
-
-    const nextMessages: ChatMessage[] = [...messages, { role: "user", content }];
-    setMessages(nextMessages);
+  async function send(question: string) {
+    const q = question.trim();
+    if (!q || loading) return;
     setInput("");
-    setIsSending(true);
+    setMessages((prev) => [...prev, { role: "user", text: q, ts: Date.now() }]);
+    setLoading(true);
+    setMascotState("thinking");
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
 
     try {
-      const apiUrl = String(Constants.expoConfig?.extra?.apiUrl ?? "").replace(/\/$/, "");
-      const response = await fetch(`${apiUrl}/ai/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: nextMessages.slice(-10), intent: "consultation" })
-      });
-      const payload = (await response.json()) as { answer?: string };
-
-      if (!response.ok) {
-        throw new Error("AI request failed");
-      }
-
-      setMessages((current) => [
-        ...current,
+      const res = await askLidyk(q);
+      const isFallback = res.mode !== "openai";
+      setMessages((prev) => [
+        ...prev,
         {
           role: "assistant",
-          content: payload.answer ?? "Можу допомогти з категорією, ціною, документами, філією або записом."
-        }
+          text: res.answer,
+          fallback: isFallback,
+          ts: Date.now(),
+        },
       ]);
+      setMascotState(isFallback ? "offline" : "happy");
     } catch {
-      setMessages((current) => [
-        ...current,
+      setMessages((prev) => [
+        ...prev,
         {
           role: "assistant",
-          content:
-            "Поки відповідаю у резервному режимі: B для легкового авто, A/A1 для мото, C для вантажного, CE для причепа. Напишіть місто і мету навчання, менеджер уточнить деталі."
-        }
+          text: "Не вдалось отримати відповідь. Перевір інтернет-з'єднання та спробуй ще раз.",
+          fallback: true,
+          ts: Date.now(),
+        },
       ]);
+      setMascotState("sad");
     } finally {
-      setIsSending(false);
+      setLoading(false);
+      setTimeout(() => {
+        scrollRef.current?.scrollToEnd({ animated: true });
+        setTimeout(() => setMascotState("idle"), 2000);
+      }, 100);
     }
   }
 
+  const s = makeStyles(colors);
+
   return (
-    <Screen
-      title="Онлайн-помічник"
-      subtitle="Консультант для категорій, документів, філій, ПДР-помилок і швидкої заявки менеджеру."
-    >
-      <Card tone="green">
-        <Label inverse>Онлайн</Label>
-        <Text style={styles.heroTitle}>Поставте питання без дзвінка</Text>
-        <Text style={styles.heroText}>
-          Помічник відповідає коротко, а контактні дані передає тільки менеджеру автошколи після вашої заявки.
-        </Text>
-      </Card>
-
-      <Card>
-        <Label>Швидкі питання</Label>
-        <View style={styles.prompts}>
-          {quickPrompts.map((prompt) => (
-            <Pressable key={prompt} style={styles.prompt} onPress={() => sendMessage(prompt)}>
-              <Text style={styles.promptText}>{prompt}</Text>
-            </Pressable>
-          ))}
+    <SafeAreaView style={s.safe} edges={["top"]}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
+      >
+        {/* Header with mascot state */}
+        <View style={s.header}>
+          <View style={s.mascotBadge}>
+            <Text style={s.mascotEmoji}>{MASCOT_EMOJI[mascotState]}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.headerTitle}>{MASCOT_LABEL[mascotState]}</Text>
+            <Text style={s.headerSub}>AI-консультант автошколи «Лідер»</Text>
+          </View>
+          {loading ? (
+            <ActivityIndicator color={colors.red} size="small" style={{ marginRight: 4 }} />
+          ) : null}
         </View>
-      </Card>
 
-      <Card tone="yellow">
-        <Label>Підбір категорії</Label>
-        <Text style={styles.categoryTitle}>Помічник поставить 3-5 питань і порадить A, A1, B, C або CE</Text>
-        <View style={styles.questionList}>
-          {categoryQuestions.map((question, index) => (
-            <Text key={question} style={styles.question}>
-              {index + 1}. {question}
-            </Text>
-          ))}
-        </View>
-        <PrimaryButton onPress={() => sendMessage("Підібрати категорію прав. Задай мені 3-5 питань.")}>
-          Почати підбір
-        </PrimaryButton>
-      </Card>
-
-      <Card>
-        <Label>Чат</Label>
-        <View style={styles.chat}>
-          {messages.map((message, index) => (
+        {/* Messages */}
+        <ScrollView
+          ref={scrollRef}
+          style={s.messages}
+          contentContainerStyle={s.messagesContent}
+          keyboardShouldPersistTaps="handled"
+          onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+        >
+          {messages.map((msg, i) => (
             <View
-              key={`${message.role}-${index}`}
-              style={[styles.message, message.role === "user" ? styles.userMessage : styles.assistantMessage]}
+              key={i}
+              style={[
+                s.bubbleWrap,
+                msg.role === "user" ? s.bubbleWrapUser : s.bubbleWrapBot,
+              ]}
             >
-              <Text style={[styles.messageText, message.role === "user" && styles.userMessageText]}>
-                {message.content}
-              </Text>
+              {msg.role === "assistant" ? (
+                <View style={s.botAvatar}>
+                  <Text style={{ fontSize: 14 }}>🚗</Text>
+                </View>
+              ) : null}
+              <View
+                style={[
+                  s.bubble,
+                  msg.role === "user" ? s.bubbleUser : s.bubbleBot,
+                  msg.fallback ? s.bubbleFallback : null,
+                ]}
+              >
+                <Text style={[s.bubbleText, msg.role === "user" && s.bubbleTextUser]}>
+                  {msg.text}
+                </Text>
+                {msg.fallback ? (
+                  <View style={s.fallbackRow}>
+                    <Text style={s.fallbackNote}>📡 Резервний режим</Text>
+                  </View>
+                ) : null}
+              </View>
             </View>
           ))}
-          {isSending ? <Text style={styles.typing}>Готуємо відповідь...</Text> : null}
-        </View>
-        <View style={styles.inputRow}>
+
+          {loading ? (
+            <View style={[s.bubbleWrap, s.bubbleWrapBot]}>
+              <View style={s.botAvatar}>
+                <Text style={{ fontSize: 14 }}>🚗</Text>
+              </View>
+              <View style={[s.bubble, s.bubbleBot, s.typingBubble]}>
+                <ActivityIndicator color={colors.red} size="small" />
+                <Text style={s.typingText}>Лідик думає...</Text>
+              </View>
+            </View>
+          ) : null}
+        </ScrollView>
+
+        {/* Quick prompts */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={s.prompts}
+          style={{ borderTopWidth: 1, borderTopColor: colors.border }}
+        >
+          {QUICK_PROMPTS.map((p) => (
+            <Pressable key={p} style={s.prompt} onPress={() => send(p)} disabled={loading}>
+              <Text style={s.promptText}>{p}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+
+        {/* Input */}
+        <View style={s.inputRow}>
           <TextInput
+            style={s.input}
             value={input}
             onChangeText={setInput}
-            placeholder="Ваше питання"
-            placeholderTextColor={colors.muted}
-            multiline
-            style={styles.input}
+            placeholder="Запитай Лідика..."
+            placeholderTextColor={colors.textTertiary}
+            returnKeyType="send"
+            onSubmitEditing={() => send(input)}
+            editable={!loading}
+            multiline={false}
+            autoCorrect={false}
           />
-          <Pressable style={styles.sendButton} onPress={() => sendMessage()}>
-            <Text style={styles.sendText}>OK</Text>
+          <Pressable
+            style={[s.sendBtn, (loading || !input.trim()) && s.sendBtnDisabled]}
+            onPress={() => send(input)}
+            disabled={loading || !input.trim()}
+          >
+            <Text style={s.sendText}>↑</Text>
           </Pressable>
         </View>
-      </Card>
-    </Screen>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  heroTitle: {
-    marginTop: 8,
-    color: colors.white,
-    fontSize: 25,
-    fontWeight: "900",
-    letterSpacing: -0.4
-  },
-  heroText: {
-    marginTop: 10,
-    color: "rgba(255,255,255,0.74)",
-    lineHeight: 22
-  },
-  prompts: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    marginTop: 14
-  },
-  prompt: {
-    borderRadius: 999,
-    backgroundColor: "#edf5f2",
-    paddingHorizontal: 13,
-    paddingVertical: 9
-  },
-  promptText: {
-    color: colors.green,
-    fontWeight: "800"
-  },
-  categoryTitle: {
-    marginTop: 8,
-    color: colors.graphite,
-    fontSize: 20,
-    fontWeight: "900",
-    lineHeight: 26
-  },
-  questionList: {
-    gap: 8,
-    marginVertical: 14
-  },
-  question: {
-    color: colors.graphite,
-    lineHeight: 22
-  },
-  chat: {
-    gap: 10,
-    marginTop: 14
-  },
-  message: {
-    maxWidth: "88%",
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 10
-  },
-  assistantMessage: {
-    alignSelf: "flex-start",
-    backgroundColor: "#edf5f2"
-  },
-  userMessage: {
-    alignSelf: "flex-end",
-    backgroundColor: colors.green
-  },
-  messageText: {
-    color: colors.graphite,
-    lineHeight: 21
-  },
-  userMessageText: {
-    color: colors.white
-  },
-  typing: {
-    color: colors.muted,
-    fontWeight: "800"
-  },
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 10,
-    marginTop: 14
-  },
-  input: {
-    flex: 1,
-    minHeight: 46,
-    maxHeight: 120,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.line,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    color: colors.graphite,
-    backgroundColor: colors.white
-  },
-  sendButton: {
-    height: 46,
-    minWidth: 52,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.green
-  },
-  sendText: {
-    color: colors.white,
-    fontWeight: "900"
-  }
-});
+function makeStyles(colors: ReturnType<typeof useTheme>["colors"]) {
+  return StyleSheet.create({
+    safe: { flex: 1, backgroundColor: colors.bg },
+
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      backgroundColor: colors.bgCard,
+    },
+    mascotBadge: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.redSoft,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 2,
+      borderColor: colors.red + "40",
+    },
+    mascotEmoji: { fontSize: 20 },
+    headerTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: "800" },
+    headerSub: { color: colors.textSecondary, fontSize: 11, marginTop: 1 },
+
+    messages: { flex: 1 },
+    messagesContent: { padding: spacing.md, gap: 12, paddingBottom: 16 },
+
+    bubbleWrap: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
+    bubbleWrapBot: { alignSelf: "flex-start", maxWidth: "90%" },
+    bubbleWrapUser: { alignSelf: "flex-end", maxWidth: "80%", flexDirection: "row-reverse" },
+
+    botAvatar: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: colors.redSoft,
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+    },
+
+    bubble: {
+      borderRadius: radii.md,
+      padding: 12,
+      gap: 4,
+      flex: 1,
+    },
+    bubbleBot: {
+      backgroundColor: colors.bgCard,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    bubbleUser: {
+      backgroundColor: colors.red,
+      borderBottomRightRadius: 4,
+    },
+    bubbleFallback: {
+      backgroundColor: colors.warningSoft,
+      borderColor: colors.warning + "55",
+    },
+    typingBubble: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      paddingVertical: 14,
+    },
+    bubbleText: { color: colors.textPrimary, fontSize: 14, lineHeight: 22, fontWeight: "500" },
+    bubbleTextUser: { color: "#fff" },
+    fallbackRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
+    fallbackNote: { color: colors.warning, fontSize: 11, fontWeight: "700" },
+    typingText: { color: colors.textSecondary, fontSize: 13, fontWeight: "600" },
+
+    prompts: { paddingHorizontal: spacing.md, paddingVertical: 8, gap: 8, alignItems: "center" },
+    prompt: {
+      borderRadius: radii.full,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      backgroundColor: colors.bgElevated,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+    },
+    promptText: { color: colors.textSecondary, fontWeight: "700", fontSize: 12 },
+
+    inputRow: {
+      flexDirection: "row",
+      gap: 8,
+      padding: spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      backgroundColor: colors.bgCard,
+    },
+    input: {
+      flex: 1,
+      backgroundColor: colors.bgElevated,
+      borderRadius: radii.md,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      color: colors.textPrimary,
+      fontSize: 15,
+      fontWeight: "600",
+    },
+    sendBtn: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: colors.red,
+      alignItems: "center",
+      justifyContent: "center",
+      shadowColor: colors.red,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.4,
+      shadowRadius: 8,
+      elevation: 6,
+    },
+    sendBtnDisabled: { opacity: 0.35 },
+    sendText: { color: "#fff", fontSize: 20, fontWeight: "900" },
+  });
+}
