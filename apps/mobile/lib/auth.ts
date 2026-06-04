@@ -6,8 +6,8 @@ export type AuthMode = "guest" | "authenticated" | "unauthenticated";
 export type User = {
   id: string;
   name: string;
-  phone: string;
   email?: string;
+  phone?: string;
   city?: string;
   category?: "A" | "A1" | "B" | "C" | "CE";
   avatarInitials: string;
@@ -22,35 +22,29 @@ export type AuthState = {
   isLoading: boolean;
 };
 
+// Minimal signup — just email + password. Phone/city/category added in profile later.
+export type SignUpData = {
+  name: string;
+  email: string;
+  password: string;
+};
+
 export type AuthContextValue = AuthState & {
   signInAsGuest: () => void;
   signIn: (email: string, password: string) => Promise<boolean>;
   signUp: (data: SignUpData) => Promise<boolean>;
   signOut: () => void;
+  forgotPassword: (email: string) => Promise<boolean>;
   requireAuth: (onSuccess: () => void) => void;
 };
-
-export type SignUpData = {
-  name: string;
-  email: string;
-  password: string;
-  phone: string;
-  city: string;
-  category: "A" | "A1" | "B" | "C" | "CE";
-  contactMethod: "telegram" | "phone" | "whatsapp";
-};
-
-// ─── Guest user singleton ─────────────────────────────────────────────────────
 
 export const GUEST_USER: User = {
   id: "guest",
   name: "Гість",
-  phone: "",
   avatarInitials: "Г",
+  avatarEmoji: "🚗",
   isGuest: true,
 };
-
-// ─── Context ─────────────────────────────────────────────────────────────────
 
 export const AuthContext = createContext<AuthContextValue>({
   mode: "unauthenticated",
@@ -60,16 +54,11 @@ export const AuthContext = createContext<AuthContextValue>({
   signIn: async () => false,
   signUp: async () => false,
   signOut: () => {},
+  forgotPassword: async () => false,
   requireAuth: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
-
-// ─── Guest-only feature guard ─────────────────────────────────────────────────
-
-export function isGuestAllowed(feature: GuestFeature): boolean {
-  return GUEST_ALLOWED_FEATURES.includes(feature);
-}
 
 export type GuestFeature =
   | "browse_courses"
@@ -84,11 +73,7 @@ export type GuestFeature =
   | "referral"
   | "club";
 
-const GUEST_ALLOWED_FEATURES: GuestFeature[] = [
-  "browse_courses",
-  "demo_test",
-  "faq",
-  "chat_limited",
-  "view_prices",
-  "onboarding",
-];
+export function isGuestAllowed(feature: GuestFeature): boolean {
+  return (["browse_courses", "demo_test", "faq", "chat_limited", "view_prices", "onboarding"] as GuestFeature[])
+    .includes(feature);
+}

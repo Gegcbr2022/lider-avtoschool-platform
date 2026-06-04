@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { firebaseAuth } from "../lib/firebase";
+import { firebaseAuth, firebaseApp } from "../lib/firebase";
 import { API_BASE } from "../lib/api";
 import { useTheme, radii, spacing } from "../lib/theme";
 
@@ -213,10 +213,12 @@ export default function DiagnosticScreen() {
           <Text style={{ color: colors.textPrimary, fontWeight: "800", fontSize: 15, marginBottom: 6 }}>Конфіг</Text>
           {[
             ["API Base", API_BASE],
-            ["Firebase Project", "lider-avtoschool-dev"],
+            ["Firebase Project", (firebaseApp as any).options?.projectId ?? "—"],
+            ["Auth Domain", (firebaseApp as any).options?.authDomain ?? "—"],
             ["Auth UID", firebaseAuth.currentUser?.uid?.slice(0, 12) ?? "—"],
             ["Anon", firebaseAuth.currentUser?.isAnonymous ? "так" : "ні"],
             ["Email", firebaseAuth.currentUser?.email ?? "—"],
+            ["Email Verified", firebaseAuth.currentUser?.emailVerified ? "✅ так" : "❌ ні"],
           ].map(([k, v]) => (
             <Text key={k} style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 18 }}>
               <Text style={{ color: colors.textTertiary }}>{k}: </Text>{v}

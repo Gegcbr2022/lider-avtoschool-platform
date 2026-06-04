@@ -1,5 +1,5 @@
 // ─── Firebase client for mobile ───────────────────────────────────────────────
-// Project: lider-avtoschool-dev
+// Project: lider-avtoschool (PRODUCTION)
 // Auth: email/password + Google (optional)
 // Persistence: AsyncStorage (survives app restarts)
 
@@ -10,13 +10,15 @@ import {
   initializeAuth,
 } from "firebase/auth";
 
+// Production Firebase config — matches google-services.json (lider-avtoschool)
+// Project number: 111711727739
 const firebaseConfig = {
-  apiKey:            "AIzaSyB3LZzjUwY9pIHROPmRVWHeRddXm2ZW2l8",
-  authDomain:        "lider-avtoschool-dev.firebaseapp.com",
-  projectId:         "lider-avtoschool-dev",
-  storageBucket:     "lider-avtoschool-dev.firebasestorage.app",
-  messagingSenderId: "128703486160",
-  appId:             "1:128703486160:web:40e75f7bd37ae87d1d66d5",
+  apiKey:            "AIzaSyCvNtROKFtF-wQPHbiUKxcxVnHlN26R0oI",
+  authDomain:        "lider-avtoschool.firebaseapp.com",
+  projectId:         "lider-avtoschool",
+  storageBucket:     "lider-avtoschool.firebasestorage.app",
+  messagingSenderId: "111711727739",
+  appId:             "1:111711727739:web:fc4b00ba23303c28fd32de",
 };
 
 // Singleton — safe to call multiple times
@@ -31,7 +33,6 @@ try {
     persistence: getReactNativePersistence(AsyncStorage),
   });
 } catch {
-  // Already initialized (hot reload)
   const { getAuth } = require("firebase/auth");
   _auth = getAuth(firebaseApp);
 }

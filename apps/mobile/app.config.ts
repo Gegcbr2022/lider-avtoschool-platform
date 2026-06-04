@@ -31,9 +31,9 @@ const config: ExpoConfig = {
     typedRoutes: true
   },
   extra: {
-    // Production Firebase Functions URL — used in release APK and emulator testing.
-    // For local dev with Firebase emulator: set API_URL=http://10.0.2.2:5001/lider-avtoschool-dev/europe-west1/api
-    apiUrl: process.env.API_URL ?? "https://api-jd6b6vy57a-ew.a.run.app",
+    // Production Firebase Functions — lider-avtoschool project
+    // For local emulator dev: set API_URL=http://10.0.2.2:5001/lider-avtoschool/europe-west1/api
+    apiUrl: process.env.API_URL ?? "https://europe-west1-lider-avtoschool.cloudfunctions.net/api",
     eas: {
       projectId: "74bb8f9a-fc35-4016-b110-a17da4dcd31c"
     }

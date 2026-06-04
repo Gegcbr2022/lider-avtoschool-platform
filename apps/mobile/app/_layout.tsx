@@ -2,6 +2,7 @@ import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
   sendEmailVerification,
+  sendPasswordResetEmail,
   signInAnonymously,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
@@ -141,33 +142,34 @@ export default function RootLayout() {
 
   const signUp = useCallback(async (data: SignUpData): Promise<boolean> => {
     try {
-      // 1. Create Firebase account
-      const cred = await createUserWithEmailAndPassword(
-        firebaseAuth,
-        data.email,
-        data.password
-      );
-      // 2. Update display name
+      const cred = await createUserWithEmailAndPassword(firebaseAuth, data.email, data.password);
       await updateProfile(cred.user, { displayName: data.name });
-      // 3. Send email verification (non-blocking, best effort)
+      // Send email verification (non-blocking)
       sendEmailVerification(cred.user).catch(() => {});
-      // 4. Submit lead to API (fire-and-forget, non-blocking)
+      // Submit lead (fire-and-forget, simplified — no phone/city required at signup)
       fetch(`${API_BASE}/leads`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: data.name,
-          phone: data.phone,
-          city: data.city,
-          category: data.category,
-          contactMethod: data.contactMethod,
+          phone: "",
+          city: "Не вказано",
+          category: "B",
+          contactMethod: "phone",
           source: "mobile",
           branchId: "kyiv",
           consentAccepted: true,
         }),
-      }).catch(() => {
-        // Lead submission failure is non-critical — auth already succeeded
-      });
+      }).catch(() => {});
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const forgotPassword = useCallback(async (email: string): Promise<boolean> => {
+    try {
+      await sendPasswordResetEmail(firebaseAuth, email.trim().toLowerCase());
       return true;
     } catch {
       return false;
@@ -219,6 +221,7 @@ export default function RootLayout() {
     signIn,
     signUp,
     signOut,
+    forgotPassword,
     requireAuth,
   };
 

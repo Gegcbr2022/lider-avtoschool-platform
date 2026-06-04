@@ -1,4 +1,4 @@
-// ─── Auth Screen ─────────────────────────────────────────────────────────────
+// ─── Auth Screen — production-ready ──────────────────────────────────────────
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
@@ -15,10 +15,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../lib/auth";
 import { useTheme, radii, spacing } from "../lib/theme";
 
-type Screen = "choose" | "email" | "phone";
-type EmailMode = "login" | "register";
+type Screen = "choose" | "email-login" | "email-register" | "forgot";
 
-// ─── Field ────────────────────────────────────────────────────────────────────
+// ─── Shared components ────────────────────────────────────────────────────────
 
 function Field({
   label, value, onChange, placeholder, secure, keyboard, error, autoFocus,
@@ -48,186 +47,240 @@ function Field({
   );
 }
 
-function PrimaryBtn({ label, onPress, loading }: { label: string; onPress: () => void; loading?: boolean }) {
+function Btn({ label, onPress, loading, variant = "primary" }: {
+  label: string; onPress: () => void; loading?: boolean;
+  variant?: "primary" | "outline" | "ghost";
+}) {
   const { colors } = useTheme();
+  if (variant === "primary") {
+    return (
+      <Pressable onPress={onPress} disabled={loading}
+        style={{ backgroundColor: colors.red, borderRadius: radii.md, paddingVertical: 18, alignItems: "center", shadowColor: colors.red, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 8, opacity: loading ? 0.6 : 1 }}
+      >
+        {loading ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontSize: 16, fontWeight: "800" }}>{label}</Text>}
+      </Pressable>
+    );
+  }
+  if (variant === "outline") {
+    return (
+      <Pressable onPress={onPress}
+        style={{ borderWidth: 1.5, borderColor: colors.border, borderRadius: radii.md, paddingVertical: 14, alignItems: "center" }}
+      >
+        <Text style={{ color: colors.textSecondary, fontWeight: "700", fontSize: 15 }}>{label}</Text>
+      </Pressable>
+    );
+  }
   return (
-    <Pressable
-      onPress={onPress} disabled={loading}
-      style={{ backgroundColor: colors.red, borderRadius: radii.md, paddingVertical: 18, alignItems: "center", shadowColor: colors.red, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 8, opacity: loading ? 0.6 : 1 }}
-    >
-      {loading
-        ? <ActivityIndicator color="#fff" size="small" />
-        : <Text style={{ color: "#fff", fontSize: 16, fontWeight: "800" }}>{label}</Text>
-      }
+    <Pressable onPress={onPress} style={{ alignItems: "center", paddingVertical: 10 }}>
+      <Text style={{ color: colors.textTertiary, fontSize: 14 }}>{label}</Text>
     </Pressable>
   );
 }
 
-function ModeToggle({ mode, onChange }: { mode: EmailMode; onChange: (m: EmailMode) => void }) {
-  const { colors } = useTheme();
-  return (
-    <View style={{ flexDirection: "row", backgroundColor: colors.bgCard, borderRadius: radii.sm, borderWidth: 1, borderColor: colors.border, padding: 4, gap: 4 }}>
-      {(["login", "register"] as EmailMode[]).map((m) => (
-        <Pressable
-          key={m} onPress={() => onChange(m)}
-          style={{ flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: radii.xs, backgroundColor: mode === m ? colors.red : "transparent" }}
-        >
-          <Text style={{ color: mode === m ? "#fff" : colors.textSecondary, fontWeight: "700", fontSize: 14 }}>
-            {m === "login" ? "Вхід" : "Реєстрація"}
-          </Text>
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-
-// ─── Choose Screen ────────────────────────────────────────────────────────────
+// ─── Choose Method ────────────────────────────────────────────────────────────
 
 function ChooseScreen({ onSelect }: { onSelect: (s: Screen) => void }) {
   const { colors } = useTheme();
   const { signInAsGuest } = useAuth();
-
   return (
     <View style={{ gap: spacing.md }}>
-      <View style={{ alignItems: "center", marginBottom: spacing.sm }}>
-        <View style={{ width: 80, height: 80, borderRadius: 24, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
-          <Text style={{ fontSize: 40 }}>🚗</Text>
+      <View style={{ alignItems: "center", gap: 12, marginBottom: spacing.sm }}>
+        <View style={{ width: 80, height: 80, borderRadius: 24, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center" }}>
+          <Text style={{ fontSize: 42 }}>🚗</Text>
         </View>
-        <Text style={{ color: colors.textPrimary, fontSize: 28, fontWeight: "900", letterSpacing: -0.5, textAlign: "center" }}>
-          Автошкола Лідер
-        </Text>
-        <Text style={{ color: colors.textSecondary, fontSize: 15, marginTop: 8, textAlign: "center", lineHeight: 22 }}>
-          Твій шлях до прав починається тут.
+        <Text style={{ color: colors.textPrimary, fontSize: 28, fontWeight: "900", letterSpacing: -0.5, textAlign: "center" }}>Автошкола Лідер</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 15, textAlign: "center", lineHeight: 22 }}>
+          Твій шлях до водійських прав починається тут.
         </Text>
       </View>
 
+      {/* Email register */}
       <Pressable
-        onPress={() => onSelect("email")}
-        style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 18, backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1.5, borderColor: colors.border }}
+        onPress={() => onSelect("email-register")}
+        style={{ backgroundColor: colors.red, borderRadius: radii.md, paddingVertical: 18, alignItems: "center", shadowColor: colors.red, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 8 }}
       >
-        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ fontSize: 20 }}>📧</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: colors.textPrimary, fontWeight: "700", fontSize: 16 }}>Увійти через Email</Text>
-          <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>Пошта та пароль</Text>
-        </View>
-        <Text style={{ color: colors.textTertiary, fontSize: 20 }}>›</Text>
+        <Text style={{ color: "#fff", fontWeight: "800", fontSize: 16 }}>Зареєструватись безкоштовно</Text>
       </Pressable>
 
-      <Pressable
-        onPress={() => onSelect("phone")}
-        style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 18, backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1.5, borderColor: colors.border }}
-      >
-        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ fontSize: 20 }}>📱</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: colors.textPrimary, fontWeight: "700", fontSize: 16 }}>Увійти через Телефон</Text>
-          <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>Номер телефону та пароль</Text>
-        </View>
-        <Text style={{ color: colors.textTertiary, fontSize: 20 }}>›</Text>
-      </Pressable>
+      {/* Email login */}
+      <Btn label="Увійти в існуючий акаунт" onPress={() => onSelect("email-login")} variant="outline" />
 
-      {/* Google — coming soon, shown as disabled */}
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 18, backgroundColor: colors.bgElevated, borderRadius: radii.md, borderWidth: 1.5, borderColor: colors.border, opacity: 0.5 }}>
-        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.bgCard, alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ fontSize: 22, fontWeight: "900", color: colors.textTertiary }}>G</Text>
+      {/* Google — ready when SHA-1 configured */}
+      <View style={{ opacity: 0.45, flexDirection: "row", alignItems: "center", gap: 14, padding: 16, backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1.5, borderColor: colors.border }}>
+        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.bgElevated, alignItems: "center", justifyContent: "center" }}>
+          <Text style={{ fontSize: 20, fontWeight: "900", color: colors.textTertiary }}>G</Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: colors.textTertiary, fontWeight: "700", fontSize: 16 }}>Google</Text>
-          <Text style={{ color: colors.textTertiary, fontSize: 13, marginTop: 2 }}>Скоро буде доступно</Text>
+          <Text style={{ color: colors.textTertiary, fontWeight: "700", fontSize: 15 }}>Google</Text>
+          <Text style={{ color: colors.textTertiary, fontSize: 12, marginTop: 2 }}>Скоро буде доступно</Text>
         </View>
       </View>
 
-      <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 4 }} />
+      <View style={{ height: 1, backgroundColor: colors.divider }} />
 
-      <Pressable
-        onPress={() => signInAsGuest()}
-        style={{ alignItems: "center", paddingVertical: 14, borderRadius: radii.md, borderWidth: 1.5, borderColor: colors.border }}
-      >
-        <Text style={{ color: colors.textSecondary, fontWeight: "700", fontSize: 15 }}>
-          Продовжити як гість
-        </Text>
-        <Text style={{ color: colors.textTertiary, fontSize: 12, marginTop: 4 }}>
-          Доступні курси та демо-тест без реєстрації
-        </Text>
-      </Pressable>
+      <Btn label="Продовжити як гість" onPress={() => signInAsGuest()} variant="ghost" />
+      <Text style={{ color: colors.textTertiary, fontSize: 12, textAlign: "center", marginTop: -4 }}>
+        Доступні курси та демо-тест без реєстрації
+      </Text>
     </View>
   );
 }
 
-// ─── Email Screen ─────────────────────────────────────────────────────────────
+// ─── Email Register ───────────────────────────────────────────────────────────
 
-function EmailScreen({ onBack }: { onBack: () => void }) {
+function EmailRegisterScreen({ onBack, onSuccess }: { onBack: () => void; onSuccess: (email: string) => void }) {
   const { colors } = useTheme();
-  const { signIn, signUp } = useAuth();
-  const [mode, setMode] = useState<EmailMode>("login");
+  const { signUp } = useAuth();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [registered, setRegistered] = useState(false);
 
-  async function handleSubmit() {
+  async function handleRegister() {
     setError(null);
-    if (!email.trim() || !email.includes("@")) { setError("Введіть коректний email"); return; }
+    const trimEmail = email.trim().toLowerCase();
+    if (!name.trim()) { setError("Введіть ваше ім'я"); return; }
+    if (!trimEmail || !trimEmail.includes("@")) { setError("Введіть коректний email"); return; }
     if (password.length < 6) { setError("Пароль — мінімум 6 символів"); return; }
     setLoading(true);
-    if (mode === "login") {
-      const ok = await signIn(email.trim().toLowerCase(), password);
-      setLoading(false);
-      if (!ok) setError("Невірний email або пароль");
+    const ok = await signUp({ name: name.trim(), email: trimEmail, password });
+    setLoading(false);
+    if (ok) {
+      onSuccess(trimEmail);
     } else {
-      const ok = await signUp({
-        name: name.trim() || email.split("@")[0],
-        email: email.trim().toLowerCase(),
-        password,
-        phone: "", city: "Київ", category: "B", contactMethod: "phone",
-      });
-      setLoading(false);
-      if (ok) {
-        setRegistered(true);
-      } else {
-        setError("Помилка. Можливо, цей email вже зареєстрований.");
-      }
+      setError("Цей email вже зареєстрований або сталася помилка.");
     }
   }
 
-  // Email verification sent screen
-  if (registered) {
+  return (
+    <View style={{ gap: spacing.md }}>
+      <Pressable onPress={onBack} style={{ alignSelf: "flex-start" }}>
+        <Text style={{ color: colors.textSecondary, fontWeight: "700", fontSize: 14 }}>← Назад</Text>
+      </Pressable>
+      <View>
+        <Text style={{ color: colors.textPrimary, fontSize: 26, fontWeight: "900", letterSpacing: -0.5 }}>Реєстрація</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 4 }}>Займе менше хвилини</Text>
+      </View>
+      <Field label="Ваше ім'я" value={name} onChange={setName} placeholder="Іван Коваль" autoCapitalize="words" autoFocus />
+      <Field label="Email" value={email} onChange={setEmail} placeholder="your@email.com" keyboard="email-address" />
+      <Field label="Пароль" value={password} onChange={setPassword} placeholder="мінімум 6 символів" secure error={error ?? undefined} />
+      {error ? (
+        <View style={{ backgroundColor: colors.redSoft, borderRadius: radii.sm, padding: 12, borderWidth: 1, borderColor: colors.red + "40" }}>
+          <Text style={{ color: colors.red, fontWeight: "700", fontSize: 13 }}>⚠️ {error}</Text>
+        </View>
+      ) : null}
+      <Btn label="Зареєструватись" onPress={handleRegister} loading={loading} />
+      <Text style={{ color: colors.textTertiary, fontSize: 12, textAlign: "center", lineHeight: 18 }}>
+        Реєструючись, ви погоджуєтесь з умовами використання та політикою конфіденційності
+      </Text>
+    </View>
+  );
+}
+
+// ─── Email Verification Pending ───────────────────────────────────────────────
+
+function VerificationPendingScreen({ email, onDone }: { email: string; onDone: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <View style={{ gap: spacing.lg, alignItems: "center", paddingTop: 24 }}>
+      <View style={{ width: 88, height: 88, borderRadius: 44, backgroundColor: colors.successSoft, alignItems: "center", justifyContent: "center" }}>
+        <Text style={{ fontSize: 44 }}>📧</Text>
+      </View>
+      <Text style={{ color: colors.textPrimary, fontSize: 26, fontWeight: "900", textAlign: "center", letterSpacing: -0.5 }}>
+        Перевір пошту!
+      </Text>
+      <Text style={{ color: colors.textSecondary, fontSize: 15, textAlign: "center", lineHeight: 24 }}>
+        Ми надіслали лист підтвердження на{"\n"}
+        <Text style={{ color: colors.textPrimary, fontWeight: "700" }}>{email}</Text>
+      </Text>
+      <View style={{ backgroundColor: colors.infoSoft, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.info + "33", width: "100%", gap: 4 }}>
+        <Text style={{ color: colors.info, fontWeight: "800", fontSize: 13 }}>📬 Що далі:</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 20 }}>
+          1. Відкрий лист від Автошколи Лідер{"\n"}
+          2. Натисни кнопку «Підтвердити email»{"\n"}
+          3. Повернись і натисни «Увійти»
+        </Text>
+      </View>
+      <Btn label="Увійти в акаунт →" onPress={onDone} />
+      <Btn label="Я ще не отримав листа" onPress={() => {}} variant="ghost" />
+    </View>
+  );
+}
+
+// ─── Email Login ──────────────────────────────────────────────────────────────
+
+function EmailLoginScreen({ onBack, onForgot }: { onBack: () => void; onForgot: () => void }) {
+  const { colors } = useTheme();
+  const { signIn } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleLogin() {
+    setError(null);
+    const trimEmail = email.trim().toLowerCase();
+    if (!trimEmail || !trimEmail.includes("@")) { setError("Введіть коректний email"); return; }
+    if (!password) { setError("Введіть пароль"); return; }
+    setLoading(true);
+    const ok = await signIn(trimEmail, password);
+    setLoading(false);
+    if (!ok) setError("Невірний email або пароль. Перевірте дані або скористайтесь відновленням.");
+  }
+
+  return (
+    <View style={{ gap: spacing.md }}>
+      <Pressable onPress={onBack} style={{ alignSelf: "flex-start" }}>
+        <Text style={{ color: colors.textSecondary, fontWeight: "700", fontSize: 14 }}>← Назад</Text>
+      </Pressable>
+      <View>
+        <Text style={{ color: colors.textPrimary, fontSize: 26, fontWeight: "900", letterSpacing: -0.5 }}>Вхід</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 4 }}>Введіть дані від вашого акаунту</Text>
+      </View>
+      <Field label="Email" value={email} onChange={setEmail} placeholder="your@email.com" keyboard="email-address" autoFocus />
+      <Field label="Пароль" value={password} onChange={setPassword} placeholder="ваш пароль" secure error={error ?? undefined} />
+      {error ? (
+        <View style={{ backgroundColor: colors.redSoft, borderRadius: radii.sm, padding: 12, borderWidth: 1, borderColor: colors.red + "40" }}>
+          <Text style={{ color: colors.red, fontWeight: "700", fontSize: 13 }}>⚠️ {error}</Text>
+        </View>
+      ) : null}
+      <Btn label="Увійти" onPress={handleLogin} loading={loading} />
+      <Btn label="Забули пароль? Відновити →" onPress={onForgot} variant="ghost" />
+    </View>
+  );
+}
+
+// ─── Forgot Password ──────────────────────────────────────────────────────────
+
+function ForgotPasswordScreen({ onBack }: { onBack: () => void }) {
+  const { colors } = useTheme();
+  const { forgotPassword } = useAuth();
+  const [email, setEmail] = useState("");
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSend() {
+    setError(null);
+    const trimEmail = email.trim().toLowerCase();
+    if (!trimEmail || !trimEmail.includes("@")) { setError("Введіть коректний email"); return; }
+    setLoading(true);
+    const ok = await forgotPassword(trimEmail);
+    setLoading(false);
+    if (ok) setSent(true);
+    else setError("Не вдалося надіслати лист. Перевірте email та спробуйте ще раз.");
+  }
+
+  if (sent) {
     return (
       <View style={{ gap: spacing.lg, alignItems: "center", paddingTop: 24 }}>
-        <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: colors.successSoft, alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ fontSize: 40 }}>📧</Text>
-        </View>
-        <Text style={{ color: colors.textPrimary, fontSize: 24, fontWeight: "900", textAlign: "center" }}>
-          Перевір пошту!
-        </Text>
+        <Text style={{ fontSize: 56 }}>✉️</Text>
+        <Text style={{ color: colors.textPrimary, fontSize: 24, fontWeight: "900", textAlign: "center" }}>Лист надіслано!</Text>
         <Text style={{ color: colors.textSecondary, fontSize: 15, textAlign: "center", lineHeight: 24 }}>
-          Ми надіслали лист підтвердження на{"\n"}
-          <Text style={{ color: colors.textPrimary, fontWeight: "700" }}>{email.trim().toLowerCase()}</Text>
+          Перевір {email.trim()} та перейди за посиланням для скидання пароля.
         </Text>
-        <View style={{ backgroundColor: colors.infoSoft, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.info + "33", width: "100%" }}>
-          <Text style={{ color: colors.info, fontWeight: "700", fontSize: 13 }}>
-            📬 Що далі:{"\n"}
-          </Text>
-          <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 20 }}>
-            1. Відкрий лист від Автошколи Лідер{"\n"}
-            2. Натисни кнопку підтвердження{"\n"}
-            3. Повернись в додаток і увійди
-          </Text>
-        </View>
-        <Pressable
-          onPress={() => { setRegistered(false); setMode("login"); }}
-          style={{ width: "100%", backgroundColor: colors.red, borderRadius: radii.md, paddingVertical: 18, alignItems: "center", shadowColor: colors.red, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 8 }}
-        >
-          <Text style={{ color: "#fff", fontWeight: "800", fontSize: 16 }}>Увійти в акаунт →</Text>
-        </Pressable>
-        <Pressable onPress={() => setRegistered(false)} style={{ paddingVertical: 10 }}>
-          <Text style={{ color: colors.textTertiary, fontSize: 14 }}>Змінити email</Text>
-        </Pressable>
+        <Btn label="← Повернутись до входу" onPress={onBack} variant="outline" />
       </View>
     );
   }
@@ -237,97 +290,14 @@ function EmailScreen({ onBack }: { onBack: () => void }) {
       <Pressable onPress={onBack} style={{ alignSelf: "flex-start" }}>
         <Text style={{ color: colors.textSecondary, fontWeight: "700", fontSize: 14 }}>← Назад</Text>
       </Pressable>
-
-      <ModeToggle mode={mode} onChange={(m) => { setMode(m); setError(null); }} />
-
-      <Text style={{ color: colors.textPrimary, fontSize: 22, fontWeight: "900", letterSpacing: -0.5 }}>
-        {mode === "login" ? "Вхід в кабінет" : "Створити акаунт"}
-      </Text>
-
-      {mode === "register" ? (
-        <Field label="Ваше ім'я" value={name} onChange={setName} placeholder="Іван Коваль" autoFocus />
-      ) : null}
-
-      <Field label="Email" value={email} onChange={setEmail} placeholder="your@email.com" keyboard="email-address" autoFocus={mode === "login"} />
-      <Field label="Пароль" value={password} onChange={setPassword} placeholder="мінімум 6 символів" secure error={error ?? undefined} />
-
-      {error ? (
-        <View style={{ backgroundColor: colors.redSoft, borderRadius: radii.sm, padding: 12, borderWidth: 1, borderColor: colors.red + "40" }}>
-          <Text style={{ color: colors.red, fontWeight: "700", fontSize: 14 }}>⚠️ {error}</Text>
-        </View>
-      ) : null}
-
-      <PrimaryBtn label={mode === "login" ? "Увійти" : "Зареєструватись"} onPress={handleSubmit} loading={loading} />
-
-      {mode === "login" ? (
-        <Pressable style={{ alignItems: "center", paddingVertical: 8 }} onPress={() => {}}>
-          <Text style={{ color: colors.textTertiary, fontSize: 13 }}>Забули пароль? Надіслати лист для відновлення</Text>
-        </Pressable>
-      ) : null}
-    </View>
-  );
-}
-
-// ─── Phone Screen ─────────────────────────────────────────────────────────────
-
-function PhoneScreen({ onBack }: { onBack: () => void }) {
-  const { colors } = useTheme();
-  const { signIn, signUp } = useAuth();
-  const [mode, setMode] = useState<EmailMode>("login");
-  const [phone, setPhone] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  function normalize(p: string) { return p.replace(/\D/g, "").replace(/^38/, "").slice(0, 10); }
-  function phoneToEmail(p: string) { return `${normalize(p)}@phone.lider.ua`; }
-
-  async function handleSubmit() {
-    setError(null);
-    const digits = normalize(phone);
-    if (digits.length < 9) { setError("Введіть коректний номер телефону"); return; }
-    if (password.length < 6) { setError("Пароль — мінімум 6 символів"); return; }
-    setLoading(true);
-    const proxyEmail = phoneToEmail(phone);
-    if (mode === "login") {
-      const ok = await signIn(proxyEmail, password);
-      setLoading(false);
-      if (!ok) setError("Невірний номер або пароль");
-    } else {
-      const ok = await signUp({
-        name: `Учень`,
-        email: proxyEmail,
-        password,
-        phone: `+38${digits}`,
-        city: "Київ", category: "B", contactMethod: "phone",
-      });
-      setLoading(false);
-      if (!ok) setError("Цей номер вже зареєстрований або сталась помилка.");
-    }
-  }
-
-  return (
-    <View style={{ gap: spacing.md }}>
-      <Pressable onPress={onBack} style={{ alignSelf: "flex-start" }}>
-        <Text style={{ color: colors.textSecondary, fontWeight: "700", fontSize: 14 }}>← Назад</Text>
-      </Pressable>
-
-      <ModeToggle mode={mode} onChange={(m) => { setMode(m); setError(null); }} />
-
-      <Text style={{ color: colors.textPrimary, fontSize: 22, fontWeight: "900" }}>
-        {mode === "login" ? "Вхід за телефоном" : "Реєстрація за телефоном"}
-      </Text>
-
-      <Field label="Номер телефону" value={phone} onChange={setPhone} placeholder="+380 50 123 45 67" keyboard="phone-pad" autoFocus />
-      <Field label="Пароль" value={password} onChange={setPassword} placeholder="мінімум 6 символів" secure error={error ?? undefined} />
-
-      {error ? (
-        <View style={{ backgroundColor: colors.redSoft, borderRadius: radii.sm, padding: 12, borderWidth: 1, borderColor: colors.red + "40" }}>
-          <Text style={{ color: colors.red, fontWeight: "700", fontSize: 14 }}>⚠️ {error}</Text>
-        </View>
-      ) : null}
-
-      <PrimaryBtn label={mode === "login" ? "Увійти" : "Зареєструватись"} onPress={handleSubmit} loading={loading} />
+      <View>
+        <Text style={{ color: colors.textPrimary, fontSize: 26, fontWeight: "900", letterSpacing: -0.5 }}>Відновлення паролю</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 4, lineHeight: 20 }}>
+          Введіть email — ми надішлемо посилання для скидання пароля.
+        </Text>
+      </View>
+      <Field label="Email" value={email} onChange={setEmail} placeholder="your@email.com" keyboard="email-address" autoFocus error={error ?? undefined} />
+      <Btn label="Надіслати посилання" onPress={handleSend} loading={loading} />
     </View>
   );
 }
@@ -337,9 +307,24 @@ function PhoneScreen({ onBack }: { onBack: () => void }) {
 export default function AuthScreen() {
   const params = useLocalSearchParams<{ mode?: string }>();
   const { colors } = useTheme();
+
   const [screen, setScreen] = useState<Screen>(
-    params.mode === "register" || params.mode === "login" ? "email" : "choose"
+    params.mode === "login" ? "email-login" : "choose"
   );
+  const [verifyEmail, setVerifyEmail] = useState<string | null>(null);
+
+  if (verifyEmail) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
+        <ScrollView contentContainerStyle={{ padding: spacing.md, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
+          <VerificationPendingScreen
+            email={verifyEmail}
+            onDone={() => { setVerifyEmail(null); setScreen("email-login"); }}
+          />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -349,9 +334,24 @@ export default function AuthScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {screen === "choose" && <ChooseScreen onSelect={setScreen} />}
-          {screen === "email" && <EmailScreen onBack={() => setScreen("choose")} />}
-          {screen === "phone" && <PhoneScreen onBack={() => setScreen("choose")} />}
+          {screen === "choose" && (
+            <ChooseScreen onSelect={setScreen} />
+          )}
+          {screen === "email-register" && (
+            <EmailRegisterScreen
+              onBack={() => setScreen("choose")}
+              onSuccess={(e) => setVerifyEmail(e)}
+            />
+          )}
+          {screen === "email-login" && (
+            <EmailLoginScreen
+              onBack={() => setScreen("choose")}
+              onForgot={() => setScreen("forgot")}
+            />
+          )}
+          {screen === "forgot" && (
+            <ForgotPasswordScreen onBack={() => setScreen("email-login")} />
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
