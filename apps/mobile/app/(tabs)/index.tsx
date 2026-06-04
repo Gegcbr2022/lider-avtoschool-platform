@@ -54,7 +54,7 @@ export default function HomeTab() {
           <View style={{ flex: 1, alignItems: "flex-end", justifyContent: "flex-end" }}>
             <Pressable
               onPress={() => router.push("/(tabs)/tests")}
-              style={{ backgroundColor: "#fff", borderRadius: radii.sm, paddingVertical: 8, paddingHorizontal: 16 }}
+              style={{ backgroundColor: colors.white, borderRadius: radii.sm, paddingVertical: 8, paddingHorizontal: 16 }}
             >
               <Text style={{ color: colors.red, fontWeight: "900", fontSize: 13 }}>Тест →</Text>
             </Pressable>
@@ -105,33 +105,62 @@ export default function HomeTab() {
       {/* ─── STUDENT JOURNEY ──────────────────────────────────────────────── */}
       <Card>
         <Label>Шлях учня</Label>
-        <View style={{ flexDirection: "row", marginTop: 14, gap: 8 }}>
+        <View style={{ marginTop: 20 }}>
           {([
-            { icon: "📖", title: "Теорія",   done: true  },
-            { icon: "✅", title: "Тести",    done: true  },
-            { icon: "🚗", title: "Практика", done: false },
-            { icon: "🎓", title: "Іспит",    done: false },
-          ] as const).map((step) => (
-            <View key={step.title} style={{ flex: 1, alignItems: "center", gap: 6 }}>
-              <View style={{
-                width: 44, height: 44, borderRadius: 22,
-                backgroundColor: step.done ? colors.red : colors.bgElevated,
-                alignItems: "center", justifyContent: "center",
-                borderWidth: step.done ? 0 : 1.5, borderColor: colors.border,
-              }}>
-                <Text style={{ fontSize: step.done ? 20 : 18, opacity: step.done ? 1 : 0.4 }}>{step.icon}</Text>
+            { icon: "📖", title: "Теорія",   subtitle: "ПДР та правила",    done: true,  current: false },
+            { icon: "✅", title: "Тести",    subtitle: "Онлайн-тренажер",   done: true,  current: false },
+            { icon: "🚗", title: "Практика", subtitle: "За кермом з інструктором", done: false, current: true  },
+            { icon: "🎓", title: "Іспит",    subtitle: "Офіційний в ТСЦ",  done: false, current: false },
+          ] as const).map((step, idx, arr) => (
+            <View key={step.title} style={{ flexDirection: "row", alignItems: "flex-start", marginBottom: idx < arr.length - 1 ? 0 : 0 }}>
+              {/* Left column: dot + line */}
+              <View style={{ width: 44, alignItems: "center" }}>
+                <View style={{
+                  width: 40, height: 40, borderRadius: 20,
+                  backgroundColor: step.done ? colors.red : step.current ? colors.bgCard : colors.bgElevated,
+                  borderWidth: step.current ? 2.5 : step.done ? 0 : 1.5,
+                  borderColor: step.current ? colors.red : colors.border,
+                  alignItems: "center", justifyContent: "center",
+                  shadowColor: step.done ? colors.red : "transparent",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: step.done ? 0.3 : 0,
+                  shadowRadius: 6,
+                  elevation: step.done ? 4 : 0,
+                }}>
+                  {step.done ? (
+                    <Text style={{ fontSize: 18, color: "#fff" }}>✓</Text>
+                  ) : (
+                    <Text style={{ fontSize: 18, opacity: step.current ? 1 : 0.35 }}>{step.icon}</Text>
+                  )}
+                </View>
+                {/* Vertical connector */}
+                {idx < arr.length - 1 ? (
+                  <View style={{ width: 3, flex: 1, minHeight: 20, marginTop: 2, marginBottom: 2, borderRadius: 2, backgroundColor: step.done ? colors.red : colors.border }} />
+                ) : null}
               </View>
-              <Text style={{ color: step.done ? colors.red : colors.textTertiary, fontSize: 11, fontWeight: "800", textAlign: "center" }}>
-                {step.title}
-              </Text>
+
+              {/* Right column: text */}
+              <View style={{ flex: 1, paddingLeft: 14, paddingBottom: idx < arr.length - 1 ? 20 : 0, paddingTop: 8 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Text style={{ fontSize: 15, fontWeight: "900", color: step.done ? colors.textPrimary : step.current ? colors.textPrimary : colors.textTertiary }}>
+                    {step.title}
+                  </Text>
+                  {step.done ? (
+                    <View style={{ backgroundColor: colors.successSoft, borderRadius: radii.full, paddingHorizontal: 8, paddingVertical: 2 }}>
+                      <Text style={{ color: colors.success, fontSize: 10, fontWeight: "800" }}>ГОТОВО</Text>
+                    </View>
+                  ) : step.current ? (
+                    <View style={{ backgroundColor: colors.redSoft, borderRadius: radii.full, paddingHorizontal: 8, paddingVertical: 2 }}>
+                      <Text style={{ color: colors.red, fontSize: 10, fontWeight: "800" }}>ЗАРАЗ</Text>
+                    </View>
+                  ) : null}
+                </View>
+                <Text style={{ fontSize: 13, color: step.current ? colors.textSecondary : colors.textTertiary, marginTop: 2, lineHeight: 18 }}>
+                  {step.subtitle}
+                </Text>
+              </View>
             </View>
           ))}
-        </View>
-        {/* Progress connector line */}
-        <View style={{ flexDirection: "row", position: "absolute", top: 58, left: 56, right: 56 }}>
-          <View style={{ flex: 1, height: 2, backgroundColor: colors.red }} />
-          <View style={{ flex: 1, height: 2, backgroundColor: colors.border }} />
-          <View style={{ flex: 1, height: 2, backgroundColor: colors.border }} />
         </View>
       </Card>
 
