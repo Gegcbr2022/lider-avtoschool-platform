@@ -11,6 +11,8 @@ export type User = {
   city?: string;
   category?: "A" | "A1" | "B" | "C" | "CE";
   avatarInitials: string;
+  avatarEmoji?: string;
+  emailVerified?: boolean;
   isGuest: boolean;
 };
 

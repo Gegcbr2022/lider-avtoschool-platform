@@ -1,6 +1,7 @@
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  sendEmailVerification,
   signInAnonymously,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
@@ -28,16 +29,28 @@ import { GUEST_USER } from "../lib/auth";
 import { API_BASE } from "../lib/api";
 import { ThemeProvider, darkColors as colors, radii, spacing } from "../lib/theme";
 
+// ─── Avatar emoji pool ────────────────────────────────────────────────────────
+const AVATAR_EMOJIS = ["🚗", "🏎️", "🚦", "🛞", "🏁", "🚘", "🧭", "⭐", "🔥", "😎", "🚙", "🛣️"];
+
+function pickAvatar(uid: string): string {
+  const idx = uid.charCodeAt(0) % AVATAR_EMOJIS.length;
+  return AVATAR_EMOJIS[idx];
+}
+
 // ─── Convert Firebase user to our User type ───────────────────────────────────
 
 function toAppUser(fb: FirebaseUser): User {
-  const displayName = fb.displayName ?? fb.email?.split("@")[0] ?? "Учень";
+  // Prefer displayName; fall back to email prefix; hide phone-proxy emails
+  const isPhoneProxy = fb.email?.endsWith("@phone.lider.ua") ?? false;
+  const displayName = fb.displayName ?? (isPhoneProxy ? "Учень" : fb.email?.split("@")[0] ?? "Учень");
   return {
     id: fb.uid,
     name: displayName,
     phone: fb.phoneNumber ?? "",
-    email: fb.email ?? undefined,
+    email: isPhoneProxy ? undefined : (fb.email ?? undefined),
     avatarInitials: displayName.slice(0, 2).toUpperCase(),
+    avatarEmoji: pickAvatar(fb.uid),
+    emailVerified: fb.emailVerified,
     isGuest: fb.isAnonymous,
   };
 }
@@ -136,7 +149,9 @@ export default function RootLayout() {
       );
       // 2. Update display name
       await updateProfile(cred.user, { displayName: data.name });
-      // 3. Submit lead to API (fire-and-forget, non-blocking)
+      // 3. Send email verification (non-blocking, best effort)
+      sendEmailVerification(cred.user).catch(() => {});
+      // 4. Submit lead to API (fire-and-forget, non-blocking)
       fetch(`${API_BASE}/leads`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

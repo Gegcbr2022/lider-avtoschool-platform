@@ -82,28 +82,38 @@ export default function AssistantTab() {
 
     try {
       const res = await askLidyk(q);
-      const isFallback = res.mode !== "openai";
+
+      if (res.mode === "openai") {
+        // Full success — OpenAI answered
+        setMessages((prev) => [...prev, { role: "assistant", text: res.answer, ts: Date.now() }]);
+        setMascotState("happy");
+      } else if (res.mode === "local-fallback") {
+        // No OpenAI key — using local answers
+        setMessages((prev) => [...prev, { role: "assistant", text: res.answer, fallback: true, ts: Date.now() }]);
+        setMascotState("offline");
+      } else if (res.mode === "guard") {
+        // Off-topic question blocked
+        setMessages((prev) => [...prev, { role: "assistant", text: res.answer, ts: Date.now() }]);
+        setMascotState("idle");
+      } else {
+        // openai-fallback or unknown — API returned fallback
+        setMessages((prev) => [...prev, { role: "assistant", text: res.answer, fallback: true, ts: Date.now() }]);
+        setMascotState("sad");
+      }
+    } catch (err: unknown) {
+      const isTimeout = err instanceof Error && err.name === "AbortError";
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          text: res.answer,
-          fallback: isFallback,
-          ts: Date.now(),
-        },
-      ]);
-      setMascotState(isFallback ? "offline" : "happy");
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          text: "Не вдалось отримати відповідь. Перевір інтернет-з'єднання та спробуй ще раз.",
+          text: isTimeout
+            ? "Лідик думав надто довго... Спробуй ще раз або задай простіше питання. ⏱️"
+            : "Щось пішло не так. Спробуй ще раз — Лідик вже готується! 🔧",
           fallback: true,
           ts: Date.now(),
         },
       ]);
-      setMascotState("sad");
+      setMascotState(isTimeout ? "thinking" : "sad");
     } finally {
       setLoading(false);
       setTimeout(() => {
