@@ -61,6 +61,7 @@ export default function OnboardingScreen() {
   const { signInAsGuest } = useAuth();
   const [current, setCurrent] = useState(0);
   const [taps, setTaps] = useState(0);
+  const [offset, setOffset] = useState(0);
   const flatRef = useRef<FlatList<Slide>>(null);
   const dotAnim = useRef(SLIDES.map(() => new Animated.Value(0))).current;
 
@@ -74,7 +75,9 @@ export default function OnboardingScreen() {
   }
 
   function onScroll(e: { nativeEvent: { contentOffset: { x: number } } }) {
-    const idx = Math.round(e.nativeEvent.contentOffset.x / W);
+    const x = e.nativeEvent.contentOffset.x;
+    setOffset(Math.round(x));
+    const idx = Math.round(x / W);
     if (idx !== current) {
       setCurrent(idx);
       animateDot(idx);
@@ -85,17 +88,9 @@ export default function OnboardingScreen() {
     setTaps(taps + 1);
     if (current < SLIDES.length - 1) {
       const nextIndex = current + 1;
-      console.log("[Carousel] Attempting scroll to index:", nextIndex, "from:", current);
-      try {
-        flatRef.current?.scrollToIndex({ index: nextIndex, animated: true, viewPosition: 0 });
-        console.log("[Carousel] scrollToIndex called successfully");
-      } catch (e) {
-        console.error("[Carousel] scrollToIndex failed:", e);
-        // Fallback: use scrollToOffset
-        const offset = nextIndex * W;
-        console.log("[Carousel] Fallback: scrollToOffset with offset:", offset);
-        flatRef.current?.scrollToOffset({ offset, animated: true });
-      }
+      const offset = nextIndex * W;
+      console.log("[Carousel] Scrolling to offset:", offset, "index:", nextIndex);
+      flatRef.current?.scrollToOffset({ offset, animated: true });
     } else {
       router.push("/auth");
     }
@@ -109,10 +104,18 @@ export default function OnboardingScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      {/* Debug: Show current slide and taps */}
-      <Text style={{ position: "absolute", top: 10, right: 10, fontSize: 11, color: colors.red, zIndex: 1000, fontWeight: "bold" }}>
-        {current + 1}/{SLIDES.length} (taps:{taps})
-      </Text>
+      {/* Debug: Show current slide, taps, and offset */}
+      <View style={{ position: "absolute", top: 10, right: 10, zIndex: 1000 }}>
+        <Text style={{ fontSize: 10, color: colors.red, fontWeight: "bold" }}>
+          Slide: {current + 1}/{SLIDES.length}
+        </Text>
+        <Text style={{ fontSize: 10, color: colors.red }}>
+          Taps: {taps}
+        </Text>
+        <Text style={{ fontSize: 9, color: colors.red }}>
+          Offset: {offset}
+        </Text>
+      </View>
 
       {/* Logo/brand */}
       <View style={styles.brand}>
