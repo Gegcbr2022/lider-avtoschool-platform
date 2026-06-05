@@ -60,6 +60,7 @@ const SLIDES: Slide[] = [
 export default function OnboardingScreen() {
   const { signInAsGuest } = useAuth();
   const [current, setCurrent] = useState(0);
+  const [taps, setTaps] = useState(0);
   const flatRef = useRef<FlatList<Slide>>(null);
   const dotAnim = useRef(SLIDES.map(() => new Animated.Value(0))).current;
 
@@ -81,6 +82,7 @@ export default function OnboardingScreen() {
   }
 
   function next() {
+    setTaps(taps + 1);
     if (current < SLIDES.length - 1) {
       const nextIndex = current + 1;
       console.log("[Carousel] Attempting scroll to index:", nextIndex, "from:", current);
@@ -107,6 +109,11 @@ export default function OnboardingScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      {/* Debug: Show current slide and taps */}
+      <Text style={{ position: "absolute", top: 10, right: 10, fontSize: 11, color: colors.red, zIndex: 1000, fontWeight: "bold" }}>
+        {current + 1}/{SLIDES.length} (taps:{taps})
+      </Text>
+
       {/* Logo/brand */}
       <View style={styles.brand}>
         <View style={styles.logoWrap}>
