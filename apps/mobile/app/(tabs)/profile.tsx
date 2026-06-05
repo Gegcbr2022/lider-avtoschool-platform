@@ -367,7 +367,7 @@ export default function ProfileTab() {
       {/* Navigation */}
       <Card>
         <Label>Навчання</Label>
-        <Row title="ПДД Тренажер" detail="Пройти тест зараз" icon="✅" onPress={() => router.push("/(tabs)/tests")} />
+        <Row title="ПДР Тренажер" detail="Пройти тест зараз" icon="✅" onPress={() => router.push("/(tabs)/tests")} />
         <Row title="Курси та уроки" detail="Матеріали для підготовки" icon="📚" onPress={() => router.push("/(tabs)/learning")} />
         <Row title="Клуб та Лідик" detail="Спільнота та AI-помічник" icon="🏆" onPress={() => router.push("/(tabs)/club")} />
       </Card>

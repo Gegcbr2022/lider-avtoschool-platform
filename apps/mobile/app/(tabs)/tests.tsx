@@ -48,7 +48,7 @@ function LidykExplainModal({
   async function askForExplanation() {
     setLoading(true);
     setError(false);
-    const prompt = `Поясни питання ПДД:\n"${question}"\nВаріанти: ${options.map((o, i) => `${String.fromCharCode(65 + i)}) ${o}`).join(", ")}. Правильна відповідь: ${String.fromCharCode(65 + correctIndex)}) ${options[correctIndex]}.\nПоясни коротко чому саме ця відповідь правильна. Відповідай українською.`;
+    const prompt = `Поясни питання ПДР:\n"${question}"\nВаріанти: ${options.map((o, i) => `${String.fromCharCode(65 + i)}) ${o}`).join(", ")}. Правильна відповідь: ${String.fromCharCode(65 + correctIndex)}) ${options[correctIndex]}.\nПоясни коротко чому саме ця відповідь правильна. Відповідай українською.`;
     const result = await askLidyk(prompt, user?.id ?? null);
     if (result.errorType) {
       setError(true);
@@ -69,7 +69,7 @@ function LidykExplainModal({
             <Image source={MASCOT} style={{ width: 48, height: 48 }} resizeMode="contain" />
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 17, fontWeight: "900", color: colors.textPrimary }}>Лідик пояснює</Text>
-              <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>AI-роз'яснення правила ПДД</Text>
+              <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>AI-роз'яснення правила ПДР</Text>
             </View>
             <TouchableOpacity onPress={onClose}>
               <Text style={{ fontSize: 22, color: colors.textTertiary }}>✕</Text>

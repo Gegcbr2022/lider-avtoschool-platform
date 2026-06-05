@@ -282,7 +282,7 @@ function LidykView({ onBack }: { onBack: () => void }) {
 
   return (
     <View style={{ flex: 1 }}>
-      <SubHeader title="Лідик AI" subtitle="Помічник з ПДД і підготовки" onBack={onBack} />
+      <SubHeader title="Лідик AI" subtitle="Помічник з ПДР і підготовки" onBack={onBack} />
       <ScrollView contentContainerStyle={{ padding: spacing.md, paddingBottom: 100, gap: spacing.md }}>
         {!response && !loading ? (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, padding: 16, ...shadows.card }}>
@@ -290,7 +290,7 @@ function LidykView({ onBack }: { onBack: () => void }) {
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 17, fontWeight: "900", color: colors.textPrimary }}>Привіт! Я Лідик 👋</Text>
               <Text style={{ marginTop: 4, fontSize: 13, color: colors.textSecondary, lineHeight: 20 }}>
-                Запитай про ПДД, знаки, правила руху чи підготовку до іспиту
+                Запитай про ПДР, знаки, правила руху чи підготовку до іспиту
               </Text>
             </View>
           </View>
@@ -316,7 +316,7 @@ function LidykView({ onBack }: { onBack: () => void }) {
           <TextInput
             style={{ flex: 1, borderRadius: radii.sm, borderWidth: 1.5, borderColor: colors.border, paddingHorizontal: 16, paddingVertical: 12, fontSize: 14, fontWeight: "600", color: colors.textPrimary, backgroundColor: colors.bgCard, minHeight: 48 }}
             value={customQ} onChangeText={setCustomQ}
-            placeholder="Запитай про ПДД..." placeholderTextColor={colors.textTertiary}
+            placeholder="Запитай про ПДР..." placeholderTextColor={colors.textTertiary}
             multiline returnKeyType="send" onSubmitEditing={() => handleAsk(customQ)} editable={!loading}
           />
           <TouchableOpacity
