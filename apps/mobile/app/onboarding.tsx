@@ -82,7 +82,18 @@ export default function OnboardingScreen() {
 
   function next() {
     if (current < SLIDES.length - 1) {
-      flatRef.current?.scrollToIndex({ index: current + 1, animated: true, viewPosition: 0 });
+      const nextIndex = current + 1;
+      console.log("[Carousel] Attempting scroll to index:", nextIndex, "from:", current);
+      try {
+        flatRef.current?.scrollToIndex({ index: nextIndex, animated: true, viewPosition: 0 });
+        console.log("[Carousel] scrollToIndex called successfully");
+      } catch (e) {
+        console.error("[Carousel] scrollToIndex failed:", e);
+        // Fallback: use scrollToOffset
+        const offset = nextIndex * W;
+        console.log("[Carousel] Fallback: scrollToOffset with offset:", offset);
+        flatRef.current?.scrollToOffset({ offset, animated: true });
+      }
     } else {
       router.push("/auth");
     }
