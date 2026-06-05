@@ -30,6 +30,7 @@ const config: ExpoConfig = {
   experiments: {
     typedRoutes: true
   },
+  owner: "vell1414",
   extra: {
     // Production Firebase Functions — lider-avtoschool project.
     // Use the canonical Cloud Run URL (verified reachable). The cloudfunctions.net
