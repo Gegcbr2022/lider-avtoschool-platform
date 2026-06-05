@@ -13,6 +13,12 @@ import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  createNotificationChannels,
+  registerPushToken,
+  requestNotificationPermission,
+  setupNotificationListeners,
+} from "../lib/notifications";
+import {
   Animated,
   Easing,
   Modal,
@@ -89,6 +95,23 @@ export default function RootLayout() {
   useEffect(() => {
     configureGoogleSignIn();
   }, []);
+
+  // ─── Setup push notifications (Android channels + request permission) ───────
+  useEffect(() => {
+    void createNotificationChannels();
+    const cleanup = setupNotificationListeners();
+    return cleanup;
+  }, []);
+
+  // Register push token when authenticated user is known
+  useEffect(() => {
+    if (mode !== "authenticated" || !user?.id) return;
+    void requestNotificationPermission().then((status) => {
+      if (status === "granted") {
+        void registerPushToken(user.id);
+      }
+    });
+  }, [mode, user?.id]);
 
   // ─── Listen to Firebase auth state (persists across restarts) ─────────────
   useEffect(() => {

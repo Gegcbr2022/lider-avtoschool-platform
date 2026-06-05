@@ -82,6 +82,7 @@ export type UserProfileDoc = {
   category?: string;
   avatarEmoji?: string;
   photoURL?: string;
+  pushToken?: string;
   updatedAt: Date | null;
 };
 
