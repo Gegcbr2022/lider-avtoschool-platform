@@ -82,8 +82,7 @@ export default function OnboardingScreen() {
 
   function next() {
     if (current < SLIDES.length - 1) {
-      const offset = (current + 1) * W;
-      flatRef.current?.scrollToOffset({ offset, animated: true });
+      flatRef.current?.scrollToIndex({ index: current + 1, animated: true, viewPosition: 0 });
     } else {
       router.push("/auth");
     }
@@ -111,10 +110,16 @@ export default function OnboardingScreen() {
         data={SLIDES}
         horizontal
         pagingEnabled
+        scrollEnabled
         showsHorizontalScrollIndicator={false}
         onScroll={onScroll}
         scrollEventThrottle={16}
         keyExtractor={(item) => item.id}
+        getItemLayout={(data, index) => ({
+          length: W,
+          offset: W * index,
+          index
+        })}
         renderItem={({ item }) => (
           <View style={styles.slide}>
             <View style={[styles.emojiWrap, { backgroundColor: item.accent + "22" }]}>
