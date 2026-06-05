@@ -78,17 +78,20 @@ export default function OnboardingScreen() {
   }
 
   function next() {
-    setTaps(taps + 1);
-    if (current < SLIDES.length - 1) {
-      const nextIndex = current + 1;
-      const offset = nextIndex * W;
-      console.log("[OnboardingAlt] Scrolling to offset:", offset);
-      scrollRef.current?.scrollTo({ x: offset, animated: true });
-      setCurrent(nextIndex);
-      animateDot(nextIndex);
-    } else {
-      router.push("/auth");
-    }
+    setTaps(prev => prev + 1);
+    setCurrent(prev => {
+      const nextIndex = prev + 1;
+      if (nextIndex < SLIDES.length) {
+        const offset = nextIndex * W;
+        console.log("[OnboardingAlt] Scrolling to offset:", offset);
+        scrollRef.current?.scrollTo({ x: offset, animated: true });
+        animateDot(nextIndex);
+        return nextIndex;
+      } else {
+        router.push("/auth");
+        return prev;
+      }
+    });
   }
 
   function goGuest() {
