@@ -1,11 +1,15 @@
+/**
+ * Alternative onboarding carousel using ScrollView instead of FlatList
+ * Fallback if FlatList scrolling is broken
+ */
 import { router } from "expo-router";
 import { useRef, useState } from "react";
 import {
   Animated,
   Dimensions,
-  FlatList,
   Image,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -61,8 +65,7 @@ export default function OnboardingScreen() {
   const { signInAsGuest } = useAuth();
   const [current, setCurrent] = useState(0);
   const [taps, setTaps] = useState(0);
-  const [offset, setOffset] = useState(0);
-  const flatRef = useRef<FlatList<Slide>>(null);
+  const scrollRef = useRef<ScrollView>(null);
   const dotAnim = useRef(SLIDES.map(() => new Animated.Value(0))).current;
 
   function animateDot(index: number) {
@@ -74,23 +77,15 @@ export default function OnboardingScreen() {
     });
   }
 
-  function onScroll(e: { nativeEvent: { contentOffset: { x: number } } }) {
-    const x = e.nativeEvent.contentOffset.x;
-    setOffset(Math.round(x));
-    const idx = Math.round(x / W);
-    if (idx !== current) {
-      setCurrent(idx);
-      animateDot(idx);
-    }
-  }
-
   function next() {
     setTaps(taps + 1);
     if (current < SLIDES.length - 1) {
       const nextIndex = current + 1;
       const offset = nextIndex * W;
-      console.log("[Carousel] Scrolling to offset:", offset, "index:", nextIndex);
-      flatRef.current?.scrollToOffset({ offset, animated: true });
+      console.log("[OnboardingAlt] Scrolling to offset:", offset);
+      scrollRef.current?.scrollTo({ x: offset, animated: true });
+      setCurrent(nextIndex);
+      animateDot(nextIndex);
     } else {
       router.push("/auth");
     }
@@ -104,16 +99,13 @@ export default function OnboardingScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      {/* Debug: Show current slide, taps, and offset */}
+      {/* Debug: Show current slide and taps */}
       <View style={{ position: "absolute", top: 10, right: 10, zIndex: 1000 }}>
         <Text style={{ fontSize: 10, color: colors.red, fontWeight: "bold" }}>
           Slide: {current + 1}/{SLIDES.length}
         </Text>
         <Text style={{ fontSize: 10, color: colors.red }}>
           Taps: {taps}
-        </Text>
-        <Text style={{ fontSize: 9, color: colors.red }}>
-          Offset: {offset}
         </Text>
       </View>
 
@@ -126,31 +118,24 @@ export default function OnboardingScreen() {
       </View>
 
       {/* Slides */}
-      <FlatList
-        ref={flatRef}
-        data={SLIDES}
+      <ScrollView
+        ref={scrollRef}
         horizontal
         pagingEnabled
         scrollEnabled
         showsHorizontalScrollIndicator={false}
-        onScroll={onScroll}
         scrollEventThrottle={16}
-        keyExtractor={(item) => item.id}
-        getItemLayout={(data, index) => ({
-          length: W,
-          offset: W * index,
-          index
-        })}
-        renderItem={({ item }) => (
-          <View style={styles.slide}>
+      >
+        {SLIDES.map((item) => (
+          <View key={item.id} style={styles.slide}>
             <View style={[styles.emojiWrap, { backgroundColor: item.accent + "22" }]}>
               <Text style={styles.emoji}>{item.emoji}</Text>
             </View>
             <Text style={styles.slideTitle}>{item.title}</Text>
             <Text style={styles.slideSubtitle}>{item.subtitle}</Text>
           </View>
-        )}
-      />
+        ))}
+      </ScrollView>
 
       {/* Dots */}
       <View style={styles.dots}>
@@ -249,51 +234,63 @@ const styles = StyleSheet.create({
   slideTitle: {
     color: colors.textPrimary,
     fontSize: 28,
-    fontWeight: "900",
-    letterSpacing: -0.5,
+    fontWeight: "700",
     textAlign: "center",
+    marginTop: spacing.md,
   },
   slideSubtitle: {
     color: colors.textSecondary,
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 14,
     textAlign: "center",
+    lineHeight: 20,
   },
 
   dots: {
     flexDirection: "row",
+    gap: 8,
     justifyContent: "center",
-    alignItems: "center",
-    gap: 6,
     paddingVertical: spacing.lg,
   },
-  dot: { height: 8, borderRadius: radii.full },
+  dot: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.border,
+  },
 
   actions: {
+    gap: spacing.md,
     paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xl,
-    gap: spacing.sm,
+    paddingBottom: spacing.lg,
   },
   btnPrimary: {
     backgroundColor: colors.red,
+    paddingVertical: 14,
     borderRadius: radii.md,
-    paddingVertical: 18,
     alignItems: "center",
-    shadowColor: colors.red,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
   },
-  btnPrimaryText: { color: colors.white, fontSize: 17, fontWeight: "800" },
+  btnPrimaryText: {
+    color: colors.bg,
+    fontSize: 16,
+    fontWeight: "600",
+  },
   btnSecondary: {
-    borderWidth: 1.5,
-    borderColor: colors.border,
+    backgroundColor: colors.inputBg,
+    paddingVertical: 14,
     borderRadius: radii.md,
-    paddingVertical: 15,
     alignItems: "center",
   },
-  btnSecondaryText: { color: colors.textSecondary, fontSize: 16, fontWeight: "700" },
-  btnGhost: { alignItems: "center", paddingVertical: 10 },
-  btnGhostText: { color: colors.textTertiary, fontSize: 14 },
+  btnSecondaryText: {
+    color: colors.textPrimary,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  btnGhost: {
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  btnGhostText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    fontWeight: "500",
+  },
 });
