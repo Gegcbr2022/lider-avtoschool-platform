@@ -82,7 +82,8 @@ export default function OnboardingScreen() {
 
   function next() {
     if (current < SLIDES.length - 1) {
-      flatRef.current?.scrollToIndex({ index: current + 1, animated: true });
+      const offset = (current + 1) * W;
+      flatRef.current?.scrollToOffset({ offset, animated: true });
     } else {
       router.push("/auth");
     }

@@ -94,7 +94,10 @@ export async function callOpenAiChat(
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json; charset=utf-8"
+      },
       body: JSON.stringify(body)
     });
 
