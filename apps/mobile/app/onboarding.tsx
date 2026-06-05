@@ -84,7 +84,10 @@ export default function OnboardingScreen() {
       if (nextIndex < SLIDES.length) {
         const offset = nextIndex * W;
         console.log("[OnboardingAlt] Scrolling to offset:", offset);
-        scrollRef.current?.scrollTo({ x: offset, animated: true });
+        // Try immediate scroll without animation first
+        setTimeout(() => {
+          scrollRef.current?.scrollTo({ x: offset, animated: false });
+        }, 0);
         animateDot(nextIndex);
         return nextIndex;
       } else {
