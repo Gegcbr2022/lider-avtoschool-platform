@@ -52,9 +52,21 @@ function ChatList({ onOpen }: { onOpen: (id: string) => void }) {
     {
       id: "support",
       title: "Автошкола Лідер",
-      subtitle: "Менеджер · Підтримка · Інструктор",
-      emoji: "🚗",
+      subtitle: "Загальний чат з автошколою",
+      emoji: "🏫",
       lastMessage: "Напишіть своє питання...",
+    },
+    {
+      id: "manager",
+      title: "Менеджер",
+      subtitle: "Оплата, документи, запис",
+      emoji: "👩‍💼",
+    },
+    {
+      id: "instructor",
+      title: "Інструктор",
+      subtitle: "Практичні заняття",
+      emoji: "🚗",
     },
   ];
 
@@ -253,6 +265,49 @@ function Conversation({ onBack }: { onBack: () => void }) {
   );
 }
 
+// ─── Placeholder conversation for Instructor / Manager ───────────────────────
+// These will become real Firestore chats once the school assigns instructors.
+// For now: inform the user to use the main school chat.
+
+function PlaceholderConversation({
+  title, subtitle, emoji, onBack,
+}: { title: string; subtitle: string; emoji: string; onBack: () => void }) {
+  const { colors } = useTheme();
+  const s = makeStyles(colors);
+
+  return (
+    <SafeAreaView style={s.safe} edges={["top"]}>
+      <View style={s.header}>
+        <Pressable hitSlop={12} onPress={onBack} style={{ marginRight: 8 }}>
+          <Text style={{ color: colors.red, fontSize: 22, fontWeight: "600" }}>‹</Text>
+        </Pressable>
+        <View style={s.chatAvatar}>
+          <Text style={{ fontSize: 20 }}>{emoji}</Text>
+        </View>
+        <View style={{ flex: 1, marginLeft: 10 }}>
+          <Text style={s.headerTitle}>{title}</Text>
+          <Text style={s.headerSub}>{subtitle}</Text>
+        </View>
+      </View>
+      <View style={s.center}>
+        <Text style={{ fontSize: 48, marginBottom: 16 }}>{emoji}</Text>
+        <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "900", textAlign: "center" }}>
+          {title} — скоро
+        </Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 21, textAlign: "center", marginTop: 10, paddingHorizontal: 16 }}>
+          Прямий чат з {title === "Інструктор" ? "інструктором" : "менеджером"} з'явиться після призначення.{"\n\n"}Поки що пишіть через «Автошкола Лідер» — ми відповімо протягом робочого дня.
+        </Text>
+        <Pressable
+          style={{ marginTop: 24, backgroundColor: colors.red, borderRadius: 20, paddingVertical: 14, paddingHorizontal: 40 }}
+          onPress={onBack}
+        >
+          <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>← Повернутись до чатів</Text>
+        </Pressable>
+      </View>
+    </SafeAreaView>
+  );
+}
+
 // ─── Root tab component ───────────────────────────────────────────────────────
 
 export default function ChatTab() {
@@ -283,8 +338,15 @@ export default function ChatTab() {
     );
   }
 
-  if (activeChat) {
+  if (activeChat === "support") {
     return <Conversation onBack={() => setActiveChat(null)} />;
+  }
+
+  if (activeChat === "manager" || activeChat === "instructor") {
+    const meta = activeChat === "manager"
+      ? { title: "Менеджер", subtitle: "Оплата, документи, запис", emoji: "👩‍💼" }
+      : { title: "Інструктор", subtitle: "Практичні заняття", emoji: "🚗" };
+    return <PlaceholderConversation {...meta} onBack={() => setActiveChat(null)} />;
   }
 
   return <ChatList onOpen={(id) => setActiveChat(id)} />;

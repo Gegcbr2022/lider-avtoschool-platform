@@ -828,7 +828,11 @@ export default function ClubTab() {
             <Text style={{ marginTop: 4, color: colors.textSecondary, fontSize: 14 }}>Навчайся, спілкуйся, зростай</Text>
           </View>
           {isAuth ? (
-            <TouchableOpacity onPress={() => setShowCreateStory(true)} style={{ backgroundColor: colors.redSoft, borderRadius: radii.sm, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: colors.red + "44" }}>
+            <TouchableOpacity
+              hitSlop={{ top: 12, bottom: 12, left: 16, right: 16 }}
+              onPress={() => setShowCreateStory(true)}
+              style={{ backgroundColor: colors.redSoft, borderRadius: radii.sm, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: colors.red + "44" }}
+            >
               <Text style={{ fontSize: 13, fontWeight: "800", color: colors.red }}>+ Історія</Text>
             </TouchableOpacity>
           ) : null}

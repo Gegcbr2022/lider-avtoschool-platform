@@ -1,11 +1,54 @@
 import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
-import { Card, Label, LidykBanner, MascotCard, Pill, ProgressBar, Row, Screen } from "../../components/mobile-ui";
+import { Card, Label, Pill, ProgressBar, Row, Screen } from "../../components/mobile-ui";
 import { courseProgress, retentionSignals, student, upcomingSlot } from "../../lib/mobile-data";
 import { useAuth } from "../../lib/auth";
-import { useTheme, radii } from "../../lib/theme";
+import { useTheme, radii, shadows, spacing } from "../../lib/theme";
 
-// ─── Guest dashboard: focused, answers "what can I do right now?" ──────────────
+// ─── Monobank-style tip card ───────────────────────────────────────────────────
+const TIPS = [
+  "Повтори знаки пріоритету та правило перешкоди справа — там найбільше помилок.",
+  "Перевір, чи правильно відрегульовані дзеркала перед кожним заняттям.",
+  "Категорія «Знаки» — база іспиту ПДР. Починай з неї.",
+  "3 короткі сесії тестів на тиждень кращі за одну довгу.",
+  "Стоп-лінія — зупинятися потрібно ПЕРЕД нею, а не на ній.",
+];
+
+function DailyTip({ onPress }: { onPress: () => void }) {
+  const { colors } = useTheme();
+  const tip = TIPS[Math.floor(Date.now() / 86_400_000) % TIPS.length];
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{
+        backgroundColor: colors.bgCard,
+        borderRadius: radii.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+        flexDirection: "row",
+        overflow: "hidden",
+        ...shadows.card,
+      }}
+    >
+      <View style={{ width: 4, backgroundColor: "#f59e0b" }} />
+      <View style={{ flex: 1, padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <Text style={{ fontSize: 22 }}>💡</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 10, fontWeight: "900", color: "#f59e0b", letterSpacing: 1, textTransform: "uppercase", marginBottom: 3 }}>
+            Порада дня
+          </Text>
+          <Text style={{ fontSize: 13, color: colors.textPrimary, lineHeight: 18, fontWeight: "600" }}>
+            {tip}
+          </Text>
+        </View>
+        <Text style={{ fontSize: 18, color: colors.textTertiary }}>›</Text>
+      </View>
+    </Pressable>
+  );
+}
+
+// ─── Guest dashboard ───────────────────────────────────────────────────────────
 function GuestHome() {
   const { colors } = useTheme();
   return (
@@ -26,25 +69,20 @@ function GuestHome() {
         </Pressable>
       </Card>
 
+      <DailyTip onPress={() => router.push("/(tabs)/tests")} />
+
       <Card>
-        <Label>Швидкі дії</Label>
+        <Label>Що можна зробити</Label>
         <Row title="Переглянути курси" detail="Категорії, ціни, програми" icon="📚" onPress={() => router.push("/(tabs)/learning")} />
-        <Row title="Запитати Лідика" detail="AI-помічник 24/7" icon="🚗" onPress={() => router.push("/(tabs)/assistant")} />
+        <Row title="Запитати Лідика" detail="AI-помічник 24/7" icon="🤖" onPress={() => router.push("/(tabs)/assistant")} />
         <Row title="Написати в автошколу" detail="Менеджер відповість" icon="💬" onPress={() => router.push("/(tabs)/chat")} />
       </Card>
-
-      <LidykBanner
-        state="thinking"
-        message="Порада дня: почни з категорії «Знаки» — це база, на якій тримається весь іспит ПДР."
-        action="Почати тест"
-        onAction={() => router.push("/(tabs)/tests")}
-      />
 
       <Pressable
         onPress={() => router.push("/auth?mode=register")}
         style={{ backgroundColor: colors.redSoft, borderRadius: radii.md, padding: 18, borderWidth: 1.5, borderColor: colors.red + "44" }}
       >
-        <Text style={{ color: colors.red, fontWeight: "900", fontSize: 16 }}>🔐 Зареєструватись</Text>
+        <Text style={{ color: colors.red, fontWeight: "900", fontSize: 16 }}>🔐 Зареєструватись безкоштовно</Text>
         <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4, lineHeight: 18 }}>
           Збережи прогрес, отримуй нагороди і доступ до всіх матеріалів.
         </Text>
@@ -62,7 +100,8 @@ function StudentHome({ firstName }: { firstName: string }) {
 
   return (
     <Screen title={`${firstName} 👋`} subtitle="Твій навчальний кабінет.">
-      {/* HERO: where am I now */}
+
+      {/* 1. Де я? — current course */}
       <Card tone="red">
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
           <View style={{ flex: 1 }}>
@@ -104,15 +143,10 @@ function StudentHome({ firstName }: { firstName: string }) {
         </View>
       </Card>
 
-      {/* WHAT'S NEXT: Lidyk daily tip — prominent but compact */}
-      <LidykBanner
-        state="thinking"
-        message="Порада дня: повтори знаки пріоритету та правило перешкоди справа — там найбільше помилок на іспиті."
-        action="Почати тест"
-        onAction={() => router.push("/(tabs)/tests")}
-      />
+      {/* 2. Що робити далі? — daily tip */}
+      <DailyTip onPress={() => router.push("/(tabs)/tests")} />
 
-      {/* NEXT SESSION */}
+      {/* 3. Наступне заняття */}
       <Card>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase" }}>
@@ -143,26 +177,11 @@ function StudentHome({ firstName }: { firstName: string }) {
         </View>
       </Card>
 
-      {/* LEARNING STATUS */}
-      <Card>
-        <Label>Стан навчання</Label>
-        {retentionSignals.map((item) => (
-          <Row
-            key={item.title}
-            title={item.title}
-            detail={item.detail}
-            right={<Pill tone={item.tone}>{item.status}</Pill>}
-          />
-        ))}
-      </Card>
-
-      {/* QUICK ACTIONS */}
+      {/* 4. Швидкі дії — 2 most-used only */}
       <Card>
         <Label>Швидкі дії</Label>
         <Row title="ПДР Тренажер" detail="Почати тест зараз" icon="🎯" onPress={() => router.push("/(tabs)/tests")} />
-        <Row title="Запитати Лідика" detail="AI-помічник" icon="🚗" onPress={() => router.push("/(tabs)/assistant")} />
-        <Row title="Чат з автошколою" detail="Менеджер, підтримка, інструктор" icon="💬" onPress={() => router.push("/(tabs)/chat")} />
-        <Row title="Профіль та налаштування" detail="Тема, документи, вихід" icon="👤" onPress={() => router.push("/(tabs)/profile")} />
+        <Row title="Запитати Лідика" detail="AI-помічник 24/7" icon="🤖" onPress={() => router.push("/(tabs)/assistant")} />
       </Card>
     </Screen>
   );
