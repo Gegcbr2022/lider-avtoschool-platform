@@ -442,15 +442,18 @@ export async function ensureSupportConversation(
   userId: string,
   userName: string
 ): Promise<string> {
-  // Look for existing support conversation for this user
+  // Uses only the participantIds+updatedAt index (no compound type filter needed).
+  // We fetch a small page and find the support convo client-side to avoid
+  // requiring a separate composite index for participantIds+type.
   const q = query(
     collection(db, "conversations"),
     where("participantIds", "array-contains", userId),
-    where("type", "==", "support"),
-    limit(1)
+    orderBy("updatedAt", "desc"),
+    limit(10)
   );
   const snap = await getDocs(q);
-  if (!snap.empty) return snap.docs[0].id;
+  const existing = snap.docs.find((d) => d.data().type === "support");
+  if (existing) return existing.id;
 
   // Create new
   const ref = await addDoc(collection(db, "conversations"), {

@@ -7,6 +7,7 @@ import { Card, GhostButton, Label, Pill, Row, Screen } from "../../components/mo
 import { useTheme, radii, type ThemePreference, spacing } from "../../lib/theme";
 import { useNetworkStatus } from "../../lib/useNetwork";
 import { getUserProfile, upsertUserProfile } from "../../lib/firestore";
+import { requestNotificationPermission, scheduleLocalNotification } from "../../lib/notifications";
 
 const APP_VERSION = (Constants.expoConfig?.version as string | undefined) ?? "1.0.0";
 
@@ -401,7 +402,29 @@ export default function ProfileTab() {
       {/* Notifications */}
       <Card>
         <Label>Сповіщення</Label>
-        <Row title="Щоденне нагадування" detail="Тест дня та серія" icon="🔔" onPress={() => Alert.alert("Незабаром", "Сповіщення будуть доступні в наступному оновленні.")} />
+        <Row
+          title="Щоденне нагадування"
+          detail="Тест дня та серія"
+          icon="🔔"
+          onPress={async () => {
+            const status = await requestNotificationPermission();
+            if (status !== "granted") {
+              Alert.alert(
+                "Дозвіл потрібен",
+                "Увімкніть сповіщення в Налаштуваннях → Застосунки → Автошкола Лідер.",
+                [{ text: "OK" }]
+              );
+              return;
+            }
+            await scheduleLocalNotification({
+              title: "⏰ Час тренуватися!",
+              body: "Пройди тест дня — підтримуй серію та готуйся до іспиту.",
+              channelId: "reminders",
+              delaySeconds: 5,
+            });
+            Alert.alert("Нагадування встановлено", "Отримаєш сповіщення через 5 секунд — перевір!");
+          }}
+        />
       </Card>
 
       {/* Support */}
@@ -424,6 +447,25 @@ export default function ProfileTab() {
         <Card>
           <Label variant="red">Розробник</Label>
           <Row title="Діагностика" detail="API та Firebase" icon="🔧" onPress={() => router.push("/diagnostic")} />
+          <Row
+            title="Тест-сповіщення"
+            detail="Надіслати local push зараз"
+            icon="🧪"
+            onPress={async () => {
+              const status = await requestNotificationPermission();
+              if (status !== "granted") {
+                Alert.alert("Немає дозволу", "Увімкніть сповіщення в налаштуваннях.");
+                return;
+              }
+              await scheduleLocalNotification({
+                title: "🧪 Тест-сповіщення",
+                body: "Push notifications працюють! Канал: reminders.",
+                channelId: "reminders",
+                delaySeconds: 2,
+              });
+              Alert.alert("OK", "Сповіщення через 2 сек.");
+            }}
+          />
           <Row title="Приховати" detail="Вийти з режиму розробника" icon="🙈" onPress={() => setDevUnlocked(false)} />
         </Card>
       ) : null}

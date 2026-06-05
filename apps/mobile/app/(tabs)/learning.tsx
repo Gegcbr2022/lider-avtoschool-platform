@@ -5,21 +5,14 @@ import {
   Label,
   LidykBanner,
   Pill,
-  ProgressBar,
   Row,
   Screen,
   SectionHeader,
 } from "../../components/mobile-ui";
-import { courseProgress, mobileServices } from "../../lib/mobile-data";
+import { mobileServices } from "../../lib/mobile-data";
 import { PDR_QUESTIONS } from "../../lib/pdr-questions";
 import { useTheme, radii } from "../../lib/theme";
 import { useAuth } from "../../lib/auth";
-
-const lessons = [
-  { title: "Тема 12. Проїзд перехресть", detail: "Домашнє завдання до п'ятниці", progress: 72 },
-  { title: "Безпечна дистанція", detail: "Відео та короткий тест", progress: 45 },
-  { title: "Підготовка до сервісного центру", detail: "Екзаменаційний модуль", progress: 84 },
-];
 
 const PDR_CATEGORIES = ["Знаки", "Перехрестя", "Безпека", "Швидкість", "Зупинка", "Розмітка", "Стоянка"];
 
@@ -35,27 +28,38 @@ export default function LearningTab() {
   const { colors } = useTheme();
   const { mode } = useAuth();
   const isAuth = mode === "authenticated";
-  const overall = Math.round(
-    (courseProgress.completedLessons / courseProgress.totalLessons) * 100
-  );
 
   return (
     <Screen title="Навчання" subtitle="Курс, уроки, тести ПДР та тренажери — все в одному місці.">
-      {/* ─── Мій курс (тільки зареєстровані) ────────────────────────────── */}
+
+      {/* ─── Мій курс ────────────────────────────────────────────────────── */}
       {isAuth ? (
-        <Card tone="red">
-          <Label variant="inverse">Мій курс</Label>
-          <Text style={{ marginTop: 8, color: "#fff", fontSize: 22, fontWeight: "900", letterSpacing: -0.3 }}>
-            {courseProgress.title}
+        // Course not yet assigned — clean empty state instead of fake mock data
+        <View
+          style={{
+            backgroundColor: colors.bgCard,
+            borderRadius: radii.lg,
+            borderWidth: 1,
+            borderColor: colors.border,
+            padding: 20,
+          }}
+        >
+          <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 8 }}>
+            Мій курс
           </Text>
-          <Text style={{ marginVertical: 10, color: "rgba(255,255,255,0.78)", lineHeight: 22 }}>
-            {courseProgress.completedLessons}/{courseProgress.totalLessons} уроків · середній результат тестів {courseProgress.testScore}%
+          <Text style={{ color: colors.textPrimary, fontSize: 17, fontWeight: "800" }}>
+            Курс ще не призначено
           </Text>
-          <ProgressBar value={overall} color="rgba(255,255,255,0.9)" />
-          <Text style={{ marginTop: 8, color: "rgba(255,255,255,0.65)", fontSize: 13, fontWeight: "700" }}>
-            {overall}% пройдено
+          <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 6, lineHeight: 20 }}>
+            Менеджер автошколи призначить курс після запису. Поки що тренуйся в ПДР Тренажері.
           </Text>
-        </Card>
+          <Pressable
+            onPress={() => router.push("/(tabs)/chat")}
+            style={{ marginTop: 14, backgroundColor: colors.redSoft, borderRadius: radii.sm, paddingVertical: 11, alignItems: "center", borderWidth: 1.5, borderColor: colors.red + "44" }}
+          >
+            <Text style={{ color: colors.red, fontWeight: "800", fontSize: 14 }}>Написати менеджеру →</Text>
+          </Pressable>
+        </View>
       ) : (
         <Pressable onPress={() => router.push("/auth?mode=register")}>
           <Card>
@@ -119,28 +123,6 @@ export default function LearningTab() {
           ))}
         </View>
       </Card>
-
-      {/* ─── Активні уроки — тільки зареєстровані ────────────────────────── */}
-      {isAuth ? (
-        <Card>
-          <Label>Активні уроки</Label>
-          {lessons.map(({ title, detail, progress }) => (
-            <Row
-              key={title}
-              title={title}
-              detail={detail}
-              right={
-                <View style={{ alignItems: "flex-end", gap: 4 }}>
-                  <Text style={{ color: colors.red, fontWeight: "900", fontSize: 13 }}>{progress}%</Text>
-                  <View style={{ width: 48, height: 4, borderRadius: 4, backgroundColor: colors.border, overflow: "hidden" }}>
-                    <View style={{ height: 4, width: `${progress}%` as any, backgroundColor: colors.red, borderRadius: 4 }} />
-                  </View>
-                </View>
-              }
-            />
-          ))}
-        </Card>
-      ) : null}
 
       {/* ─── Lidyk tip ────────────────────────────────────────────────────── */}
       <LidykBanner

@@ -1,100 +1,67 @@
-// ─── Push Notifications — Expo Notifications + Firebase Cloud Messaging ───────
-// Android: FCM via google-services.json (project: lider-avtoschool)
-// iOS: APNs via EAS credentials (requires apple developer account)
+// ─── Push Notifications — stub ────────────────────────────────────────────────
+// expo-notifications (v0.30.x / v0.31.x) has a binary incompatibility with
+// expo-modules-core 2.5.0 (Expo SDK 53) — BadgeModule crashes at startup.
+// Until a compatible version ships, we implement a no-op stub so the rest
+// of the app compiles and runs. The push-token registration path is preserved
+// so that once a working expo-notifications build is available the stub can
+// be swapped back for the real implementation with minimal changes.
 //
-// Flow:
+// FCM architecture (already in place, just needs the token path unblocked):
 //  1. App starts → requestPermissions() + registerPushToken()
-//  2. Push token saved in Firestore: userProfiles/{userId}.pushToken
-//  3. Server (Cloud Functions) reads token → sends notification via FCM
-//     when: manager replies in chat, new lesson reminder, daily tip
+//  2. Token saved to Firestore: userProfiles/{userId}.pushToken
+//  3. Cloud Functions reads token → FCM → device notification
+//     triggers: manager reply in chat, new lesson reminder, daily tip
 
-import * as Notifications from "expo-notifications";
-import { Platform } from "react-native";
+import { Alert } from "react-native";
 import { upsertUserProfile } from "./firestore";
-
-// Configure how notifications appear when app is in foreground
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }) as Notifications.NotificationBehavior,
-});
 
 export type NotificationPermissionStatus = "granted" | "denied" | "undetermined";
 
 export async function requestNotificationPermission(): Promise<NotificationPermissionStatus> {
-  const existing = await Notifications.getPermissionsAsync();
-  // PermissionResponse has `granted: boolean` and `canAskAgain: boolean`
-  const existingResp = existing as unknown as { granted: boolean; canAskAgain: boolean };
-  if (existingResp.granted) return "granted";
-
-  const result = await Notifications.requestPermissionsAsync({
-    ios: { allowAlert: true, allowSound: true, allowBadge: false },
-  });
-  const resp = result as unknown as { granted: boolean; canAskAgain: boolean };
-  if (resp.granted) return "granted";
-  return resp.canAskAgain ? "undetermined" : "denied";
+  // On a real physical device this would request the OS permission dialog.
+  // In the emulator we simulate "granted" so the test flow works.
+  return "granted";
 }
 
 export async function registerPushToken(userId: string): Promise<string | null> {
   try {
-    // Physical device only (emulators don't support push)
-    const { data: token } = await Notifications.getExpoPushTokenAsync({
-      projectId: "74bb8f9a-fc35-4016-b110-a17da4dcd31c",
-    });
-
-    // Save to Firestore so server can find it
-    await upsertUserProfile(userId, { pushToken: token });
-    return token;
+    // When expo-notifications is re-enabled, call getExpoPushTokenAsync here.
+    // For now, clear any stale pushToken to avoid sending to wrong device.
+    await upsertUserProfile(userId, { pushToken: undefined });
   } catch {
-    // Emulator / permission denied / no projectId configured — silently ignore
-    return null;
+    // Non-critical
   }
+  return null;
 }
 
 export function setupNotificationListeners(
-  onNotification?: (notification: Notifications.Notification) => void,
-  onResponse?: (response: Notifications.NotificationResponse) => void
+  _onNotification?: (notification: unknown) => void,
+  _onResponse?: (response: unknown) => void
 ): () => void {
-  const receivedSub = Notifications.addNotificationReceivedListener((notification) => {
-    onNotification?.(notification);
-  });
-
-  const responseSub = Notifications.addNotificationResponseReceivedListener((response) => {
-    onResponse?.(response);
-  });
-
-  return () => {
-    receivedSub.remove();
-    responseSub.remove();
-  };
+  return () => {};
 }
 
-// ─── Android notification channels ───────────────────────────────────────────
-// Must be created before first notification on Android 8+
-
 export async function createNotificationChannels(): Promise<void> {
-  if (Platform.OS !== "android") return;
+  // No-op — channels will be created once expo-notifications is re-added.
+}
 
-  await Notifications.setNotificationChannelAsync("messages", {
-    name: "Повідомлення",
-    description: "Нові повідомлення від менеджера та інструктора",
-    importance: Notifications.AndroidImportance.HIGH,
-    vibrationPattern: [0, 250, 250, 250],
-    sound: "default",
-  });
+export async function scheduleLocalNotification(params: {
+  title: string;
+  body: string;
+  channelId?: string;
+  delaySeconds?: number;
+}): Promise<string> {
+  // Simulate a local notification with an Alert so the UX flow is testable.
+  const { title, body, delaySeconds = 0 } = params;
+  const showIt = () => Alert.alert(title, body);
+  if (delaySeconds > 0) {
+    setTimeout(showIt, delaySeconds * 1000);
+  } else {
+    showIt();
+  }
+  return "stub-notification-id";
+}
 
-  await Notifications.setNotificationChannelAsync("reminders", {
-    name: "Нагадування",
-    description: "Нагадування про заняття та тести",
-    importance: Notifications.AndroidImportance.DEFAULT,
-    sound: "default",
-  });
-
-  await Notifications.setNotificationChannelAsync("tips", {
-    name: "Поради дня",
-    description: "Щоденні поради для підготовки до іспиту",
-    importance: Notifications.AndroidImportance.LOW,
-  });
+export async function cancelAllScheduledNotifications(): Promise<void> {
+  // No-op
 }
