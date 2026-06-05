@@ -765,11 +765,11 @@ export default function ClubTab() {
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [tipIndex] = useState(Math.floor(Date.now() / 86_400_000) % roadTips.length);
 
-  const mascot = getMascotState(driverClubStreak);
+  const isAuth = mode !== "guest";
+  const mascot = getMascotState(isAuth ? driverClubStreak : { current: 0, best: 0, lastActiveDate: "" });
   const isAnswered = selectedAnswer !== null;
   const isCorrect = selectedAnswer === todayChallenge.correctIndex;
   const earnedCount = clubAwards.filter(a => a.earned).length;
-  const isAuth = mode !== "guest";
 
   // Subscribe to live stories
   useEffect(() => {

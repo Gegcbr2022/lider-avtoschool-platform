@@ -120,25 +120,27 @@ export default function LearningTab() {
         </View>
       </Card>
 
-      {/* ─── Активні уроки ────────────────────────────────────────────────── */}
-      <Card>
-        <Label>Активні уроки</Label>
-        {lessons.map(({ title, detail, progress }) => (
-          <Row
-            key={title}
-            title={title}
-            detail={detail}
-            right={
-              <View style={{ alignItems: "flex-end", gap: 4 }}>
-                <Text style={{ color: colors.red, fontWeight: "900", fontSize: 13 }}>{progress}%</Text>
-                <View style={{ width: 48, height: 4, borderRadius: 4, backgroundColor: colors.border, overflow: "hidden" }}>
-                  <View style={{ height: 4, width: `${progress}%` as any, backgroundColor: colors.red, borderRadius: 4 }} />
+      {/* ─── Активні уроки — тільки зареєстровані ────────────────────────── */}
+      {isAuth ? (
+        <Card>
+          <Label>Активні уроки</Label>
+          {lessons.map(({ title, detail, progress }) => (
+            <Row
+              key={title}
+              title={title}
+              detail={detail}
+              right={
+                <View style={{ alignItems: "flex-end", gap: 4 }}>
+                  <Text style={{ color: colors.red, fontWeight: "900", fontSize: 13 }}>{progress}%</Text>
+                  <View style={{ width: 48, height: 4, borderRadius: 4, backgroundColor: colors.border, overflow: "hidden" }}>
+                    <View style={{ height: 4, width: `${progress}%` as any, backgroundColor: colors.red, borderRadius: 4 }} />
+                  </View>
                 </View>
-              </View>
-            }
-          />
-        ))}
-      </Card>
+              }
+            />
+          ))}
+        </Card>
+      ) : null}
 
       {/* ─── Lidyk tip ────────────────────────────────────────────────────── */}
       <LidykBanner
