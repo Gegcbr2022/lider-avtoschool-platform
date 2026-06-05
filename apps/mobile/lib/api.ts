@@ -74,12 +74,16 @@ export async function askLidyk(
   let errorType: LidykErrorType | undefined;
   let result: LidykResponse;
 
+  // AbortSignal.timeout() is not supported in Hermes/React Native — use manual controller.
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20_000);
+
   try {
     const response = await fetch(`${API_BASE}/ai/lidyk`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question }),
-      signal: AbortSignal.timeout(20_000),
+      signal: controller.signal,
     });
 
     if (response.status === 429) {
@@ -107,6 +111,8 @@ export async function askLidyk(
       mode: "fallback",
       errorType,
     };
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   // Fire-and-forget AI log (non-blocking, never throws)
