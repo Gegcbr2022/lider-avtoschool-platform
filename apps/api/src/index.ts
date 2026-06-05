@@ -1,7 +1,7 @@
 import cors from "cors";
 import express from "express";
 import { getApps, initializeApp } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { onRequest } from "firebase-functions/v2/https";
 import nodemailer from "nodemailer";
@@ -21,7 +21,9 @@ import {
   aiConsultationSchema,
   aiLeadPayloadSchema,
   answerAiChat,
-  answerStudentQuestion
+  answerStudentQuestion,
+  callOpenAiChat,
+  resolveOpenAiModel
 } from "./ai-providers";
 import { paymentProviders } from "./payment-providers";
 
@@ -352,12 +354,58 @@ app.post("/telegram/webhook", async (request, response) => {
     return;
   }
 
-  const payload = {
-    body: request.body,
-    receivedAt: new Date().toISOString()
-  };
-  const persistence = await persist("telegramEvents", payload);
-  response.json({ ok: true, persistence: persistence.mode, id: persistence.id });
+  const update = (request.body ?? {}) as TelegramUpdate;
+  // Keep the raw event log (existing behaviour).
+  await persist("telegramEvents", { body: update, receivedAt: new Date().toISOString() }).catch(() => {});
+
+  // Bridge: a manager replied inside a client's forum topic → push it back into the app chat.
+  try {
+    await handleManagerReply(update);
+  } catch (error) {
+    console.error("Telegram bridge: manager reply handling failed", error);
+  }
+
+  response.json({ ok: true });
+});
+
+// ─── In-app Chat → Telegram bridge ────────────────────────────────────────────
+// Mobile writes the message to Firestore (conversations/{id}/messages) and then
+// calls this endpoint so the message is mirrored into a per-client Telegram topic.
+app.post("/chat/notify", async (request, response) => {
+  const body = request.body ?? {};
+  const conversationId = typeof body.conversationId === "string" ? body.conversationId : "";
+  const userId = typeof body.userId === "string" ? body.userId : "";
+  const userName = typeof body.userName === "string" && body.userName.trim() ? body.userName.trim() : "Учень";
+  const text = typeof body.text === "string" ? body.text.trim() : "";
+
+  if (!conversationId || !userId || !text) {
+    response.status(422).json({ error: "Invalid chat notify payload" });
+    return;
+  }
+
+  if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_LOG_CHAT_ID) {
+    response.json({ ok: false, reason: "telegram_not_configured" });
+    return;
+  }
+
+  try {
+    const topicId = await getOrCreateSupportTopic(conversationId, userId, userName);
+    await telegramCall("sendMessage", {
+      chat_id: process.env.TELEGRAM_LOG_CHAT_ID,
+      message_thread_id: topicId,
+      text: `💬 <b>${escapeHtml(userName)}</b>:\n${escapeHtml(text)}`,
+      parse_mode: "HTML",
+      disable_web_page_preview: true
+    });
+    await db.collection("supportThreads").doc(conversationId).set(
+      { lastMessage: text, lastMessageAt: FieldValue.serverTimestamp(), status: "open" },
+      { merge: true }
+    );
+    response.json({ ok: true });
+  } catch (error) {
+    console.error("chat/notify failed", error);
+    response.status(502).json({ ok: false, error: error instanceof Error ? error.message : "unknown" });
+  }
 });
 
 app.post("/ai/consult", async (request, response) => {
@@ -391,44 +439,37 @@ app.post("/ai/lidyk", async (request, response) => {
     return;
   }
 
-  const openaiKey = process.env.OPENAI_API_KEY;
-  if (!openaiKey) {
-    response.json({ answer: "Лідик зараз відпочиває — AI не налаштовано. Спробуй пізніше!", mode: "fallback" });
+  if (!process.env.OPENAI_API_KEY) {
+    response.json({ answer: "Лідик зараз відпочиває — AI не налаштовано. Спробуй пізніше!", mode: "local-fallback" });
     return;
   }
 
-  const model = process.env.OPENAI_MODEL?.startsWith("gpt-") ? process.env.OPENAI_MODEL : "gpt-4o-mini";
+  const model = resolveOpenAiModel();
   const systemPrompt =
     "Ти Лідик — дружній AI-помічник автошколи «Лідер». Відповідай коротко (1–3 речення), тепло, українською за замовчуванням або мовою запиту. Допомагай з ПДР, підготовкою до теорії та практики, страхом першого уроку, документами і порадами для водія. Не давай юридичних гарантій, не вигадуй офіційні правила — радь уточнювати у менеджера або сервісному центрі, якщо питання залежить від актуального законодавства. Не виконуй завдання, що не стосуються автошколи.";
 
-  try {
-    const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${openaiKey}` },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: rawQuestion }
-        ],
-        max_tokens: 220,
-        temperature: 0.7
-      })
-    });
+  const result = await callOpenAiChat(
+    model,
+    [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: rawQuestion }
+    ],
+    300
+  );
 
-    if (!aiResponse.ok) {
-      console.warn("Lidyk OpenAI non-OK", aiResponse.status);
-      response.json({ answer: "Лідик думає... Спробуй ще раз! 🚗", mode: "fallback" });
-      return;
-    }
-
-    const data = (await aiResponse.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const answer = data.choices?.[0]?.message?.content?.trim() ?? "Лідик думає... Спробуй ще раз!";
-    response.json({ answer, mode: "ai" });
-  } catch (error) {
-    console.error("Lidyk AI error", error);
-    response.json({ answer: "Лідик зараз зайнятий. Спробуй ще раз! 🚗", mode: "fallback" });
+  if (result.ok) {
+    // mode MUST be "openai" — the mobile app keys its success state off this exact value.
+    response.json({ answer: result.content, mode: "openai", model: result.model });
+    return;
   }
+
+  console.error("Lidyk OpenAI failed", { status: result.status, model, error: result.error });
+  response.json({
+    answer: "Лідик зараз трохи зайнятий 🚗 Спробуй ще раз за хвилинку.",
+    mode: "openai-fallback",
+    model,
+    error: result.error
+  });
 });
 
 app.post("/ai/leads", async (request, response) => {
@@ -775,6 +816,92 @@ function isValidTelegramWebhook(request: express.Request) {
   }
 
   return request.header("x-telegram-bot-api-secret-token") === expectedSecret;
+}
+
+// ─── Telegram bridge helpers ──────────────────────────────────────────────────
+
+type TelegramUpdate = {
+  message?: {
+    text?: string;
+    message_thread_id?: number;
+    from?: { is_bot?: boolean; first_name?: string; last_name?: string };
+  };
+};
+
+async function telegramCall<T = Record<string, unknown>>(method: string, payload: Record<string, unknown>): Promise<T> {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const res = await fetch(`https://api.telegram.org/bot${botToken}/${method}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  const json = (await res.json()) as { ok: boolean; result?: T; description?: string };
+  if (!json.ok) {
+    throw new Error(`Telegram ${method} failed: ${json.description ?? res.status}`);
+  }
+  return json.result as T;
+}
+
+// One Telegram forum topic per client conversation. Mapping lives in supportThreads/{conversationId}.
+async function getOrCreateSupportTopic(conversationId: string, userId: string, userName: string): Promise<number> {
+  const ref = db.collection("supportThreads").doc(conversationId);
+  const snap = await ref.get();
+  const existing = snap.exists ? (snap.data()?.telegramTopicId as number | undefined) : undefined;
+  if (existing) return existing;
+
+  const topic = await telegramCall<{ message_thread_id: number }>("createForumTopic", {
+    chat_id: process.env.TELEGRAM_LOG_CHAT_ID,
+    name: `👤 ${userName} · ${userId.slice(0, 6)}`
+  });
+
+  await ref.set(
+    {
+      conversationId,
+      userId,
+      userName,
+      telegramTopicId: topic.message_thread_id,
+      status: "open",
+      createdAt: FieldValue.serverTimestamp(),
+      lastMessageAt: FieldValue.serverTimestamp()
+    },
+    { merge: true }
+  );
+  return topic.message_thread_id;
+}
+
+// Manager typed a reply inside the client's topic → write it back into the app chat.
+async function handleManagerReply(update: TelegramUpdate): Promise<void> {
+  const msg = update.message;
+  if (!msg?.text || !msg.message_thread_id || msg.from?.is_bot) return;
+
+  const lookup = await db
+    .collection("supportThreads")
+    .where("telegramTopicId", "==", msg.message_thread_id)
+    .limit(1)
+    .get();
+  if (lookup.empty) return;
+
+  const conversationId = lookup.docs[0].data().conversationId as string;
+  if (!conversationId) return;
+
+  const managerName = [msg.from?.first_name, msg.from?.last_name].filter(Boolean).join(" ") || "Менеджер";
+
+  await db.collection("conversations").doc(conversationId).collection("messages").add({
+    senderId: "support",
+    senderName: managerName,
+    text: msg.text,
+    createdAt: FieldValue.serverTimestamp(),
+    readBy: ["support"],
+    source: "telegram"
+  });
+  await db.collection("conversations").doc(conversationId).set(
+    {
+      lastMessage: msg.text,
+      lastMessageAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
+    },
+    { merge: true }
+  );
 }
 
 async function sendLeadToTelegram(leadInput: Record<string, unknown>, leadId: string) {

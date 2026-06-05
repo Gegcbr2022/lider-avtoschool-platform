@@ -20,12 +20,13 @@ type Screen = "choose" | "email-login" | "email-register" | "forgot";
 // ─── Shared components ────────────────────────────────────────────────────────
 
 function Field({
-  label, value, onChange, placeholder, secure, keyboard, error, autoFocus,
+  label, value, onChange, placeholder, secure, keyboard, error, autoFocus, autoCapitalize,
 }: {
   label: string; value: string; onChange: (v: string) => void;
   placeholder?: string; secure?: boolean;
   keyboard?: "default" | "email-address" | "phone-pad";
   error?: string; autoFocus?: boolean;
+  autoCapitalize?: "none" | "sentences" | "words" | "characters";
 }) {
   const { colors } = useTheme();
   return (
@@ -39,7 +40,7 @@ function Field({
         }}
         value={value} onChangeText={onChange} placeholder={placeholder}
         placeholderTextColor={colors.textTertiary} secureTextEntry={secure}
-        keyboardType={keyboard ?? "default"} autoCapitalize="none"
+        keyboardType={keyboard ?? "default"} autoCapitalize={autoCapitalize ?? "none"}
         autoCorrect={false} autoFocus={autoFocus}
       />
       {error ? <Text style={{ color: colors.red, fontSize: 12, fontWeight: "600" }}>{error}</Text> : null}
@@ -47,15 +48,15 @@ function Field({
   );
 }
 
-function Btn({ label, onPress, loading, variant = "primary" }: {
+function Btn({ label, onPress, loading, variant = "primary", disabled }: {
   label: string; onPress: () => void; loading?: boolean;
-  variant?: "primary" | "outline" | "ghost";
+  variant?: "primary" | "outline" | "ghost"; disabled?: boolean;
 }) {
   const { colors } = useTheme();
   if (variant === "primary") {
     return (
-      <Pressable onPress={onPress} disabled={loading}
-        style={{ backgroundColor: colors.red, borderRadius: radii.md, paddingVertical: 18, alignItems: "center", shadowColor: colors.red, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 8, opacity: loading ? 0.6 : 1 }}
+      <Pressable onPress={onPress} disabled={loading || disabled}
+        style={{ backgroundColor: colors.red, borderRadius: radii.md, paddingVertical: 18, alignItems: "center", shadowColor: colors.red, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 8, opacity: (loading || disabled) ? 0.6 : 1 }}
       >
         {loading ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontSize: 16, fontWeight: "800" }}>{label}</Text>}
       </Pressable>
@@ -63,15 +64,15 @@ function Btn({ label, onPress, loading, variant = "primary" }: {
   }
   if (variant === "outline") {
     return (
-      <Pressable onPress={onPress}
-        style={{ borderWidth: 1.5, borderColor: colors.border, borderRadius: radii.md, paddingVertical: 14, alignItems: "center" }}
+      <Pressable onPress={onPress} disabled={disabled}
+        style={{ borderWidth: 1.5, borderColor: colors.border, borderRadius: radii.md, paddingVertical: 14, alignItems: "center", opacity: disabled ? 0.5 : 1 }}
       >
         <Text style={{ color: colors.textSecondary, fontWeight: "700", fontSize: 15 }}>{label}</Text>
       </Pressable>
     );
   }
   return (
-    <Pressable onPress={onPress} style={{ alignItems: "center", paddingVertical: 10 }}>
+    <Pressable onPress={onPress} disabled={disabled} style={{ alignItems: "center", paddingVertical: 10 }}>
       <Text style={{ color: colors.textTertiary, fontSize: 14 }}>{label}</Text>
     </Pressable>
   );
@@ -81,7 +82,21 @@ function Btn({ label, onPress, loading, variant = "primary" }: {
 
 function ChooseScreen({ onSelect }: { onSelect: (s: Screen) => void }) {
   const { colors } = useTheme();
-  const { signInAsGuest } = useAuth();
+  const { signInAsGuest, signInWithGoogle } = useAuth();
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
+
+  async function handleGoogle() {
+    setGoogleError(null);
+    setGoogleLoading(true);
+    const result = await signInWithGoogle();
+    setGoogleLoading(false);
+    if (!result.success && !result.cancelled) {
+      setGoogleError(result.error ?? "Помилка входу через Google");
+    }
+    // success → onAuthStateChanged in _layout.tsx handles navigation
+  }
+
   return (
     <View style={{ gap: spacing.md }}>
       <View style={{ alignItems: "center", gap: 12, marginBottom: spacing.sm }}>
@@ -105,16 +120,36 @@ function ChooseScreen({ onSelect }: { onSelect: (s: Screen) => void }) {
       {/* Email login */}
       <Btn label="Увійти в існуючий акаунт" onPress={() => onSelect("email-login")} variant="outline" />
 
-      {/* Google — ready when SHA-1 configured */}
-      <View style={{ opacity: 0.45, flexDirection: "row", alignItems: "center", gap: 14, padding: 16, backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1.5, borderColor: colors.border }}>
-        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.bgElevated, alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ fontSize: 20, fontWeight: "900", color: colors.textTertiary }}>G</Text>
+      {/* Google Sign-In */}
+      <Pressable
+        onPress={handleGoogle}
+        disabled={googleLoading}
+        style={{
+          flexDirection: "row", alignItems: "center", gap: 14, padding: 16,
+          backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1.5,
+          borderColor: colors.border, opacity: googleLoading ? 0.7 : 1,
+        }}
+      >
+        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" }}>
+          {googleLoading ? (
+            <ActivityIndicator size="small" color={colors.red} />
+          ) : (
+            <Text style={{ fontSize: 22, fontWeight: "900", color: "#4285F4" }}>G</Text>
+          )}
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: colors.textTertiary, fontWeight: "700", fontSize: 15 }}>Google</Text>
-          <Text style={{ color: colors.textTertiary, fontSize: 12, marginTop: 2 }}>Скоро буде доступно</Text>
+          <Text style={{ color: colors.textPrimary, fontWeight: "700", fontSize: 15 }}>
+            {googleLoading ? "Вхід через Google..." : "Продовжити через Google"}
+          </Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>Швидко і безпечно</Text>
         </View>
-      </View>
+      </Pressable>
+
+      {googleError ? (
+        <View style={{ backgroundColor: colors.redSoft, borderRadius: radii.sm, padding: 12, borderWidth: 1, borderColor: colors.red + "40" }}>
+          <Text style={{ color: colors.red, fontWeight: "700", fontSize: 13 }}>⚠️ {googleError}</Text>
+        </View>
+      ) : null}
 
       <View style={{ height: 1, backgroundColor: colors.divider }} />
 
@@ -266,10 +301,13 @@ function ForgotPasswordScreen({ onBack }: { onBack: () => void }) {
     const trimEmail = email.trim().toLowerCase();
     if (!trimEmail || !trimEmail.includes("@")) { setError("Введіть коректний email"); return; }
     setLoading(true);
-    const ok = await forgotPassword(trimEmail);
+    const result = await forgotPassword(trimEmail);
     setLoading(false);
-    if (ok) setSent(true);
-    else setError("Не вдалося надіслати лист. Перевірте email та спробуйте ще раз.");
+    if (result.sent) {
+      setSent(true);
+    } else {
+      setError(result.error ?? "Не вдалося надіслати лист. Перевірте email та спробуйте ще раз.");
+    }
   }
 
   if (sent) {
@@ -278,8 +316,16 @@ function ForgotPasswordScreen({ onBack }: { onBack: () => void }) {
         <Text style={{ fontSize: 56 }}>✉️</Text>
         <Text style={{ color: colors.textPrimary, fontSize: 24, fontWeight: "900", textAlign: "center" }}>Лист надіслано!</Text>
         <Text style={{ color: colors.textSecondary, fontSize: 15, textAlign: "center", lineHeight: 24 }}>
-          Перевір {email.trim()} та перейди за посиланням для скидання пароля.
+          Перевір <Text style={{ fontWeight: "700", color: colors.textPrimary }}>{email.trim()}</Text> та перейди за посиланням для скидання пароля.
         </Text>
+        <View style={{ backgroundColor: colors.infoSoft, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.info + "33", width: "100%", gap: 4 }}>
+          <Text style={{ color: colors.info, fontWeight: "800", fontSize: 13 }}>📬 Не бачиш листа?</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 20 }}>
+            • Перевір папку «Спам» або «Промоакції»{"\n"}
+            • Лист від noreply@lider-avtoschool.firebaseapp.com{"\n"}
+            • Зазвичай приходить протягом 1-2 хвилин
+          </Text>
+        </View>
         <Btn label="← Повернутись до входу" onPress={onBack} variant="outline" />
       </View>
     );
@@ -297,6 +343,11 @@ function ForgotPasswordScreen({ onBack }: { onBack: () => void }) {
         </Text>
       </View>
       <Field label="Email" value={email} onChange={setEmail} placeholder="your@email.com" keyboard="email-address" autoFocus error={error ?? undefined} />
+      {error ? (
+        <View style={{ backgroundColor: colors.redSoft, borderRadius: radii.sm, padding: 12, borderWidth: 1, borderColor: colors.red + "40" }}>
+          <Text style={{ color: colors.red, fontWeight: "700", fontSize: 13 }}>⚠️ {error}</Text>
+        </View>
+      ) : null}
       <Btn label="Надіслати посилання" onPress={handleSend} loading={loading} />
     </View>
   );

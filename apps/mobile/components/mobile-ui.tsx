@@ -96,13 +96,13 @@ export function Label({
   children: ReactNode;
   variant?: "default" | "inverse" | "red" | "muted";
 }) {
+  const { colors: tc } = useTheme();
+  const dynamicColor =
+    variant === "inverse" ? "rgba(255,255,255,0.6)" :
+    variant === "red" ? tc.red :
+    tc.textTertiary;
   return (
-    <Text style={[
-      styles.label,
-      variant === "inverse" && styles.labelInverse,
-      variant === "red" && styles.labelRed,
-      variant === "muted" && styles.labelMuted,
-    ]}>
+    <Text style={[styles.label, { color: dynamicColor }]}>
       {children}
     </Text>
   );
@@ -257,18 +257,19 @@ export function Row({
   icon?: string;
   onPress?: () => void;
 }) {
+  const { colors: tc } = useTheme();
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && onPress && styles.rowPressed]}
+      style={({ pressed }) => [styles.row, { borderBottomColor: tc.divider }, pressed && onPress && { backgroundColor: tc.bgElevated }]}
     >
       {icon ? <Text style={styles.rowIcon}>{icon}</Text> : null}
       <View style={styles.rowText}>
-        <Text style={styles.rowTitle}>{title}</Text>
-        {detail ? <Text style={styles.rowDetail}>{detail}</Text> : null}
+        <Text style={[styles.rowTitle, { color: tc.textPrimary }]}>{title}</Text>
+        {detail ? <Text style={[styles.rowDetail, { color: tc.textSecondary }]}>{detail}</Text> : null}
       </View>
       {right}
-      {onPress && !right ? <Text style={styles.rowChevron}>›</Text> : null}
+      {onPress && !right ? <Text style={[styles.rowChevron, { color: tc.textTertiary }]}>›</Text> : null}
     </Pressable>
   );
 }
@@ -536,12 +537,13 @@ export function SectionHeader({
   action?: string;
   onAction?: () => void;
 }) {
+  const { colors: tc } = useTheme();
   return (
     <View style={styles.sectionHeader}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <Text style={[styles.sectionTitle, { color: tc.textPrimary }]}>{title}</Text>
       {action ? (
         <Pressable onPress={onAction}>
-          <Text style={styles.sectionAction}>{action}</Text>
+          <Text style={[styles.sectionAction, { color: tc.red }]}>{action}</Text>
         </Pressable>
       ) : null}
     </View>

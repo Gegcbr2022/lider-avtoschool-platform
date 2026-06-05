@@ -5,10 +5,10 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getApp, getApps, initializeApp } from "firebase/app";
-import {
-  getReactNativePersistence,
-  initializeAuth,
-} from "firebase/auth";
+import { type Persistence, initializeAuth } from "firebase/auth";
+// firebase v12 TS types omit getReactNativePersistence; the symbol still exists at runtime.
+// eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-explicit-any
+const getReactNativePersistence: (storage: unknown) => Persistence = (require("firebase/auth") as any).getReactNativePersistence;
 
 // Production Firebase config — matches google-services.json (lider-avtoschool)
 // Project number: 111711727739

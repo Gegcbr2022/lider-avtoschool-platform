@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "111711727739",
+    "project_id": "lider-avtoschool",
+    "storage_bucket": "lider-avtoschool.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:111711727739:android:73d56e273faf5559fd32de",
+        "android_client_info": {
+          "package_name": "ua.lider.avtoschool"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "111711727739-c205j04hr10h32v8tddvjpuju14btb3v.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "ua.lider.avtoschool",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "111711727739-hsmelc7ch68627g80j7me7f9nvgnrg16.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCjQu5qgy3kP-sS4DnspZTU_1jeGZMH4eo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "111711727739-hsmelc7ch68627g80j7me7f9nvgnrg16.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

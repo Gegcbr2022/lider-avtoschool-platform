@@ -1,26 +1,68 @@
 import { Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
-import { Card, Label, MascotCard, Pill, ProgressBar, Row, Screen } from "../../components/mobile-ui";
+import { Card, Label, LidykBanner, MascotCard, Pill, ProgressBar, Row, Screen } from "../../components/mobile-ui";
 import { courseProgress, retentionSignals, student, upcomingSlot } from "../../lib/mobile-data";
 import { useAuth } from "../../lib/auth";
-import { useTheme, radii, spacing } from "../../lib/theme";
+import { useTheme, radii } from "../../lib/theme";
 
-export default function HomeTab() {
-  const { user, mode } = useAuth();
+// ─── Guest dashboard: focused, answers "what can I do right now?" ──────────────
+function GuestHome() {
+  const { colors } = useTheme();
+  return (
+    <Screen title="Вітаємо 👋" subtitle="Автошкола «Лідер» — почни знайомство.">
+      <Card tone="red">
+        <Label variant="inverse">З чого почати</Label>
+        <Text style={{ marginTop: 8, color: "#fff", fontSize: 22, fontWeight: "900", letterSpacing: -0.3 }}>
+          Спробуй демо-тест ПДР
+        </Text>
+        <Text style={{ marginVertical: 10, color: "rgba(255,255,255,0.82)", lineHeight: 21 }}>
+          200 реальних питань з поясненнями. Без реєстрації — просто спробуй.
+        </Text>
+        <Pressable
+          onPress={() => router.push("/(tabs)/tests")}
+          style={{ backgroundColor: "#fff", borderRadius: radii.sm, paddingVertical: 12, alignItems: "center", marginTop: 4 }}
+        >
+          <Text style={{ color: colors.red, fontWeight: "900", fontSize: 15 }}>🚀 Почати демо-тест</Text>
+        </Pressable>
+      </Card>
+
+      <Card>
+        <Label>Швидкі дії</Label>
+        <Row title="Переглянути курси" detail="Категорії, ціни, програми" icon="📚" onPress={() => router.push("/(tabs)/learning")} />
+        <Row title="Запитати Лідика" detail="AI-помічник 24/7" icon="🚗" onPress={() => router.push("/(tabs)/assistant")} />
+        <Row title="Написати в автошколу" detail="Менеджер відповість" icon="💬" onPress={() => router.push("/(tabs)/chat")} />
+      </Card>
+
+      <LidykBanner
+        state="thinking"
+        message="Порада дня: почни з категорії «Знаки» — це база, на якій тримається весь іспит ПДР."
+        action="Почати тест"
+        onAction={() => router.push("/(tabs)/tests")}
+      />
+
+      <Pressable
+        onPress={() => router.push("/auth?mode=register")}
+        style={{ backgroundColor: colors.redSoft, borderRadius: radii.md, padding: 18, borderWidth: 1.5, borderColor: colors.red + "44" }}
+      >
+        <Text style={{ color: colors.red, fontWeight: "900", fontSize: 16 }}>🔐 Зареєструватись</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4, lineHeight: 18 }}>
+          Збережи прогрес, отримуй нагороди і доступ до всіх матеріалів.
+        </Text>
+      </Pressable>
+    </Screen>
+  );
+}
+
+// ─── Active student dashboard ──────────────────────────────────────────────────
+function StudentHome({ firstName }: { firstName: string }) {
   const { colors } = useTheme();
   const progressPercent = Math.round(
     (courseProgress.completedLessons / courseProgress.totalLessons) * 100
   );
-  const displayName = user?.isGuest ? "Гість" : user?.name ?? student.name;
-  const firstName = displayName.split(" ")[0];
 
   return (
-    <Screen
-      title={mode === "guest" ? "Вітаємо 👋" : `${firstName} 👋`}
-      subtitle={mode === "guest" ? "Переглядай курси і пройди демо-тест." : "Твій навчальний кабінет."}
-    >
-
-      {/* ─── HERO: Course progress ─────────────────────────────────────────── */}
+    <Screen title={`${firstName} 👋`} subtitle="Твій навчальний кабінет.">
+      {/* HERO: where am I now */}
       <Card tone="red">
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
           <View style={{ flex: 1 }}>
@@ -53,16 +95,24 @@ export default function HomeTab() {
           </View>
           <View style={{ flex: 1, alignItems: "flex-end", justifyContent: "flex-end" }}>
             <Pressable
-              onPress={() => router.push("/(tabs)/tests")}
-              style={{ backgroundColor: colors.white, borderRadius: radii.sm, paddingVertical: 8, paddingHorizontal: 16 }}
+              onPress={() => router.push("/(tabs)/learning")}
+              style={{ backgroundColor: "#fff", borderRadius: radii.sm, paddingVertical: 8, paddingHorizontal: 16 }}
             >
-              <Text style={{ color: colors.red, fontWeight: "900", fontSize: 13 }}>Тест →</Text>
+              <Text style={{ color: colors.red, fontWeight: "900", fontSize: 13 }}>Навчання →</Text>
             </Pressable>
           </View>
         </View>
       </Card>
 
-      {/* ─── NEXT SESSION: Premium card ────────────────────────────────────── */}
+      {/* WHAT'S NEXT: Lidyk daily tip — prominent but compact */}
+      <LidykBanner
+        state="thinking"
+        message="Порада дня: повтори знаки пріоритету та правило перешкоди справа — там найбільше помилок на іспиті."
+        action="Почати тест"
+        onAction={() => router.push("/(tabs)/tests")}
+      />
+
+      {/* NEXT SESSION */}
       <Card>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase" }}>
@@ -70,110 +120,30 @@ export default function HomeTab() {
           </Text>
           <Pill tone="success">Підтверджено</Pill>
         </View>
-
-        <Text style={{ color: colors.textPrimary, fontSize: 24, fontWeight: "900", marginTop: 10, letterSpacing: -0.5 }}>
-          03 червня, вт
+        <Text style={{ color: colors.textPrimary, fontSize: 20, fontWeight: "900", marginTop: 10, letterSpacing: -0.5 }}>
+          {upcomingSlot.branch?.city ?? "Київ"} · {upcomingSlot.vehicle}
         </Text>
         <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 4 }}>
-          {upcomingSlot.branch?.city ?? "Київ"} · {upcomingSlot.vehicle} · {upcomingSlot.instructor}
+          Інструктор: {upcomingSlot.instructor}
         </Text>
-
         <View style={{ height: 1, backgroundColor: colors.divider, marginVertical: 14 }} />
-
         <View style={{ flexDirection: "row", gap: 10 }}>
           <Pressable
             onPress={() => router.push("/(tabs)/learning")}
-            style={{ flex: 1, backgroundColor: colors.red, borderRadius: radii.sm, paddingVertical: 12, alignItems: "center", shadowColor: colors.red, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 }}
+            style={{ flex: 1, backgroundColor: colors.red, borderRadius: radii.sm, paddingVertical: 12, alignItems: "center" }}
           >
             <Text style={{ color: "#fff", fontWeight: "800", fontSize: 14 }}>Курс</Text>
           </Pressable>
           <Pressable
-            onPress={() => router.push("/(tabs)/tests")}
+            onPress={() => router.push("/(tabs)/chat")}
             style={{ flex: 1, borderWidth: 1.5, borderColor: colors.border, borderRadius: radii.sm, paddingVertical: 12, alignItems: "center" }}
           >
-            <Text style={{ color: colors.textPrimary, fontWeight: "700", fontSize: 14 }}>Тест ПДР</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push("/(tabs)/club")}
-            style={{ flex: 1, borderWidth: 1.5, borderColor: colors.border, borderRadius: radii.sm, paddingVertical: 12, alignItems: "center" }}
-          >
-            <Text style={{ color: colors.textPrimary, fontWeight: "700", fontSize: 14 }}>Чат</Text>
+            <Text style={{ color: colors.textPrimary, fontWeight: "700", fontSize: 14 }}>Написати</Text>
           </Pressable>
         </View>
       </Card>
 
-      {/* ─── STUDENT JOURNEY ──────────────────────────────────────────────── */}
-      <Card>
-        <Label>Шлях учня</Label>
-        <View style={{ marginTop: 20 }}>
-          {([
-            { icon: "📖", title: "Теорія",   subtitle: "ПДР та правила",    done: true,  current: false },
-            { icon: "✅", title: "Тести",    subtitle: "Онлайн-тренажер",   done: true,  current: false },
-            { icon: "🚗", title: "Практика", subtitle: "За кермом з інструктором", done: false, current: true  },
-            { icon: "🎓", title: "Іспит",    subtitle: "Офіційний в ТСЦ",  done: false, current: false },
-          ] as const).map((step, idx, arr) => (
-            <View key={step.title} style={{ flexDirection: "row", alignItems: "flex-start", marginBottom: idx < arr.length - 1 ? 0 : 0 }}>
-              {/* Left column: dot + line */}
-              <View style={{ width: 44, alignItems: "center" }}>
-                <View style={{
-                  width: 40, height: 40, borderRadius: 20,
-                  backgroundColor: step.done ? colors.red : step.current ? colors.bgCard : colors.bgElevated,
-                  borderWidth: step.current ? 2.5 : step.done ? 0 : 1.5,
-                  borderColor: step.current ? colors.red : colors.border,
-                  alignItems: "center", justifyContent: "center",
-                  shadowColor: step.done ? colors.red : "transparent",
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: step.done ? 0.3 : 0,
-                  shadowRadius: 6,
-                  elevation: step.done ? 4 : 0,
-                }}>
-                  {step.done ? (
-                    <Text style={{ fontSize: 18, color: "#fff" }}>✓</Text>
-                  ) : (
-                    <Text style={{ fontSize: 18, opacity: step.current ? 1 : 0.35 }}>{step.icon}</Text>
-                  )}
-                </View>
-                {/* Vertical connector */}
-                {idx < arr.length - 1 ? (
-                  <View style={{ width: 3, flex: 1, minHeight: 20, marginTop: 2, marginBottom: 2, borderRadius: 2, backgroundColor: step.done ? colors.red : colors.border }} />
-                ) : null}
-              </View>
-
-              {/* Right column: text */}
-              <View style={{ flex: 1, paddingLeft: 14, paddingBottom: idx < arr.length - 1 ? 20 : 0, paddingTop: 8 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <Text style={{ fontSize: 15, fontWeight: "900", color: step.done ? colors.textPrimary : step.current ? colors.textPrimary : colors.textTertiary }}>
-                    {step.title}
-                  </Text>
-                  {step.done ? (
-                    <View style={{ backgroundColor: colors.successSoft, borderRadius: radii.full, paddingHorizontal: 8, paddingVertical: 2 }}>
-                      <Text style={{ color: colors.success, fontSize: 10, fontWeight: "800" }}>ГОТОВО</Text>
-                    </View>
-                  ) : step.current ? (
-                    <View style={{ backgroundColor: colors.redSoft, borderRadius: radii.full, paddingHorizontal: 8, paddingVertical: 2 }}>
-                      <Text style={{ color: colors.red, fontSize: 10, fontWeight: "800" }}>ЗАРАЗ</Text>
-                    </View>
-                  ) : null}
-                </View>
-                <Text style={{ fontSize: 13, color: step.current ? colors.textSecondary : colors.textTertiary, marginTop: 2, lineHeight: 18 }}>
-                  {step.subtitle}
-                </Text>
-              </View>
-            </View>
-          ))}
-        </View>
-      </Card>
-
-      {/* ─── LIDYK HINT ──────────────────────────────────────────────────── */}
-      <MascotCard
-        title="Лідик радить"
-        message="Повтори знаки пріоритету та правило перешкоди справа — саме там найбільше помилок на іспиті."
-        state="thinking"
-        action="Почати тест"
-        onAction={() => router.push("/(tabs)/tests")}
-      />
-
-      {/* ─── LEARNING STATUS ────────────────────────────────────────────── */}
+      {/* LEARNING STATUS */}
       <Card>
         <Label>Стан навчання</Label>
         {retentionSignals.map((item) => (
@@ -186,28 +156,24 @@ export default function HomeTab() {
         ))}
       </Card>
 
-      {/* ─── QUICK ACTIONS ────────────────────────────────────────────────── */}
+      {/* QUICK ACTIONS */}
       <Card>
         <Label>Швидкі дії</Label>
-        <Row title="ПДР Тренажер" detail="Почати тест зараз" icon="✅" onPress={() => router.push("/(tabs)/tests")} />
-        <Row title="Курси та навчання" detail="Матеріали та уроки" icon="📚" onPress={() => router.push("/(tabs)/learning")} />
-        <Row title="Запитати Лідика" detail="AI-помічник" icon="🚗" onPress={() => router.push("/(tabs)/club")} />
+        <Row title="ПДР Тренажер" detail="Почати тест зараз" icon="🎯" onPress={() => router.push("/(tabs)/tests")} />
+        <Row title="Запитати Лідика" detail="AI-помічник" icon="🚗" onPress={() => router.push("/(tabs)/assistant")} />
+        <Row title="Чат з автошколою" detail="Менеджер, підтримка, інструктор" icon="💬" onPress={() => router.push("/(tabs)/chat")} />
         <Row title="Профіль та налаштування" detail="Тема, документи, вихід" icon="👤" onPress={() => router.push("/(tabs)/profile")} />
       </Card>
-
-      {/* ─── GUEST PROMO ─────────────────────────────────────────────────── */}
-      {mode === "guest" ? (
-        <Pressable
-          onPress={() => router.push("/auth?mode=register")}
-          style={{ backgroundColor: colors.redSoft, borderRadius: radii.md, padding: 18, borderWidth: 1.5, borderColor: colors.red + "44" }}
-        >
-          <Text style={{ color: colors.red, fontWeight: "900", fontSize: 16 }}>🔐 Зареєструватись</Text>
-          <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4, lineHeight: 18 }}>
-            Збережи прогрес, отримуй нагороди і доступ до всіх матеріалів.
-          </Text>
-        </Pressable>
-      ) : null}
-
     </Screen>
   );
+}
+
+export default function HomeTab() {
+  const { user, mode } = useAuth();
+  const isGuest = mode !== "authenticated" || !user || user.isGuest;
+
+  if (isGuest) return <GuestHome />;
+
+  const displayName = user?.name ?? student.name;
+  return <StudentHome firstName={displayName.split(" ")[0]} />;
 }

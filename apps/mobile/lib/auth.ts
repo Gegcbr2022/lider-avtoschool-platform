@@ -12,6 +12,7 @@ export type User = {
   category?: "A" | "A1" | "B" | "C" | "CE";
   avatarInitials: string;
   avatarEmoji?: string;
+  photoURL?: string;
   emailVerified?: boolean;
   isGuest: boolean;
 };
@@ -33,8 +34,9 @@ export type AuthContextValue = AuthState & {
   signInAsGuest: () => void;
   signIn: (email: string, password: string) => Promise<boolean>;
   signUp: (data: SignUpData) => Promise<boolean>;
+  signInWithGoogle: () => Promise<{ success: boolean; cancelled?: boolean; error?: string }>;
   signOut: () => void;
-  forgotPassword: (email: string) => Promise<boolean>;
+  forgotPassword: (email: string) => Promise<{ sent: boolean; error?: string }>;
   requireAuth: (onSuccess: () => void) => void;
 };
 
@@ -53,8 +55,9 @@ export const AuthContext = createContext<AuthContextValue>({
   signInAsGuest: () => {},
   signIn: async () => false,
   signUp: async () => false,
+  signInWithGoogle: async () => ({ success: false }),
   signOut: () => {},
-  forgotPassword: async () => false,
+  forgotPassword: async () => ({ sent: false }),
   requireAuth: () => {},
 });
 

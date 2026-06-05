@@ -1,83 +1,79 @@
-// ─── Google Sign-In Architecture ─────────────────────────────────────────────
-//
-// TODO для власника проекту:
-//
-// 1. Отримати Google Web Client ID:
-//    → Firebase Console → Authentication → Sign-in method → Google → Enable
-//    → Скопіювати "Web client ID"
-//
-// 2. Отримати Android Client ID:
-//    → Google Cloud Console → APIs & Credentials
-//    → Create OAuth 2.0 Client ID → Android
-//    → Package name: ua.lider.avtoschool
-//    → SHA-1: run `keytool -keystore debug.keystore -list -v`
-//
-// 3. Оновити google-services.json в android/app/
-//    → Firebase Console → Project Settings → Android → Download google-services.json
-//
-// 4. Встановити: npx expo install expo-auth-session expo-web-browser
-//
-// 5. Розкоментувати код нижче
+// ─── Google Sign-In — Production implementation ───────────────────────────────
+// Uses @react-native-google-signin/google-signin + Firebase Auth
+// Web Client ID comes from google-services.json (client_type: 3)
+// SHA-1 + SHA-256 must be registered in Firebase Console (done)
 
-export const GOOGLE_WEB_CLIENT_ID = ""; // TODO: вставити ваш Web Client ID
-export const GOOGLE_ANDROID_CLIENT_ID = ""; // TODO: вставити Android Client ID
+import {
+  GoogleSignin,
+  isSuccessResponse,
+  isErrorWithCode,
+  statusCodes,
+} from "@react-native-google-signin/google-signin";
+import { GoogleAuthProvider, signInWithCredential } from "firebase/auth";
+import { firebaseAuth } from "./firebase";
 
-export async function signInWithGoogle(): Promise<{
-  success: boolean;
-  error?: string;
-}> {
-  if (!GOOGLE_WEB_CLIENT_ID) {
-    return { success: false, error: "Google Web Client ID не налаштовано" };
+export const GOOGLE_WEB_CLIENT_ID =
+  "111711727739-hsmelc7ch68627g80j7me7f9nvgnrg16.apps.googleusercontent.com";
+
+// Call once at app startup (safe to call multiple times)
+export function configureGoogleSignIn() {
+  GoogleSignin.configure({
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    offlineAccess: false,
+  });
+}
+
+export type GoogleSignInResult =
+  | { success: true }
+  | { success: false; cancelled: boolean; error?: string };
+
+export async function signInWithGoogle(): Promise<GoogleSignInResult> {
+  try {
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    const response = await GoogleSignin.signIn();
+
+    if (isSuccessResponse(response)) {
+      const idToken = response.data?.idToken;
+      if (!idToken) {
+        return { success: false, cancelled: false, error: "Google не повернув ID Token" };
+      }
+      const credential = GoogleAuthProvider.credential(idToken);
+      await signInWithCredential(firebaseAuth, credential);
+      return { success: true };
+    }
+
+    // type === 'cancelled'
+    return { success: false, cancelled: true };
+  } catch (error: unknown) {
+    if (isErrorWithCode(error)) {
+      switch (error.code) {
+        case statusCodes.SIGN_IN_CANCELLED:
+          return { success: false, cancelled: true };
+        case statusCodes.IN_PROGRESS:
+          return { success: false, cancelled: false, error: "Вхід вже виконується" };
+        case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
+          return {
+            success: false,
+            cancelled: false,
+            error: "Google Play Services недоступний або застарілий. Оновіть Play Services.",
+          };
+        default:
+          return {
+            success: false,
+            cancelled: false,
+            error: `Google помилка: ${error.code}`,
+          };
+      }
+    }
+    const msg = error instanceof Error ? error.message : "Невідома помилка";
+    return { success: false, cancelled: false, error: `Помилка Google Sign-In: ${msg}` };
   }
-
-  // TODO: Розкоментувати після встановлення expo-auth-session:
-  //
-  // import * as Google from "expo-auth-session/providers/google";
-  // import { GoogleAuthProvider, signInWithCredential } from "firebase/auth";
-  // import { firebaseAuth } from "./firebase";
-  //
-  // const [request, response, promptAsync] = Google.useAuthRequest({
-  //   webClientId: GOOGLE_WEB_CLIENT_ID,
-  //   androidClientId: GOOGLE_ANDROID_CLIENT_ID,
-  // });
-  //
-  // if (response?.type === "success") {
-  //   const { id_token } = response.params;
-  //   const credential = GoogleAuthProvider.credential(id_token);
-  //   await signInWithCredential(firebaseAuth, credential);
-  //   return { success: true };
-  // }
-
-  return { success: false, error: "Google Sign-In не налаштовано — дивись lib/googleAuth.ts" };
 }
 
-// ─── Phone Auth Architecture ──────────────────────────────────────────────────
-//
-// TODO для власника проекту:
-//
-// 1. Firebase Console → Authentication → Sign-in method → Phone → Enable
-//
-// 2. Додати тестові номери для розробки:
-//    → Firebase Console → Authentication → Phone → Test phone numbers
-//    → Напр.: +380500000000 / code: 123456
-//
-// 3. Для production додати SafetyNet/reCAPTCHA:
-//    → Android: потрібен SHA-256 fingerprint у Firebase
-//    → iOS: потрібен APNs certificate
-//
-// Поточна архітектура: phone login через email-proxy
-// user enters phone → app creates email: {phone_digits}@phone.lider.ua
-// This allows password login without SMS, with optional OTP later
-
-export async function sendPhoneOTP(phone: string): Promise<{ success: boolean; verificationId?: string }> {
-  // TODO: implement Firebase Phone Auth OTP
-  // const { PhoneAuthProvider, signInWithPhoneNumber } = await import("firebase/auth");
-  // const provider = new PhoneAuthProvider(firebaseAuth);
-  // const verificationId = await provider.verifyPhoneNumber(phone, recaptchaVerifier);
-  return { success: false };
-}
-
-export async function verifyPhoneOTP(verificationId: string, code: string): Promise<boolean> {
-  // TODO: verify OTP and sign in
-  return false;
+export async function signOutFromGoogle() {
+  try {
+    await GoogleSignin.signOut();
+  } catch {
+    // ignore — Firebase sign-out is the authoritative one
+  }
 }

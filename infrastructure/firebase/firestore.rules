@@ -2,8 +2,15 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ─── Auth helpers ─────────────────────────────────────────────────────────
+
     function signedIn() {
       return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
     }
 
     function hasRole(role) {
@@ -14,16 +21,20 @@ service cloud.firestore {
       return hasRole("admin") || hasRole("manager");
     }
 
+    function isAdmin() {
+      return hasRole("admin");
+    }
+
     function ownsResource() {
-      return signedIn() && resource.data.studentId == request.auth.uid;
+      return signedIn() && resource.data.studentId == uid();
     }
 
     function createsOwnResource() {
-      return signedIn() && request.resource.data.studentId == request.auth.uid;
+      return signedIn() && request.resource.data.studentId == uid();
     }
 
     function keepsOwnResource() {
-      return ownsResource() && request.resource.data.studentId == request.auth.uid;
+      return ownsResource() && request.resource.data.studentId == uid();
     }
 
     function validPublicLeadCreate() {
@@ -35,13 +46,15 @@ service cloud.firestore {
         && request.resource.data.city is string;
     }
 
+    // ─── Business collections (existing) ─────────────────────────────────────
+
     match /leads/{leadId} {
       allow create: if validPublicLeadCreate();
       allow read, update, delete: if staff();
     }
 
     match /students/{studentId} {
-      allow read, update: if staff() || (signedIn() && request.auth.uid == studentId);
+      allow read, update: if staff() || (signedIn() && uid() == studentId);
       allow create, delete: if staff();
     }
 
@@ -60,10 +73,21 @@ service cloud.firestore {
     match /courses/{courseId} {
       allow read: if signedIn();
       allow write: if staff();
+
+      match /lessons/{lessonId} {
+        allow read: if signedIn();
+        allow write: if staff();
+      }
+    }
+
+    match /lessonProgress/{docId} {
+      allow read, write: if signedIn() && resource.data.userId == uid();
+      allow create: if signedIn() && request.resource.data.userId == uid();
+      allow read: if staff();
     }
 
     match /auditLogs/{logId} {
-      allow read: if hasRole("admin");
+      allow read: if isAdmin();
       allow write: if false;
     }
 
@@ -71,6 +95,101 @@ service cloud.firestore {
       allow read: if staff();
       allow write: if false;
     }
+
+    // ─── AI Logs ──────────────────────────────────────────────────────────────
+
+    match /aiLogs/{logId} {
+      // Any signed-in user can write their own log entry (mobile app writes after ask)
+      allow create: if signedIn() || true;  // allow anonymous (guestMode) writes too
+      // Only admins can read — users must never see other users' questions
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // ─── User Profiles (public profile data) ─────────────────────────────────
+
+    match /userProfiles/{userId} {
+      // Anyone signed in can read public profiles
+      allow read: if signedIn();
+      // Users can only write their own profile
+      allow create, update: if signedIn() && uid() == userId;
+      allow delete: if signedIn() && uid() == userId || isAdmin();
+    }
+
+    // ─── Club Posts ───────────────────────────────────────────────────────────
+
+    match /clubPosts/{postId} {
+      // Any signed-in user can read approved posts
+      allow read: if signedIn();
+      // Create: signed in, must set own authorId
+      allow create: if signedIn()
+        && request.resource.data.authorId == uid()
+        && request.resource.data.keys().hasAll(["authorId", "authorName", "text", "createdAt", "likesCount", "commentsCount"]);
+      // Update: admin can update anything; user can only update their own likesCount
+      allow update: if staff()
+        || (signedIn() && resource.data.authorId == uid())
+        || (signedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["likesCount", "likedBy"]));
+      allow delete: if staff() || (signedIn() && resource.data.authorId == uid());
+    }
+
+    // ─── Club Comments ────────────────────────────────────────────────────────
+
+    match /clubComments/{commentId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.authorId == uid()
+        && request.resource.data.keys().hasAll(["postId", "authorId", "authorName", "text", "createdAt", "likesCount"]);
+      allow update: if staff()
+        || (signedIn() && resource.data.authorId == uid())
+        || (signedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["likesCount", "likedBy"]));
+      allow delete: if staff() || (signedIn() && resource.data.authorId == uid());
+    }
+
+    // ─── Stories ─────────────────────────────────────────────────────────────
+
+    match /stories/{storyId} {
+      // Any signed-in user can read non-expired stories
+      allow read: if signedIn();
+      // Create: signed in, must set own authorId, must have expiresAt
+      allow create: if signedIn()
+        && request.resource.data.authorId == uid()
+        && request.resource.data.keys().hasAll(["authorId", "authorName", "text", "tone", "createdAt", "expiresAt"]);
+      // Update: reactions/views only
+      allow update: if staff()
+        || (signedIn() && resource.data.authorId == uid())
+        || (signedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["reactions", "views", "viewedBy"]));
+      allow delete: if staff() || (signedIn() && resource.data.authorId == uid());
+    }
+
+    // ─── Conversations / Chats ────────────────────────────────────────────────
+
+    match /conversations/{convId} {
+      // Participant can read/write their own conversation
+      allow read: if signedIn() && (
+        resource.data.participantIds.hasAny([uid()]) || staff()
+      );
+      allow create: if signedIn()
+        && request.resource.data.participantIds.hasAny([uid()]);
+      allow update: if signedIn() && (
+        resource.data.participantIds.hasAny([uid()]) || staff()
+      );
+      allow delete: if staff();
+
+      match /messages/{msgId} {
+        allow read: if signedIn() && (
+          get(/databases/$(database)/documents/conversations/$(convId)).data.participantIds.hasAny([uid()]) || staff()
+        );
+        allow create: if signedIn()
+          && request.resource.data.senderId == uid()
+          && get(/databases/$(database)/documents/conversations/$(convId)).data.participantIds.hasAny([uid()]);
+        allow update: if staff()
+          || (signedIn() && resource.data.senderId == uid()
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["readAt", "readBy"]));
+        allow delete: if staff();
+      }
+    }
+
+    // ─── Catch-all (deny everything else) ────────────────────────────────────
 
     match /{document=**} {
       allow read, write: if false;

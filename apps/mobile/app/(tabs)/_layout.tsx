@@ -79,17 +79,17 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="tests"
+        name="chat"
         options={{
-          title: "Тести",
-          tabBarIcon: ({ focused }) => <TabIcon icon="✅" active={focused} />,
+          title: "Чат",
+          tabBarIcon: ({ focused }) => <TabIcon icon="💬" active={focused} />,
         }}
       />
       <Tabs.Screen
         name="club"
         options={{
-          title: "Чат",
-          tabBarIcon: ({ focused }) => <TabIcon icon="💬" active={focused} />,
+          title: "Клуб",
+          tabBarIcon: ({ focused }) => <TabIcon icon="🏆" active={focused} />,
         }}
       />
       <Tabs.Screen
@@ -100,7 +100,9 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* Hidden tabs */}
+      {/* Hidden routes — reachable via router.push, not shown in the tab bar.
+          Tests are now integrated into the Навчання hub; assistant (Лідик) opens from Home/Навчання. */}
+      <Tabs.Screen name="tests" options={{ href: null }} />
       <Tabs.Screen name="practice" options={{ href: null }} />
       <Tabs.Screen name="assistant" options={{ href: null }} />
     </Tabs>

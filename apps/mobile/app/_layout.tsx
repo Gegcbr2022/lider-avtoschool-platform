@@ -29,6 +29,7 @@ import type { AuthContextValue, AuthMode, SignUpData, User } from "../lib/auth";
 import { GUEST_USER } from "../lib/auth";
 import { API_BASE } from "../lib/api";
 import { ThemeProvider, darkColors as colors, radii, spacing } from "../lib/theme";
+import { configureGoogleSignIn, signInWithGoogle as googleSignIn, signOutFromGoogle } from "../lib/googleAuth";
 
 // ─── Avatar emoji pool ────────────────────────────────────────────────────────
 const AVATAR_EMOJIS = ["🚗", "🏎️", "🚦", "🛞", "🏁", "🚘", "🧭", "⭐", "🔥", "😎", "🚙", "🛣️"];
@@ -41,7 +42,6 @@ function pickAvatar(uid: string): string {
 // ─── Convert Firebase user to our User type ───────────────────────────────────
 
 function toAppUser(fb: FirebaseUser): User {
-  // Prefer displayName; fall back to email prefix; hide phone-proxy emails
   const isPhoneProxy = fb.email?.endsWith("@phone.lider.ua") ?? false;
   const displayName = fb.displayName ?? (isPhoneProxy ? "Учень" : fb.email?.split("@")[0] ?? "Учень");
   return {
@@ -50,7 +50,8 @@ function toAppUser(fb: FirebaseUser): User {
     phone: fb.phoneNumber ?? "",
     email: isPhoneProxy ? undefined : (fb.email ?? undefined),
     avatarInitials: displayName.slice(0, 2).toUpperCase(),
-    avatarEmoji: pickAvatar(fb.uid),
+    avatarEmoji: fb.photoURL ? undefined : pickAvatar(fb.uid),
+    photoURL: fb.photoURL ?? undefined,
     emailVerified: fb.emailVerified,
     isGuest: fb.isAnonymous,
   };
@@ -81,8 +82,13 @@ export default function RootLayout() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [authGateVisible, setAuthGateVisible] = useState(false);
-  const authGateCallback = useRef<() => void>();
+  const authGateCallback = useRef<(() => void) | undefined>(undefined);
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  // Configure Google Sign-In once
+  useEffect(() => {
+    configureGoogleSignIn();
+  }, []);
 
   // ─── Listen to Firebase auth state (persists across restarts) ─────────────
   useEffect(() => {
@@ -114,16 +120,13 @@ export default function RootLayout() {
 
   const signInAsGuest = useCallback(async () => {
     try {
-      // 5-second timeout — Firebase anonymous auth may fail on restricted networks (emulators)
       await Promise.race([
         signInAnonymously(firebaseAuth),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error("Guest auth timeout")), 5000)
         ),
       ]);
-      // onAuthStateChanged handles navigation
     } catch {
-      // Fallback: local guest mode (no Firebase session — works offline)
       setUser(GUEST_USER);
       setMode("guest");
       setIsLoading(false);
@@ -144,9 +147,7 @@ export default function RootLayout() {
     try {
       const cred = await createUserWithEmailAndPassword(firebaseAuth, data.email, data.password);
       await updateProfile(cred.user, { displayName: data.name });
-      // Send email verification (non-blocking)
       sendEmailVerification(cred.user).catch(() => {});
-      // Submit lead (fire-and-forget, simplified — no phone/city required at signup)
       fetch(`${API_BASE}/leads`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -167,20 +168,39 @@ export default function RootLayout() {
     }
   }, []);
 
-  const forgotPassword = useCallback(async (email: string): Promise<boolean> => {
+  const signInWithGoogle = useCallback(async () => {
+    return await googleSignIn();
+  }, []);
+
+  const forgotPassword = useCallback(async (email: string): Promise<{ sent: boolean; error?: string }> => {
     try {
-      await sendPasswordResetEmail(firebaseAuth, email.trim().toLowerCase());
-      return true;
-    } catch {
-      return false;
+      await sendPasswordResetEmail(firebaseAuth, email.trim().toLowerCase(), {
+        // handleCodeInApp: false — link opens in browser (default, works for password reset)
+        url: "https://lider-avtoschool.firebaseapp.com/__/auth/action",
+        handleCodeInApp: false,
+      });
+      return { sent: true };
+    } catch (e: unknown) {
+      const code = (e as { code?: string })?.code ?? "";
+      if (code === "auth/user-not-found") {
+        // Firebase security: silently succeed to prevent user enumeration
+        return { sent: true };
+      }
+      if (code === "auth/invalid-email") {
+        return { sent: false, error: "Невірний формат email" };
+      }
+      if (code === "auth/too-many-requests") {
+        return { sent: false, error: "Забагато запитів. Зачекайте хвилину та спробуйте ще раз." };
+      }
+      return { sent: false, error: `Firebase помилка: ${code || "network"}` };
     }
   }, []);
 
   const signOut = useCallback(async () => {
     try {
+      await signOutFromGoogle();
       await firebaseSignOut(firebaseAuth);
     } catch {
-      // Force local reset even if Firebase fails
       setUser(null);
       setMode("unauthenticated");
       router.replace("/onboarding");
@@ -220,6 +240,7 @@ export default function RootLayout() {
     signInAsGuest,
     signIn,
     signUp,
+    signInWithGoogle,
     signOut,
     forgotPassword,
     requireAuth,

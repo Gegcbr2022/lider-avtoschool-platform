@@ -1,31 +1,178 @@
 import Constants from "expo-constants";
+import { Platform } from "react-native";
+import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { firebaseApp } from "./firebase";
 
-// Production: Firebase Functions directly (bypasses Vercel for mobile)
 const FIREBASE_API = "https://api-jd6b6vy57a-ew.a.run.app";
 
 export const API_BASE =
   (Constants.expoConfig?.extra?.apiUrl as string | undefined) ?? FIREBASE_API;
 
+const APP_VERSION = (Constants.expoConfig?.version as string | undefined) ?? "1.0.0";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export type LidykErrorType =
+  | "offline"       // мережа недоступна
+  | "timeout"       // запит завис
+  | "server_error"  // 5xx
+  | "auth_error"    // 401/403
+  | "rate_limit"    // 429
+  | "empty"         // порожнє питання
+  | "unknown";      // інше
+
 export type LidykResponse = {
   answer: string;
   mode?: "openai" | "openai-fallback" | "local-fallback" | "guard" | "fallback";
   model?: string;
+  errorType?: LidykErrorType;
 };
 
-export async function askLidyk(question: string): Promise<LidykResponse> {
+// ─── Error classification ─────────────────────────────────────────────────────
+
+function classifyError(err: unknown): LidykErrorType {
+  if (err instanceof Error) {
+    const msg = err.message.toLowerCase();
+    if (err.name === "AbortError" || msg.includes("aborted") || msg.includes("timeout")) {
+      return "timeout";
+    }
+    if (
+      msg.includes("network request failed") ||
+      msg.includes("failed to fetch") ||
+      msg.includes("network error") ||
+      msg.includes("connection refused") ||
+      msg.includes("enetunreach") ||
+      msg.includes("econnrefused")
+    ) {
+      return "offline";
+    }
+  }
+  return "unknown";
+}
+
+const ERROR_MESSAGES: Record<LidykErrorType, string> = {
+  offline:      "Немає з'єднання з інтернетом 📡 Перевір підключення і спробуй ще раз.",
+  timeout:      "Лідик думає занадто довго ⏱️ Спробуй запитати ще раз — зазвичай відповідь приходить швидше.",
+  server_error: "Сервер тимчасово недоступний 🔧 Спробуй за кілька хвилин.",
+  auth_error:   "Проблема з авторизацією. Спробуй перезайти в акаунт і запитати знову.",
+  rate_limit:   "Лідик перегружений 😅 Зачекай хвилинку і спробуй ще раз.",
+  empty:        "Лідик не почув запитання. Напиши, що тебе цікавить 💬",
+  unknown:      "Щось пішло не так 🤔 Спробуй ще раз.",
+};
+
+// ─── Main API call ────────────────────────────────────────────────────────────
+
+export async function askLidyk(
+  question: string,
+  userId?: string | null
+): Promise<LidykResponse> {
+  if (!question.trim()) {
+    return { answer: ERROR_MESSAGES.empty, mode: "fallback", errorType: "empty" };
+  }
+
+  const startedAt = Date.now();
+  let errorType: LidykErrorType | undefined;
+  let result: LidykResponse;
+
   try {
     const response = await fetch(`${API_BASE}/ai/lidyk`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ question }),
-      signal: AbortSignal.timeout(15_000)
+      signal: AbortSignal.timeout(20_000),
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return (await response.json()) as LidykResponse;
-  } catch {
-    return {
-      answer: "Немає зв'язку. Лідик чекає сигналу 📡  Перевір інтернет і спробуй знову.",
-      mode: "fallback"
+
+    if (response.status === 429) {
+      errorType = "rate_limit";
+      throw new Error("rate_limit");
+    }
+    if (response.status === 401 || response.status === 403) {
+      errorType = "auth_error";
+      throw new Error("auth_error");
+    }
+    if (response.status >= 500) {
+      errorType = "server_error";
+      throw new Error(`HTTP ${response.status}`);
+    }
+    if (!response.ok) {
+      errorType = "unknown";
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    result = (await response.json()) as LidykResponse;
+  } catch (err) {
+    if (!errorType) errorType = classifyError(err);
+    result = {
+      answer: ERROR_MESSAGES[errorType],
+      mode: "fallback",
+      errorType,
     };
+  }
+
+  // Fire-and-forget AI log (non-blocking, never throws)
+  void logAiQuery({
+    question,
+    answer: result.answer,
+    mode: result.mode,
+    model: result.model,
+    latencyMs: Date.now() - startedAt,
+    error: errorType,
+    userId: userId ?? null,
+  });
+
+  return result;
+}
+
+// ─── Chat → Telegram bridge notify ────────────────────────────────────────────
+// Fire-and-forget: tells the backend to mirror this message into the manager's
+// Telegram topic. Never throws — chat works even if the bridge is down.
+export async function notifyChat(params: {
+  conversationId: string;
+  userId: string;
+  userName: string;
+  text: string;
+}): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/chat/notify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+      signal: AbortSignal.timeout(10_000),
+    });
+  } catch {
+    // Bridge is best-effort; the message is already saved in Firestore.
+  }
+}
+
+// ─── AI Logging to Firestore ──────────────────────────────────────────────────
+
+interface AiLogEntry {
+  question: string;
+  answer: string;
+  mode?: string;
+  model?: string;
+  latencyMs: number;
+  error?: string;
+  userId: string | null;
+}
+
+async function logAiQuery(entry: AiLogEntry): Promise<void> {
+  try {
+    const db = getFirestore(firebaseApp);
+    await addDoc(collection(db, "aiLogs"), {
+      question: entry.question,
+      answer: entry.answer,
+      mode: entry.mode ?? null,
+      model: entry.model ?? null,
+      latencyMs: entry.latencyMs,
+      error: entry.error ?? null,
+      userId: entry.userId,
+      appVersion: APP_VERSION,
+      platform: Platform.OS,
+      source: "mobile",
+      timestamp: serverTimestamp(),
+    });
+  } catch {
+    // Logging is non-critical — silent fail
   }
 }

@@ -88,7 +88,7 @@ export const lightColors = {
   background: "#f5f5f7",
 } as const;
 
-export type ThemeColors = typeof darkColors;
+export type ThemeColors = typeof darkColors | typeof lightColors;
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 

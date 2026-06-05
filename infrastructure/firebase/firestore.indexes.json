@@ -4,56 +4,78 @@
       "collectionGroup": "leads",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "leads",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "source", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "leads",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "city", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
       "collectionGroup": "bookings",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "branchId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "startsAt",
-          "order": "ASCENDING"
-        }
+        { "fieldPath": "branchId", "order": "ASCENDING" },
+        { "fieldPath": "startsAt", "order": "ASCENDING" }
       ]
     },
     {
-      "collectionGroup": "leads",
+      "collectionGroup": "clubPosts",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "source",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
     {
-      "collectionGroup": "leads",
+      "collectionGroup": "clubComments",
       "queryScope": "COLLECTION",
       "fields": [
-        {
-          "fieldPath": "city",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
+        { "fieldPath": "postId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "stories",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "expiresAt", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "aiLogs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "conversations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "participantIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "messages",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "createdAt", "order": "ASCENDING" }
       ]
     }
   ],
