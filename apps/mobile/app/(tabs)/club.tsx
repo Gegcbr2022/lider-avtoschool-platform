@@ -5,6 +5,7 @@ import {
   TouchableOpacity, View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
 import {
   Card, Label, MascotMessage, Pill, PrimaryButton, ProgressBar,
 } from "../../components/mobile-ui";
@@ -859,20 +860,31 @@ export default function ClubTab() {
         ) : null}
 
         <View style={{ paddingHorizontal: spacing.md, gap: spacing.md }}>
-          {/* Streak */}
-          <View style={{ borderRadius: radii.md, backgroundColor: colors.red, padding: 16, flexDirection: "row", alignItems: "center", gap: 16, ...shadows.red }}>
-            <Text style={{ fontSize: 32 }}>🔥</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 11, fontWeight: "900", color: "rgba(255,255,255,0.6)", letterSpacing: 0.8, textTransform: "uppercase" }}>Ваша серія</Text>
-              <Text style={{ fontSize: 22, fontWeight: "900", color: "#fff", marginTop: 2 }}>
-                {driverClubStreak.current} {driverClubStreak.current === 1 ? "день" : driverClubStreak.current < 5 ? "дні" : "днів"} поспіль
-              </Text>
+          {/* Streak — only for registered users */}
+          {isAuth ? (
+            <View style={{ borderRadius: radii.md, backgroundColor: colors.red, padding: 16, flexDirection: "row", alignItems: "center", gap: 16, ...shadows.red }}>
+              <Text style={{ fontSize: 32 }}>🔥</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 11, fontWeight: "900", color: "rgba(255,255,255,0.6)", letterSpacing: 0.8, textTransform: "uppercase" }}>Ваша серія</Text>
+                <Text style={{ fontSize: 22, fontWeight: "900", color: "#fff", marginTop: 2 }}>
+                  {driverClubStreak.current} {driverClubStreak.current === 1 ? "день" : driverClubStreak.current < 5 ? "дні" : "днів"} поспіль
+                </Text>
+              </View>
+              <View style={{ alignItems: "flex-end" }}>
+                <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", fontWeight: "700" }}>Рекорд</Text>
+                <Text style={{ fontSize: 18, fontWeight: "900", color: "#fff" }}>{driverClubStreak.best} д.</Text>
+              </View>
             </View>
-            <View style={{ alignItems: "flex-end" }}>
-              <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", fontWeight: "700" }}>Рекорд</Text>
-              <Text style={{ fontSize: 18, fontWeight: "900", color: "#fff" }}>{driverClubStreak.best} д.</Text>
-            </View>
-          </View>
+          ) : (
+            <Pressable onPress={() => router.push("/auth?mode=register")} style={{ borderRadius: radii.md, backgroundColor: colors.red, padding: 16, flexDirection: "row", alignItems: "center", gap: 16, ...shadows.red }}>
+              <Text style={{ fontSize: 32 }}>🏆</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 11, fontWeight: "900", color: "rgba(255,255,255,0.6)", letterSpacing: 0.8, textTransform: "uppercase" }}>Лідер Клуб</Text>
+                <Text style={{ fontSize: 18, fontWeight: "900", color: "#fff", marginTop: 2 }}>Зареєструйся, щоб зберегти серію</Text>
+              </View>
+              <Text style={{ fontSize: 22, color: "rgba(255,255,255,0.75)" }}>→</Text>
+            </Pressable>
+          )}
 
           {/* Daily quiz */}
           <Card>
@@ -938,24 +950,26 @@ export default function ClubTab() {
             </View>
           </Pressable>
 
-          {/* Awards card */}
-          <Pressable onPress={() => setView("awards")}>
-            <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, padding: 16, ...shadows.card }}>
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 16, fontWeight: "900", color: colors.textPrimary }}>Нагороди</Text>
-                  <Text style={{ marginTop: 3, fontSize: 13, color: colors.textSecondary }}>{earnedCount} з {clubAwards.length} отримано</Text>
+          {/* Awards card — registered users only */}
+          {isAuth ? (
+            <Pressable onPress={() => setView("awards")}>
+              <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, padding: 16, ...shadows.card }}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 16, fontWeight: "900", color: colors.textPrimary }}>Нагороди</Text>
+                    <Text style={{ marginTop: 3, fontSize: 13, color: colors.textSecondary }}>{earnedCount} з {clubAwards.length} отримано</Text>
+                  </View>
+                  <View style={{ flexDirection: "row", gap: 2 }}>
+                    {clubAwards.filter(a => a.earned).slice(0, 3).map(a => (
+                      <Text key={a.id} style={{ fontSize: 22 }}>{a.icon}</Text>
+                    ))}
+                  </View>
                 </View>
-                <View style={{ flexDirection: "row", gap: 2 }}>
-                  {clubAwards.filter(a => a.earned).slice(0, 3).map(a => (
-                    <Text key={a.id} style={{ fontSize: 22 }}>{a.icon}</Text>
-                  ))}
-                </View>
+                <ProgressBar value={(earnedCount / clubAwards.length) * 100} color={colors.red} height={6} />
+                <Text style={{ marginTop: 8, fontSize: 12, fontWeight: "700", color: colors.red, textAlign: "right" }}>Переглянути всі →</Text>
               </View>
-              <ProgressBar value={(earnedCount / clubAwards.length) * 100} color={colors.red} height={6} />
-              <Text style={{ marginTop: 8, fontSize: 12, fontWeight: "700", color: colors.red, textAlign: "right" }}>Переглянути всі →</Text>
-            </View>
-          </Pressable>
+            </Pressable>
+          ) : null}
 
           {/* Tip of the day */}
           <View style={{ backgroundColor: colors.bgElevated, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, padding: 16, gap: 10 }}>

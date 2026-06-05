@@ -172,20 +172,12 @@ export default function OnboardingScreen() {
       {/* Actions */}
       <View style={styles.actions}>
         {isLast ? (
-          <>
-            <Pressable
-              style={styles.btnPrimary}
-              onPress={() => router.push("/auth?mode=register")}
-            >
-              <Text style={styles.btnPrimaryText}>Почати навчання</Text>
-            </Pressable>
-            <Pressable
-              style={styles.btnSecondary}
-              onPress={() => router.push("/auth?mode=login")}
-            >
-              <Text style={styles.btnSecondaryText}>Увійти</Text>
-            </Pressable>
-          </>
+          <Pressable
+            style={styles.btnPrimary}
+            onPress={() => router.push("/auth")}
+          >
+            <Text style={styles.btnPrimaryText}>🚗 Навчатися онлайн</Text>
+          </Pressable>
         ) : (
           <Pressable style={styles.btnPrimary} onPress={next}>
             <Text style={styles.btnPrimaryText}>Далі</Text>
@@ -299,20 +291,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
-  btnSecondary: {
-    backgroundColor: colors.bgElevated,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: 16,
-    borderRadius: radii.md,
-    alignItems: "center",
-  },
-  btnSecondaryText: {
-    color: colors.textPrimary,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  btnGhost: {
+btnGhost: {
     paddingVertical: 12,
     alignItems: "center",
   },

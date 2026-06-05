@@ -13,6 +13,7 @@ import {
 import { courseProgress, mobileServices } from "../../lib/mobile-data";
 import { PDR_QUESTIONS } from "../../lib/pdr-questions";
 import { useTheme, radii } from "../../lib/theme";
+import { useAuth } from "../../lib/auth";
 
 const lessons = [
   { title: "Тема 12. Проїзд перехресть", detail: "Домашнє завдання до п'ятниці", progress: 72 },
@@ -32,26 +33,40 @@ const HUB_TILES = [
 
 export default function LearningTab() {
   const { colors } = useTheme();
+  const { mode } = useAuth();
+  const isAuth = mode === "authenticated";
   const overall = Math.round(
     (courseProgress.completedLessons / courseProgress.totalLessons) * 100
   );
 
   return (
     <Screen title="Навчання" subtitle="Курс, уроки, тести ПДР та тренажери — все в одному місці.">
-      {/* ─── Мій курс ─────────────────────────────────────────────────────── */}
-      <Card tone="red">
-        <Label variant="inverse">Мій курс</Label>
-        <Text style={{ marginTop: 8, color: "#fff", fontSize: 22, fontWeight: "900", letterSpacing: -0.3 }}>
-          {courseProgress.title}
-        </Text>
-        <Text style={{ marginVertical: 10, color: "rgba(255,255,255,0.78)", lineHeight: 22 }}>
-          {courseProgress.completedLessons}/{courseProgress.totalLessons} уроків · середній результат тестів {courseProgress.testScore}%
-        </Text>
-        <ProgressBar value={overall} color="rgba(255,255,255,0.9)" />
-        <Text style={{ marginTop: 8, color: "rgba(255,255,255,0.65)", fontSize: 13, fontWeight: "700" }}>
-          {overall}% пройдено
-        </Text>
-      </Card>
+      {/* ─── Мій курс (тільки зареєстровані) ────────────────────────────── */}
+      {isAuth ? (
+        <Card tone="red">
+          <Label variant="inverse">Мій курс</Label>
+          <Text style={{ marginTop: 8, color: "#fff", fontSize: 22, fontWeight: "900", letterSpacing: -0.3 }}>
+            {courseProgress.title}
+          </Text>
+          <Text style={{ marginVertical: 10, color: "rgba(255,255,255,0.78)", lineHeight: 22 }}>
+            {courseProgress.completedLessons}/{courseProgress.totalLessons} уроків · середній результат тестів {courseProgress.testScore}%
+          </Text>
+          <ProgressBar value={overall} color="rgba(255,255,255,0.9)" />
+          <Text style={{ marginTop: 8, color: "rgba(255,255,255,0.65)", fontSize: 13, fontWeight: "700" }}>
+            {overall}% пройдено
+          </Text>
+        </Card>
+      ) : (
+        <Pressable onPress={() => router.push("/auth?mode=register")}>
+          <Card>
+            <Text style={{ fontSize: 16, fontWeight: "900", color: colors.textPrimary }}>📚 Мій курс</Text>
+            <Text style={{ marginTop: 6, fontSize: 14, color: colors.textSecondary, lineHeight: 20 }}>
+              Зареєструйся, щоб бачити прогрес курсу, уроки та оцінки.
+            </Text>
+            <Text style={{ marginTop: 10, fontSize: 14, fontWeight: "800", color: colors.red }}>Зареєструватись →</Text>
+          </Card>
+        </Pressable>
+      )}
 
       {/* ─── Hub tiles ────────────────────────────────────────────────────── */}
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
