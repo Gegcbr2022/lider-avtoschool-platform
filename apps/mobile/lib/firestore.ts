@@ -518,10 +518,12 @@ export async function addNaisDocument(uid: string, document: NaisDocument): Prom
 
 // ─── Conversations / Chat ─────────────────────────────────────────────────────
 
+export type ConversationType = "support" | "manager" | "instructor" | "system";
+
 export type ConversationDoc = {
   id: string;
   participantIds: string[];
-  type: "support" | "instructor" | "system";
+  type: ConversationType;
   title: string;
   lastMessage?: string;
   lastMessageAt: Date | null;
@@ -608,13 +610,15 @@ export async function sendMessage(
   });
 }
 
-export async function ensureSupportConversation(
+// Find-or-create a conversation of a given type (support / manager / instructor).
+// Uses only the participantIds+updatedAt index; filters type client-side to avoid
+// a compound index. The backend Telegram bridge mirrors each thread to a topic.
+export async function ensureConversation(
   userId: string,
-  userName: string
+  userName: string,
+  type: ConversationType,
+  title: string
 ): Promise<string> {
-  // Uses only the participantIds+updatedAt index (no compound type filter needed).
-  // We fetch a small page and find the support convo client-side to avoid
-  // requiring a separate composite index for participantIds+type.
   const q = query(
     collection(db, "conversations"),
     where("participantIds", "array-contains", userId),
@@ -622,14 +626,13 @@ export async function ensureSupportConversation(
     limit(10)
   );
   const snap = await getDocs(q);
-  const existing = snap.docs.find((d) => d.data().type === "support");
+  const existing = snap.docs.find((d) => d.data().type === type);
   if (existing) return existing.id;
 
-  // Create new
   const ref = await addDoc(collection(db, "conversations"), {
-    participantIds: [userId, "support"],
-    type: "support",
-    title: "Підтримка",
+    participantIds: [userId, type],
+    type,
+    title,
     lastMessage: null,
     lastMessageAt: null,
     updatedAt: serverTimestamp(),
@@ -637,4 +640,9 @@ export async function ensureSupportConversation(
     createdByName: userName,
   });
   return ref.id;
+}
+
+// Back-compat wrapper.
+export async function ensureSupportConversation(userId: string, userName: string): Promise<string> {
+  return ensureConversation(userId, userName, "support", "Підтримка");
 }

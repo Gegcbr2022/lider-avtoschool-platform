@@ -19,10 +19,11 @@ import { router } from "expo-router";
 import { useAuth } from "../../lib/auth";
 import { notifyChat } from "../../lib/api";
 import {
-  ensureSupportConversation,
+  ensureConversation,
   sendMessage,
   subscribeToMessages,
   type MessageDoc,
+  type ConversationType,
 } from "../../lib/firestore";
 import { useTheme, radii, spacing } from "../../lib/theme";
 import { useNetworkStatus } from "../../lib/useNetwork";
@@ -106,7 +107,9 @@ function ChatList({ onOpen }: { onOpen: (id: string) => void }) {
 
 // ─── Conversation ─────────────────────────────────────────────────────────────
 
-function Conversation({ onBack }: { onBack: () => void }) {
+function Conversation({ chatType, title, emoji, onBack }: {
+  chatType: ConversationType; title: string; emoji: string; onBack: () => void;
+}) {
   const { colors } = useTheme();
   const { user } = useAuth();
   const isOffline = useNetworkStatus() === "offline";
@@ -127,7 +130,7 @@ function Conversation({ onBack }: { onBack: () => void }) {
 
     (async () => {
       try {
-        const convId = await ensureSupportConversation(user.id, user.name);
+        const convId = await ensureConversation(user.id, user.name, chatType, title);
         if (!active) return;
         setConversationId(convId);
         unsub = subscribeToMessages(convId, (msgs) => {
@@ -147,7 +150,7 @@ function Conversation({ onBack }: { onBack: () => void }) {
       active = false;
       unsub?.();
     };
-  }, [user]);
+  }, [user, chatType]);
 
   async function handleSend() {
     const text = input.trim();
@@ -178,11 +181,11 @@ function Conversation({ onBack }: { onBack: () => void }) {
             <Text style={{ color: colors.red, fontSize: 22, fontWeight: "600" }}>‹</Text>
           </Pressable>
           <View style={s.chatAvatar}>
-            <Text style={{ fontSize: 20 }}>🚗</Text>
+            <Text style={{ fontSize: 20 }}>{emoji}</Text>
           </View>
           <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={s.headerTitle}>Автошкола «Лідер»</Text>
-            <Text style={s.headerSub}>Менеджер · Підтримка · Інструктор</Text>
+            <Text style={s.headerTitle}>{title}</Text>
+            <Text style={s.headerSub}>Зазвичай відповідає протягом робочого дня</Text>
           </View>
         </View>
 
@@ -265,48 +268,13 @@ function Conversation({ onBack }: { onBack: () => void }) {
   );
 }
 
-// ─── Placeholder conversation for Instructor / Manager ───────────────────────
-// These will become real Firestore chats once the school assigns instructors.
-// For now: inform the user to use the main school chat.
+// ─── Chat metadata: each id maps to a real Firestore conversation type ──────────
 
-function PlaceholderConversation({
-  title, subtitle, emoji, onBack,
-}: { title: string; subtitle: string; emoji: string; onBack: () => void }) {
-  const { colors } = useTheme();
-  const s = makeStyles(colors);
-
-  return (
-    <SafeAreaView style={s.safe} edges={["top"]}>
-      <View style={s.header}>
-        <Pressable hitSlop={12} onPress={onBack} style={{ marginRight: 8 }}>
-          <Text style={{ color: colors.red, fontSize: 22, fontWeight: "600" }}>‹</Text>
-        </Pressable>
-        <View style={s.chatAvatar}>
-          <Text style={{ fontSize: 20 }}>{emoji}</Text>
-        </View>
-        <View style={{ flex: 1, marginLeft: 10 }}>
-          <Text style={s.headerTitle}>{title}</Text>
-          <Text style={s.headerSub}>{subtitle}</Text>
-        </View>
-      </View>
-      <View style={s.center}>
-        <Text style={{ fontSize: 48, marginBottom: 16 }}>{emoji}</Text>
-        <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "900", textAlign: "center" }}>
-          {title} — скоро
-        </Text>
-        <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 21, textAlign: "center", marginTop: 10, paddingHorizontal: 16 }}>
-          Прямий чат з {title === "Інструктор" ? "інструктором" : "менеджером"} з'явиться після призначення.{"\n\n"}Поки що пишіть через «Автошкола Лідер» — ми відповімо протягом робочого дня.
-        </Text>
-        <Pressable
-          style={{ marginTop: 24, backgroundColor: colors.red, borderRadius: 20, paddingVertical: 14, paddingHorizontal: 40 }}
-          onPress={onBack}
-        >
-          <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>← Повернутись до чатів</Text>
-        </Pressable>
-      </View>
-    </SafeAreaView>
-  );
-}
+const CHAT_META: Record<string, { type: ConversationType; title: string; emoji: string }> = {
+  support: { type: "support", title: "Автошкола Лідер", emoji: "🏫" },
+  manager: { type: "manager", title: "Менеджер", emoji: "👩‍💼" },
+  instructor: { type: "instructor", title: "Інструктор", emoji: "🚗" },
+};
 
 // ─── Root tab component ───────────────────────────────────────────────────────
 
@@ -338,15 +306,9 @@ export default function ChatTab() {
     );
   }
 
-  if (activeChat === "support") {
-    return <Conversation onBack={() => setActiveChat(null)} />;
-  }
-
-  if (activeChat === "manager" || activeChat === "instructor") {
-    const meta = activeChat === "manager"
-      ? { title: "Менеджер", subtitle: "Оплата, документи, запис", emoji: "👩‍💼" }
-      : { title: "Інструктор", subtitle: "Практичні заняття", emoji: "🚗" };
-    return <PlaceholderConversation {...meta} onBack={() => setActiveChat(null)} />;
+  if (activeChat) {
+    const meta = CHAT_META[activeChat] ?? CHAT_META.support;
+    return <Conversation chatType={meta.type} title={meta.title} emoji={meta.emoji} onBack={() => setActiveChat(null)} />;
   }
 
   return <ChatList onOpen={(id) => setActiveChat(id)} />;
