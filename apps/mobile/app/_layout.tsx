@@ -32,11 +32,12 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { firebaseAuth } from "../lib/firebase";
 import { initAppCheck } from "../lib/appCheck";
 import { AuthContext } from "../lib/auth";
-import type { AuthContextValue, AuthMode, SignUpData, User } from "../lib/auth";
+import type { AuthContextValue, AuthMode, SignUpData, User, UserRole } from "../lib/auth";
 import { GUEST_USER } from "../lib/auth";
 import { API_BASE } from "../lib/api";
 import { ThemeProvider, darkColors as colors, radii, spacing } from "../lib/theme";
 import { configureGoogleSignIn, signInWithGoogle as googleSignIn, signOutFromGoogle } from "../lib/googleAuth";
+import { getUserRole } from "../lib/firestore";
 
 // ─── Avatar emoji pool ────────────────────────────────────────────────────────
 const AVATAR_EMOJIS = ["🚗", "🏎️", "🚦", "🛞", "🏁", "🚘", "🧭", "⭐", "🔥", "😎", "🚙", "🛣️"];
@@ -88,6 +89,7 @@ export default function RootLayout() {
   const [mode, setMode] = useState<AuthMode>("unauthenticated");
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [roleLoaded, setRoleLoaded] = useState(false);
   const [authGateVisible, setAuthGateVisible] = useState(false);
   const authGateCallback = useRef<(() => void) | undefined>(undefined);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -122,9 +124,21 @@ export default function RootLayout() {
         const appUser = toAppUser(fbUser);
         setUser(appUser);
         setMode(fbUser.isAnonymous ? "guest" : "authenticated");
+        // Fetch role from Firestore and update user object
+        if (!fbUser.isAnonymous) {
+          void getUserRole(fbUser.uid).then((role) => {
+            setUser((prev) =>
+              prev ? { ...prev, role: role as UserRole } : prev
+            );
+            setRoleLoaded(true);
+          });
+        } else {
+          setRoleLoaded(true);
+        }
       } else {
         setUser(null);
         setMode("unauthenticated");
+        setRoleLoaded(true);
       }
       setIsLoading(false);
     });
@@ -133,13 +147,15 @@ export default function RootLayout() {
 
   // ─── Navigate once auth state is resolved ─────────────────────────────────
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || !roleLoaded) return;
     if (mode === "unauthenticated") {
       router.replace("/onboarding");
+    } else if (user?.role === "instructor") {
+      router.replace("/instructor-home");
     } else {
       router.replace("/(tabs)");
     }
-  }, [isLoading, mode]);
+  }, [isLoading, roleLoaded, mode, user?.role]);
 
   // ─── Auth actions ──────────────────────────────────────────────────────────
 
@@ -293,6 +309,10 @@ export default function RootLayout() {
           <Stack.Screen name="booking" />
           <Stack.Screen name="lessons" />
           <Stack.Screen name="service-centers" />
+          <Stack.Screen name="insurance" />
+          <Stack.Screen name="lawyer" />
+          <Stack.Screen name="instructor-home" />
+          <Stack.Screen name="instructor-students" />
           <Stack.Screen name="(tabs)" />
         </Stack>
         <StatusBar style="light" />

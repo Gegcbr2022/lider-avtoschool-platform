@@ -3,6 +3,8 @@ import { createContext, useContext } from "react";
 
 export type AuthMode = "guest" | "authenticated" | "unauthenticated";
 
+export type UserRole = "student" | "instructor" | "manager" | "admin";
+
 export type User = {
   id: string;
   name: string;
@@ -15,6 +17,7 @@ export type User = {
   photoURL?: string;
   emailVerified?: boolean;
   isGuest: boolean;
+  role?: UserRole;
 };
 
 export type AuthState = {

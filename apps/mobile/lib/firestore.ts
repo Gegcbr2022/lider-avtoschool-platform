@@ -335,6 +335,18 @@ export async function getUserProfile(userId: string): Promise<UserProfileDoc | n
   };
 }
 
+// Fetch the user's role from Firestore userProfiles.
+// Falls back to "student" if no role field is set.
+export async function getUserRole(userId: string): Promise<string> {
+  try {
+    const snap = await getDoc(doc(db, "userProfiles", userId));
+    if (!snap.exists()) return "student";
+    return snap.data().role ?? "student";
+  } catch {
+    return "student";
+  }
+}
+
 export async function upsertUserProfile(
   userId: string,
   updates: Partial<Omit<UserProfileDoc, "userId" | "updatedAt">>
@@ -584,6 +596,31 @@ export async function getMyBookings(studentId: string): Promise<BookingDoc[]> {
       };
     });
     return rows.sort((a, b) => (a.startsAt < b.startsAt ? 1 : -1)); // soonest-newest, client-side
+  } catch {
+    return [];
+  }
+}
+
+// Fetch bookings where the caller is the instructor.
+export async function getInstructorBookings(instructorId: string): Promise<BookingDoc[]> {
+  try {
+    const snap = await getDocs(
+      query(collection(db, "bookings"), where("instructorId", "==", instructorId), limit(50))
+    );
+    const rows = snap.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        studentId: data.studentId ?? "",
+        studentName: data.studentName ?? "",
+        instructorId: data.instructorId ?? "",
+        instructorName: data.instructorName ?? "",
+        startsAt: data.startsAt ?? "",
+        status: data.status ?? "pending",
+        createdAt: toDate(data.createdAt),
+      };
+    });
+    return rows.sort((a, b) => (a.startsAt < b.startsAt ? -1 : 1)); // chronological
   } catch {
     return [];
   }
