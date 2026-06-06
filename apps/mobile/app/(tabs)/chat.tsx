@@ -6,6 +6,8 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import {
   ActivityIndicator,
+  Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -15,6 +17,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useAuth } from "../../lib/auth";
@@ -30,6 +33,7 @@ import {
   type ConversationType,
   type ConversationDoc,
 } from "../../lib/firestore";
+import { uploadChatImage } from "../../lib/storage";
 import { useTheme, radii, spacing } from "../../lib/theme";
 import { useNetworkStatus } from "../../lib/useNetwork";
 
@@ -144,6 +148,7 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -202,23 +207,49 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
     setSending(true);
     try {
       await sendMessage(conversationId, { senderId: user.id, senderName: user.name, text });
-      // Notify backend — sends to TG topic + triggers FCM on reply
       void notifyChat({
-        conversationId,
-        userId: user.id,
-        userName: user.name,
-        text,
-        conversationType: chat.type,
-        userPhone: user.phone,
-        userEmail: user.email,
-        userCity: user.city,
-        userCategory: user.category,
+        conversationId, userId: user.id, userName: user.name, text,
+        conversationType: chat.type, userPhone: user.phone, userEmail: user.email,
+        userCity: user.city, userCategory: user.category,
       });
     } catch {
       setError("Повідомлення не надіслано. Спробуй ще раз.");
       setInput(text);
     } finally {
       setSending(false);
+    }
+  }
+
+  async function handlePickImage() {
+    if (!conversationId || !user || uploadingImage) return;
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("Доступ потрібен", "Дозвольте доступ до фото в налаштуваннях.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      allowsEditing: false,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+    const uri = result.assets[0].uri;
+    setUploadingImage(true);
+    try {
+      const { downloadURL } = await uploadChatImage(conversationId, uri);
+      await sendMessage(conversationId, {
+        senderId: user.id, senderName: user.name,
+        text: "", mediaUrl: downloadURL, mediaType: "image",
+      });
+      void notifyChat({
+        conversationId, userId: user.id, userName: user.name, text: "📷 Фото",
+        conversationType: chat.type, userPhone: user.phone, userEmail: user.email,
+        userCity: user.city, userCategory: user.category,
+      });
+    } catch {
+      Alert.alert("Помилка", "Не вдалось надіслати фото. Спробуй ще раз.");
+    } finally {
+      setUploadingImage(false);
     }
   }
 
@@ -279,8 +310,15 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
             return (
               <View key={m.id} style={[s.bubbleWrap, mine ? s.bubbleWrapMine : s.bubbleWrapTheirs]}>
                 <View style={[s.bubble, mine ? s.bubbleMine : s.bubbleTheirs]}>
-                  {!mine ? <Text style={s.senderName}>{m.senderName || chat.title}</Text> : null}
-                  <Text style={[s.bubbleText, mine && s.bubbleTextMine]}>{m.text}</Text>
+                  {!mine ? <Text style={s.senderName}>{chat.title}</Text> : null}
+                  {m.mediaUrl && m.mediaType === "image" ? (
+                    <Image
+                      source={{ uri: m.mediaUrl }}
+                      style={{ width: 200, height: 150, borderRadius: radii.sm, marginBottom: m.text ? 6 : 0 }}
+                      resizeMode="cover"
+                    />
+                  ) : null}
+                  {m.text ? <Text style={[s.bubbleText, mine && s.bubbleTextMine]}>{m.text}</Text> : null}
                   <Text style={[s.time, mine && s.timeMine]}>{formatTime(m.createdAt)}</Text>
                 </View>
               </View>
@@ -298,6 +336,13 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
         </ScrollView>
 
         <View style={s.inputRow}>
+          <Pressable
+            style={[s.attachBtn, (uploadingImage) && { opacity: 0.4 }]}
+            onPress={handlePickImage}
+            disabled={uploadingImage || sending}
+          >
+            {uploadingImage ? <ActivityIndicator color={colors.textTertiary} size="small" /> : <Text style={{ fontSize: 20 }}>📷</Text>}
+          </Pressable>
           <TextInput
             style={s.input}
             value={input}
@@ -305,12 +350,12 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
             placeholder="Написати повідомлення..."
             placeholderTextColor={colors.textTertiary}
             multiline
-            editable={!sending}
+            editable={!sending && !uploadingImage}
           />
           <Pressable
-            style={[s.sendBtn, (!input.trim() || sending) && { opacity: 0.4 }]}
+            style={[s.sendBtn, (!input.trim() || sending || uploadingImage) && { opacity: 0.4 }]}
             onPress={handleSend}
-            disabled={!input.trim() || sending}
+            disabled={!input.trim() || sending || uploadingImage}
           >
             {sending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.sendText}>↑</Text>}
           </Pressable>
@@ -530,6 +575,16 @@ function makeStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       borderTopWidth: 1,
       borderTopColor: colors.border,
       backgroundColor: colors.bgCard,
+    },
+    attachBtn: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: colors.bgElevated,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     input: {
       flex: 1,

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView,
-  Modal, Platform, Pressable, ScrollView, Share, Text, TextInput,
-  TouchableOpacity, View,
+  ActivityIndicator, Alert, Animated, Easing, FlatList, Image,
+  KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Share, Text,
+  TextInput, TouchableOpacity, View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
@@ -52,6 +52,8 @@ function formatRelativeTime(date: Date | null): string {
 
 // ─── Story Viewer ─────────────────────────────────────────────────────────────
 
+const STORY_DURATION_MS = 5000;
+
 function StoryViewer({
   stories, startIndex, userId, onClose,
 }: {
@@ -59,6 +61,8 @@ function StoryViewer({
 }) {
   const [idx, setIdx] = useState(startIndex);
   const [deleting, setDeleting] = useState(false);
+  const progressAnim = useRef(new Animated.Value(0)).current;
+  const progressAnimRef = useRef<Animated.CompositeAnimation | null>(null);
   const story = stories[idx];
   const bg = (storyToneBg as Record<string, string>)[story?.tone] ?? TONE_COLORS[story?.tone ?? "dark"] ?? "#374151";
 
@@ -68,10 +72,31 @@ function StoryViewer({
     }
   }, [story?.id]);
 
+  // Auto-advance + animated progress bar
+  useEffect(() => {
+    progressAnim.setValue(0);
+    progressAnimRef.current = Animated.timing(progressAnim, {
+      toValue: 1,
+      duration: STORY_DURATION_MS,
+      easing: Easing.linear,
+      useNativeDriver: false,
+    });
+    progressAnimRef.current.start(({ finished }) => {
+      if (finished) goNext();
+    });
+    return () => { progressAnimRef.current?.stop(); };
+  }, [idx]);
+
   if (!story) { onClose(); return null; }
 
   function goNext() { idx < stories.length - 1 ? setIdx(i => i + 1) : onClose(); }
-  function goPrev() { if (idx > 0) setIdx(i => i - 1); }
+  function goPrev() {
+    if (idx > 0) {
+      progressAnimRef.current?.stop();
+      progressAnim.setValue(0);
+      setIdx(i => i - 1);
+    }
+  }
 
   async function handleDelete() {
     Alert.alert("Видалити історію?", "Ця дія незворотня.", [
@@ -97,7 +122,11 @@ function StoryViewer({
           <View style={{ flexDirection: "row", gap: 4, paddingHorizontal: 14, paddingTop: 8 }}>
             {stories.map((_, i) => (
               <View key={i} style={{ flex: 1, height: 3, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.3)" }}>
-                <View style={{ height: 3, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.9)", width: i < idx ? "100%" : i === idx ? "50%" : "0%" }} />
+                {i < idx ? (
+                  <View style={{ height: 3, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.9)", width: "100%" }} />
+                ) : i === idx ? (
+                  <Animated.View style={{ height: 3, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.9)", width: progressAnim.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] }) }} />
+                ) : null}
               </View>
             ))}
           </View>
@@ -127,8 +156,8 @@ function StoryViewer({
           </View>
           {/* Tap zones */}
           <View style={{ flex: 1, flexDirection: "row" }}>
-            <Pressable style={{ flex: 1 }} onPress={goPrev} />
-            <Pressable style={{ flex: 1 }} onPress={goNext} />
+            <Pressable style={{ flex: 1 }} onPress={() => { progressAnimRef.current?.stop(); progressAnim.setValue(0); goPrev(); }} />
+            <Pressable style={{ flex: 1 }} onPress={() => { progressAnimRef.current?.stop(); progressAnim.setValue(0); goNext(); }} />
           </View>
           {/* Content */}
           <View style={{ paddingHorizontal: 20, paddingBottom: 36 }}>

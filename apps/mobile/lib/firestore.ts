@@ -698,6 +698,8 @@ export type MessageDoc = {
   text: string;
   createdAt: Date | null;
   readBy?: string[];
+  mediaUrl?: string;
+  mediaType?: "image";
 };
 
 export function subscribeToConversations(
@@ -749,6 +751,8 @@ export function subscribeToMessages(
           text: data.text ?? "",
           createdAt: toDate(data.createdAt),
           readBy: data.readBy ?? [],
+          mediaUrl: data.mediaUrl,
+          mediaType: data.mediaType,
         };
       })
     );
@@ -757,14 +761,14 @@ export function subscribeToMessages(
 
 export async function sendMessage(
   conversationId: string,
-  params: { senderId: string; senderName: string; text: string }
+  params: { senderId: string; senderName: string; text: string; mediaUrl?: string; mediaType?: "image" }
 ): Promise<void> {
-  await addDoc(
-    collection(db, "conversations", conversationId, "messages"),
-    { ...params, createdAt: serverTimestamp(), readBy: [params.senderId] }
-  );
+  const { mediaUrl, mediaType, ...base } = params;
+  const payload: Record<string, unknown> = { ...base, createdAt: serverTimestamp(), readBy: [params.senderId] };
+  if (mediaUrl) { payload.mediaUrl = mediaUrl; payload.mediaType = mediaType ?? "image"; }
+  await addDoc(collection(db, "conversations", conversationId, "messages"), payload);
   await updateDoc(doc(db, "conversations", conversationId), {
-    lastMessage: params.text,
+    lastMessage: params.text || "📷 Фото",
     lastMessageAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });

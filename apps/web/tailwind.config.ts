@@ -6,10 +6,10 @@ const config: Config = {
     extend: {
       colors: {
         lider: {
-          red: "#ff1e1e",
-          redDark: "#d81414",
-          green: "#004d40",
-          greenDark: "#003329",
+          red: "#e51d1d",
+          redDark: "#c01414",
+          tg: "#229ED9",
+          tgDark: "#1a86c0",
           yellow: "#ffd600",
           graphite: "#111111",
           muted: "#666666",

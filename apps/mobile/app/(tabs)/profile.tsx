@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Image, Linking, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import {
+  Alert, Image, Linking, Modal, Pressable, ScrollView, Text, TextInput, View,
+} from "react-native";
 import { router, useFocusEffect, type Href } from "expo-router";
 import Constants from "expo-constants";
 import { useAuth } from "../../lib/auth";
-import { Card, GhostButton, Label, Pill, Row, Screen } from "../../components/mobile-ui";
-import { useTheme, radii, type ThemePreference, spacing } from "../../lib/theme";
+import { GhostButton, Label, Pill, Row, Screen } from "../../components/mobile-ui";
+import { useTheme, radii, type ThemePreference, spacing, shadows } from "../../lib/theme";
 import { useNetworkStatus } from "../../lib/useNetwork";
 import { getUserProfile, upsertUserProfile, getUserStats, type UserStats } from "../../lib/firestore";
 import { requestNotificationPermission, scheduleLocalNotification } from "../../lib/notifications";
@@ -25,7 +27,7 @@ const AVATAR_EMOJIS = [
 const CATEGORIES = ["A", "A1", "B", "C", "CE"];
 const CITIES = ["Київ", "Харків", "Одеса", "Дніпро", "Запоріжжя", "Львів", "Кривий Ріг", "Миколаїв", "Маріуполь", "Вінниця"];
 
-// ─── Modals ───────────────────────────────────────────────────────────────────
+// ─── Bottom sheet wrapper ─────────────────────────────────────────────────────
 
 function BottomSheet({ visible, title, onClose, children }: {
   visible: boolean; title: string; onClose: () => void; children: React.ReactNode;
@@ -43,6 +45,8 @@ function BottomSheet({ visible, title, onClose, children }: {
     </Modal>
   );
 }
+
+// ─── Field sheet ──────────────────────────────────────────────────────────────
 
 function FieldSheet({ visible, title, value, placeholder, onSave, onClose, keyboard = "default", secure = false }: {
   visible: boolean; title: string; value: string; placeholder?: string;
@@ -96,36 +100,325 @@ function AvatarPickerModal({ current, onSave, onClose }: { current: string; onSa
   );
 }
 
+// ─── Personal Info Sheet ──────────────────────────────────────────────────────
+
+type PersonalInfoState = {
+  name: string; phone: string; city: string; category: string;
+};
+
+function PersonalInfoSheet({ visible, data, onSave, onClose }: {
+  visible: boolean;
+  data: PersonalInfoState;
+  onSave: (d: Partial<PersonalInfoState>) => void;
+  onClose: () => void;
+}) {
+  const { colors } = useTheme();
+  const [editField, setEditField] = useState<"name" | "phone" | "city" | "category" | null>(null);
+  const [local, setLocal] = useState<PersonalInfoState>(data);
+
+  useEffect(() => { if (visible) setLocal(data); }, [visible]);
+
+  function saveField(field: keyof PersonalInfoState, value: string) {
+    const updated = { ...local, [field]: value };
+    setLocal(updated);
+    onSave({ [field]: value });
+  }
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}>
+        <View style={{ backgroundColor: colors.bgSheet, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 44, maxHeight: "85%" }}>
+          <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginBottom: 20 }} />
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 20, fontWeight: "900" }}>Особиста інформація</Text>
+            <Pressable onPress={onClose} hitSlop={12}>
+              <Text style={{ color: colors.textTertiary, fontSize: 22 }}>✕</Text>
+            </Pressable>
+          </View>
+
+          <FieldSheet visible={editField === "name"} title="Ваше ім'я" value={local.name} placeholder="Ім'я та прізвище"
+            onSave={(v) => saveField("name", v)} onClose={() => setEditField(null)} />
+          <FieldSheet visible={editField === "phone"} title="Номер телефону" value={local.phone} placeholder="+380 xx xxx xx xx"
+            onSave={(v) => saveField("phone", v)} onClose={() => setEditField(null)} keyboard="phone-pad" />
+
+          <Modal visible={editField === "city"} animationType="slide" transparent onRequestClose={() => setEditField(null)}>
+            <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }} onPress={() => setEditField(null)}>
+              <View style={{ backgroundColor: colors.bgSheet, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 44 }}>
+                <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginBottom: 20 }} />
+                <Text style={{ color: colors.textPrimary, fontSize: 20, fontWeight: "900", marginBottom: 16 }}>Ваше місто</Text>
+                <ScrollView>
+                  {CITIES.map(c => (
+                    <Pressable key={c} onPress={() => { saveField("city", c); setEditField(null); }}
+                      style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                      <Text style={{ fontSize: 16, fontWeight: "600", color: local.city === c ? colors.red : colors.textPrimary }}>{c}</Text>
+                      {local.city === c ? <Text style={{ color: colors.red, fontSize: 16 }}>✓</Text> : null}
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            </Pressable>
+          </Modal>
+
+          <Modal visible={editField === "category"} animationType="slide" transparent onRequestClose={() => setEditField(null)}>
+            <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }} onPress={() => setEditField(null)}>
+              <View style={{ backgroundColor: colors.bgSheet, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 44 }}>
+                <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginBottom: 20 }} />
+                <Text style={{ color: colors.textPrimary, fontSize: 20, fontWeight: "900", marginBottom: 16 }}>Категорія прав</Text>
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+                  {CATEGORIES.map(cat => (
+                    <Pressable key={cat} onPress={() => { saveField("category", cat); setEditField(null); }}
+                      style={{ flex: 1, minWidth: 72, alignItems: "center", padding: 16, borderRadius: radii.md, backgroundColor: local.category === cat ? colors.redSoft : colors.bgCard, borderWidth: 2, borderColor: local.category === cat ? colors.red : colors.border }}>
+                      <Text style={{ fontSize: 22, fontWeight: "900", color: local.category === cat ? colors.red : colors.textPrimary }}>{cat}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            </Pressable>
+          </Modal>
+
+          {/* Rows */}
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <Pressable onPress={() => setEditField("name")}
+              style={{ paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <Text style={{ fontSize: 20 }}>👤</Text>
+                <View>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textTertiary, textTransform: "uppercase", letterSpacing: 0.5 }}>Ім'я</Text>
+                  <Text style={{ fontSize: 16, fontWeight: "700", color: local.name ? colors.textPrimary : colors.textTertiary, marginTop: 2 }}>{local.name || "Вкажіть ім'я"}</Text>
+                </View>
+              </View>
+              <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
+            </Pressable>
+
+            <Pressable onPress={() => setEditField("phone")}
+              style={{ paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <Text style={{ fontSize: 20 }}>📱</Text>
+                <View>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textTertiary, textTransform: "uppercase", letterSpacing: 0.5 }}>Телефон</Text>
+                  <Text style={{ fontSize: 16, fontWeight: "700", color: local.phone ? colors.textPrimary : colors.textTertiary, marginTop: 2 }}>{local.phone || "Вкажіть телефон"}</Text>
+                </View>
+              </View>
+              <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
+            </Pressable>
+
+            <Pressable onPress={() => setEditField("city")}
+              style={{ paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <Text style={{ fontSize: 20 }}>🏙️</Text>
+                <View>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textTertiary, textTransform: "uppercase", letterSpacing: 0.5 }}>Місто</Text>
+                  <Text style={{ fontSize: 16, fontWeight: "700", color: local.city ? colors.textPrimary : colors.textTertiary, marginTop: 2 }}>{local.city || "Вкажіть місто"}</Text>
+                </View>
+              </View>
+              <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
+            </Pressable>
+
+            <Pressable onPress={() => setEditField("category")}
+              style={{ paddingVertical: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <Text style={{ fontSize: 20 }}>🚗</Text>
+                <View>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textTertiary, textTransform: "uppercase", letterSpacing: 0.5 }}>Категорія прав</Text>
+                  <Text style={{ fontSize: 16, fontWeight: "700", color: local.category ? colors.textPrimary : colors.textTertiary, marginTop: 2 }}>{local.category || "Оберіть категорію"}</Text>
+                </View>
+              </View>
+              <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
+            </Pressable>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ─── Settings Sheet ───────────────────────────────────────────────────────────
+
+function SettingsSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { colors, preference, setPreference } = useTheme();
+  return (
+    <BottomSheet visible={visible} title="Налаштування" onClose={onClose}>
+      <Text style={{ fontSize: 13, fontWeight: "700", color: colors.textSecondary, marginBottom: 12 }}>Тема оформлення</Text>
+      <View style={{ flexDirection: "row", gap: 8 }}>
+        {THEME_OPTIONS.map((opt) => (
+          <Pressable
+            key={opt.value}
+            onPress={() => setPreference(opt.value)}
+            style={{ flex: 1, alignItems: "center", padding: 14, borderRadius: radii.sm, backgroundColor: preference === opt.value ? colors.redSoft : colors.bgElevated, borderWidth: 1.5, borderColor: preference === opt.value ? colors.red : colors.border, gap: 4 }}
+          >
+            <Text style={{ fontSize: 22 }}>{opt.icon}</Text>
+            <Text style={{ color: preference === opt.value ? colors.red : colors.textSecondary, fontSize: 11, fontWeight: "800" }}>{opt.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+    </BottomSheet>
+  );
+}
+
+// ─── Notifications Sheet ──────────────────────────────────────────────────────
+
+function NotificationsSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <BottomSheet visible={visible} title="Сповіщення" onClose={onClose}>
+      <Pressable
+        onPress={async () => {
+          const status = await requestNotificationPermission();
+          if (status !== "granted") {
+            Alert.alert("Дозвіл потрібен", "Увімкніть сповіщення в Налаштуваннях → Застосунки → Автошкола Лідер.", [{ text: "OK" }]);
+            return;
+          }
+          await scheduleLocalNotification({ title: "⏰ Час тренуватися!", body: "Пройди тест дня — підтримуй серію та готуйся до іспиту.", channelId: "reminders", delaySeconds: 5 });
+          Alert.alert("Нагадування встановлено", "Отримаєш сповіщення через 5 секунд — перевір!");
+        }}
+        style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.border }}
+      >
+        <Text style={{ fontSize: 28 }}>🔔</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 16, fontWeight: "800", color: colors.textPrimary }}>Щоденне нагадування</Text>
+          <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>Тест дня та підтримка серії</Text>
+        </View>
+        <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
+      </Pressable>
+    </BottomSheet>
+  );
+}
+
+// ─── Security Sheet ───────────────────────────────────────────────────────────
+
+function SecuritySheet({ visible, userEmail, onForgotPassword, onSignOut, onClose }: {
+  visible: boolean; userEmail?: string | null;
+  onForgotPassword: () => void; onSignOut: () => void; onClose: () => void;
+}) {
+  const { colors } = useTheme();
+  return (
+    <BottomSheet visible={visible} title="Безпека та вхід" onClose={onClose}>
+      <View style={{ gap: 12 }}>
+        {userEmail ? (
+          <Pressable
+            onPress={() => { onForgotPassword(); onClose(); }}
+            style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.border }}
+          >
+            <Text style={{ fontSize: 24 }}>🔐</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: "800", color: colors.textPrimary }}>Змінити пароль</Text>
+              <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>Надіслати посилання на {userEmail}</Text>
+            </View>
+            <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
+          </Pressable>
+        ) : null}
+        <Pressable
+          onPress={() => { onSignOut(); onClose(); }}
+          style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.redSoft, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.red + "44" }}
+        >
+          <Text style={{ fontSize: 24 }}>🚪</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 15, fontWeight: "800", color: colors.red }}>Вийти з акаунту</Text>
+            <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>Завершити сесію</Text>
+          </View>
+          <Text style={{ color: colors.red, fontSize: 18 }}>›</Text>
+        </Pressable>
+      </View>
+    </BottomSheet>
+  );
+}
+
+// ─── Support Sheet ────────────────────────────────────────────────────────────
+
+function SupportSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { colors } = useTheme();
+
+  function openEmail() {
+    Linking.openURL("mailto:support@lider-avtoschool.ua?subject=Підтримка%20з%20додатку").catch(() => {
+      Alert.alert("Підтримка", "Email: support@lider-avtoschool.ua");
+    });
+  }
+
+  return (
+    <BottomSheet visible={visible} title="Підтримка" onClose={onClose}>
+      <View style={{ gap: 12 }}>
+        <Pressable onPress={openEmail}
+          style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.border }}>
+          <Text style={{ fontSize: 24 }}>💬</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 15, fontWeight: "800", color: colors.textPrimary }}>Написати в підтримку</Text>
+            <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>support@lider-avtoschool.ua</Text>
+          </View>
+          <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
+        </Pressable>
+        <Pressable onPress={() => Linking.openURL("https://lider-avtoschool.ua/terms").catch(() => {})}
+          style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.border }}>
+          <Text style={{ fontSize: 24 }}>📄</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 15, fontWeight: "800", color: colors.textPrimary }}>Умови використання</Text>
+            <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>Правила та угода</Text>
+          </View>
+          <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
+        </Pressable>
+        <Pressable onPress={() => Linking.openURL("https://lider-avtoschool.ua/privacy").catch(() => {})}
+          style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.border }}>
+          <Text style={{ fontSize: 24 }}>🔒</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 15, fontWeight: "800", color: colors.textPrimary }}>Політика конфіденційності</Text>
+            <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>Обробка персональних даних</Text>
+          </View>
+          <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
+        </Pressable>
+      </View>
+    </BottomSheet>
+  );
+}
+
+// ─── Nav item component ───────────────────────────────────────────────────────
+
+function NavItem({ icon, title, subtitle, onPress, accent }: {
+  icon: string; title: string; subtitle?: string; onPress: () => void; accent?: boolean;
+}) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14, paddingHorizontal: 16 }}
+    >
+      <View style={{
+        width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center",
+        backgroundColor: accent ? colors.redSoft : colors.bgElevated,
+      }}>
+        <Text style={{ fontSize: 20 }}>{icon}</Text>
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 15, fontWeight: "800", color: accent ? colors.red : colors.textPrimary }}>{title}</Text>
+        {subtitle ? <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 1 }}>{subtitle}</Text> : null}
+      </View>
+      <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
+    </Pressable>
+  );
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
+
+type Sheet = "personal" | "settings" | "security" | "notifications" | "support" | "avatar" | null;
 
 export default function ProfileTab() {
   const { mode, user, signOut, forgotPassword } = useAuth();
-  const { colors, preference, setPreference } = useTheme();
+  const { colors } = useTheme();
   const networkStatus = useNetworkStatus();
   const isGuest = mode === "guest";
 
   // Local state for profile fields
-  const [localName, setLocalName] = useState<string | null>(null);
-  const [localAvatar, setLocalAvatar] = useState<string | null>(null);
-  const [localPhone, setLocalPhone] = useState<string | null>(null);
-  const [localCity, setLocalCity] = useState<string | null>(null);
-  const [localCategory, setLocalCategory] = useState<string | null>(null);
+  const [localName, setLocalName] = useState<string>("");
+  const [localAvatar, setLocalAvatar] = useState<string>("");
+  const [localPhone, setLocalPhone] = useState<string>("");
+  const [localCity, setLocalCity] = useState<string>("");
+  const [localCategory, setLocalCategory] = useState<string>("");
 
-  // Sheet visibility
-  const [editField, setEditField] = useState<"name" | "phone" | "city" | "category" | "avatar" | null>(null);
-
-  // Real gamification stats (Firestore)
+  const [activeSheet, setActiveSheet] = useState<Sheet>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
-
-  // Hidden dev mode
   const [devTapCount, setDevTapCount] = useState(0);
   const [devUnlocked, setDevUnlocked] = useState(false);
 
-  const displayName = localName ?? user?.name ?? "Учень";
-  const displayEmoji = localAvatar ?? user?.avatarEmoji ?? "🚗";
-  const displayPhone = localPhone ?? "";
-  const displayCity = localCity ?? "";
-  const displayCategory = localCategory ?? "";
+  const displayName = localName || user?.name || "Учень";
+  const displayEmoji = localAvatar || user?.avatarEmoji || "🚗";
   const isEmailVerified = user?.emailVerified ?? false;
 
   // Load profile from Firestore on mount
@@ -133,16 +426,14 @@ export default function ProfileTab() {
     if (!user?.id || isGuest) return;
     getUserProfile(user.id).then(profile => {
       if (!profile) return;
-      if (profile.name && !localName) setLocalName(profile.name);
-      if (profile.avatarEmoji && !localAvatar) setLocalAvatar(profile.avatarEmoji);
-      if (profile.phone && !localPhone) setLocalPhone(profile.phone);
-      if (profile.city && !localCity) setLocalCity(profile.city);
-      if (profile.category && !localCategory) setLocalCategory(profile.category);
+      if (profile.name) setLocalName(profile.name);
+      if (profile.avatarEmoji) setLocalAvatar(profile.avatarEmoji);
+      if (profile.phone) setLocalPhone(profile.phone);
+      if (profile.city) setLocalCity(profile.city);
+      if (profile.category) setLocalCategory(profile.category);
     }).catch(() => {});
   }, [user?.id]);
 
-  // Refresh gamification stats every time the Profile tab gains focus, so a test
-  // just completed on another tab is reflected immediately (tab stays mounted).
   useFocusEffect(
     useCallback(() => {
       if (!user?.id || isGuest) return;
@@ -154,18 +445,7 @@ export default function ProfileTab() {
     if (!user?.id || !value.trim()) return;
     try {
       await upsertUserProfile(user.id, { [field]: value.trim() });
-    } catch {
-      // Non-critical, local state already updated
-    }
-  }
-
-  function handleVersionTap() {
-    const next = devTapCount + 1;
-    setDevTapCount(next);
-    if (next >= 10) {
-      setDevTapCount(0);
-      setDevUnlocked(true);
-    }
+    } catch { /* non-critical */ }
   }
 
   async function handleForgotPassword() {
@@ -178,72 +458,50 @@ export default function ProfileTab() {
     }
   }
 
-  function handleSupport() {
-    Linking.openURL("mailto:support@lider-avtoschool.ua?subject=Підтримка%20з%20додатку").catch(() => {
-      Alert.alert("Підтримка", "Email: support@lider-avtoschool.ua");
-    });
+  function handleSignOut() {
+    Alert.alert("Вийти?", "Ваш прогрес збережено.", [
+      { text: "Скасувати", style: "cancel" },
+      { text: "Вийти", style: "destructive", onPress: signOut },
+    ]);
   }
 
-  return (
-    <Screen title="Профіль" subtitle="Ваш акаунт та налаштування">
+  const personalData: PersonalInfoState = {
+    name: localName, phone: localPhone, city: localCity, category: localCategory,
+  };
 
-      {/* Field modals */}
-      {editField === "avatar" ? (
+  return (
+    <Screen title="Профіль" subtitle="Ваш акаунт">
+
+      {/* Sheets */}
+      {activeSheet === "avatar" ? (
         <AvatarPickerModal
           current={displayEmoji}
           onSave={(e) => { setLocalAvatar(e); void saveField("avatarEmoji", e); }}
-          onClose={() => setEditField(null)}
+          onClose={() => setActiveSheet(null)}
         />
       ) : null}
 
-      <FieldSheet
-        visible={editField === "name"} title="Ваше ім'я"
-        value={displayName} placeholder="Ім'я та прізвище"
-        onSave={(v) => { setLocalName(v); void saveField("name", v); }}
-        onClose={() => setEditField(null)}
+      <PersonalInfoSheet
+        visible={activeSheet === "personal"}
+        data={personalData}
+        onSave={(patch) => {
+          if (patch.name !== undefined) { setLocalName(patch.name); void saveField("name", patch.name); }
+          if (patch.phone !== undefined) { setLocalPhone(patch.phone); void saveField("phone", patch.phone); }
+          if (patch.city !== undefined) { setLocalCity(patch.city); void saveField("city", patch.city); }
+          if (patch.category !== undefined) { setLocalCategory(patch.category); void saveField("category", patch.category); }
+        }}
+        onClose={() => setActiveSheet(null)}
       />
-      <FieldSheet
-        visible={editField === "phone"} title="Номер телефону"
-        value={displayPhone} placeholder="+380 xx xxx xx xx"
-        onSave={(v) => { setLocalPhone(v); void saveField("phone", v); }}
-        onClose={() => setEditField(null)}
-        keyboard="phone-pad"
+      <SettingsSheet visible={activeSheet === "settings"} onClose={() => setActiveSheet(null)} />
+      <NotificationsSheet visible={activeSheet === "notifications"} onClose={() => setActiveSheet(null)} />
+      <SecuritySheet
+        visible={activeSheet === "security"}
+        userEmail={user?.email}
+        onForgotPassword={handleForgotPassword}
+        onSignOut={handleSignOut}
+        onClose={() => setActiveSheet(null)}
       />
-
-      {/* City picker */}
-      <Modal visible={editField === "city"} animationType="slide" transparent onRequestClose={() => setEditField(null)}>
-        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }} onPress={() => setEditField(null)}>
-          <View style={{ backgroundColor: colors.bgSheet, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 44 }}>
-            <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginBottom: 20 }} />
-            <Text style={{ color: colors.textPrimary, fontSize: 20, fontWeight: "900", marginBottom: 16 }}>Ваше місто</Text>
-            {CITIES.map(c => (
-              <Pressable key={c} onPress={() => { setLocalCity(c); void saveField("city", c); setEditField(null); }}
-                style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                <Text style={{ fontSize: 16, fontWeight: "600", color: displayCity === c ? colors.red : colors.textPrimary }}>{c}</Text>
-                {displayCity === c ? <Text style={{ color: colors.red, fontSize: 16 }}>✓</Text> : null}
-              </Pressable>
-            ))}
-          </View>
-        </Pressable>
-      </Modal>
-
-      {/* Category picker */}
-      <Modal visible={editField === "category"} animationType="slide" transparent onRequestClose={() => setEditField(null)}>
-        <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }} onPress={() => setEditField(null)}>
-          <View style={{ backgroundColor: colors.bgSheet, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 44 }}>
-            <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginBottom: 20 }} />
-            <Text style={{ color: colors.textPrimary, fontSize: 20, fontWeight: "900", marginBottom: 16 }}>Категорія прав</Text>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-              {CATEGORIES.map(cat => (
-                <Pressable key={cat} onPress={() => { setLocalCategory(cat); void saveField("category", cat); setEditField(null); }}
-                  style={{ flex: 1, minWidth: 72, alignItems: "center", padding: 16, borderRadius: radii.md, backgroundColor: displayCategory === cat ? colors.redSoft : colors.bgCard, borderWidth: 2, borderColor: displayCategory === cat ? colors.red : colors.border }}>
-                  <Text style={{ fontSize: 22, fontWeight: "900", color: displayCategory === cat ? colors.red : colors.textPrimary }}>{cat}</Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-        </Pressable>
-      </Modal>
+      <SupportSheet visible={activeSheet === "support"} onClose={() => setActiveSheet(null)} />
 
       {/* Offline banner */}
       {networkStatus === "offline" ? (
@@ -263,71 +521,68 @@ export default function ProfileTab() {
         </View>
       ) : null}
 
-      {/* Profile card */}
-      <Card>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-          <Pressable
-            onPress={() => !isGuest && setEditField("avatar")}
-            style={{ width: 72, height: 72, borderRadius: 24, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: colors.red + "44", overflow: "hidden" }}
-          >
-            {user?.photoURL ? (
-              <Image source={{ uri: user.photoURL }} style={{ width: 72, height: 72 }} />
-            ) : (
-              <Text style={{ fontSize: 36 }}>{displayEmoji}</Text>
-            )}
-            {!isGuest && !user?.photoURL ? (
-              <View style={{ position: "absolute", bottom: 0, right: 0, width: 22, height: 22, borderRadius: 11, backgroundColor: colors.bgCard, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: colors.border }}>
-                <Text style={{ fontSize: 10 }}>✏️</Text>
-              </View>
-            ) : null}
-          </Pressable>
-
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text style={{ color: colors.textPrimary, fontSize: 20, fontWeight: "900" }}>{displayName}</Text>
-              {!isGuest ? (
-                <Pressable onPress={() => setEditField("name")}>
-                  <Text style={{ color: colors.textTertiary, fontSize: 13 }}>✏️</Text>
-                </Pressable>
-              ) : null}
+      {/* Profile hero */}
+      <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.border, padding: 20, flexDirection: "row", alignItems: "center", gap: 16, ...shadows.card }}>
+        <Pressable
+          onPress={() => !isGuest && setActiveSheet("avatar")}
+          style={{ width: 72, height: 72, borderRadius: 24, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: colors.red + "44", overflow: "hidden" }}
+        >
+          {user?.photoURL ? (
+            <Image source={{ uri: user.photoURL }} style={{ width: 72, height: 72 }} />
+          ) : (
+            <Text style={{ fontSize: 36 }}>{displayEmoji}</Text>
+          )}
+          {!isGuest && !user?.photoURL ? (
+            <View style={{ position: "absolute", bottom: 0, right: 0, width: 22, height: 22, borderRadius: 11, backgroundColor: colors.bgCard, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: colors.border }}>
+              <Text style={{ fontSize: 10 }}>✏️</Text>
             </View>
-            {isGuest ? (
-              <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4 }}>Гість · реєстрація займе 30 сек</Text>
-            ) : (
-              <View style={{ gap: 2, marginTop: 4 }}>
-                {user?.email ? <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{user.email}</Text> : null}
-              </View>
-            )}
-          </View>
-
-          {isGuest ? (
-            <View style={{ backgroundColor: colors.bgElevated, borderRadius: radii.full, paddingHorizontal: 12, paddingVertical: 5 }}>
-              <Text style={{ color: colors.textTertiary, fontSize: 12, fontWeight: "700" }}>Гість</Text>
-            </View>
-          ) : isEmailVerified ? (
-            <Pill tone="success">✓</Pill>
-          ) : user?.email ? (
-            <Pill tone="warning">!</Pill>
           ) : null}
+        </Pressable>
+
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.textPrimary, fontSize: 20, fontWeight: "900" }}>{displayName}</Text>
+          {isGuest ? (
+            <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 3 }}>Гість · реєстрація займе 30 сек</Text>
+          ) : (
+            <>
+              {user?.email ? <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 3 }}>{user.email}</Text> : null}
+              {user?.role === "instructor" ? (
+                <View style={{ marginTop: 6, alignSelf: "flex-start", backgroundColor: colors.red, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
+                  <Text style={{ color: "#fff", fontSize: 11, fontWeight: "800" }}>Інструктор</Text>
+                </View>
+              ) : null}
+            </>
+          )}
         </View>
 
         {isGuest ? (
-          <Pressable
-            style={{ marginTop: 16, backgroundColor: colors.red, borderRadius: radii.sm, paddingVertical: 14, alignItems: "center", shadowColor: colors.red, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.35, shadowRadius: 8, elevation: 6 }}
-            onPress={() => router.push("/auth?mode=register")}
-          >
-            <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>🚗 Зареєструватися безкоштовно</Text>
-          </Pressable>
+          <View style={{ backgroundColor: colors.bgElevated, borderRadius: radii.full, paddingHorizontal: 12, paddingVertical: 5 }}>
+            <Text style={{ color: colors.textTertiary, fontSize: 12, fontWeight: "700" }}>Гість</Text>
+          </View>
+        ) : isEmailVerified ? (
+          <Pill tone="success">✓</Pill>
+        ) : user?.email ? (
+          <Pill tone="warning">!</Pill>
         ) : null}
-      </Card>
+      </View>
 
-      {/* Stats — real Firestore gamification data */}
+      {/* Guest CTA */}
+      {isGuest ? (
+        <Pressable
+          style={{ backgroundColor: colors.red, borderRadius: radii.md, paddingVertical: 16, alignItems: "center", ...shadows.red }}
+          onPress={() => router.push("/auth?mode=register")}
+        >
+          <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>🚗 Зареєструватися безкоштовно</Text>
+        </Pressable>
+      ) : null}
+
+      {/* Stats — auth users only */}
       {!isGuest ? (
         <View style={{ flexDirection: "row", gap: 10 }}>
           {[
             { value: String(stats?.testsCompleted ?? 0), label: "Тестів" },
             { value: stats && stats.bestScorePct > 0 ? `${stats.bestScorePct}%` : "—", label: "Найкращий" },
-            { value: String(stats?.streakDays ?? 0), label: "Днів поспіль" },
+            { value: String(stats?.streakDays ?? 0), label: "Поспіль" },
           ].map((stat) => (
             <View key={stat.label} style={{ flex: 1, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 14, alignItems: "center", borderWidth: 1, borderColor: colors.border }}>
               <Text style={{ color: colors.red, fontSize: 22, fontWeight: "900" }}>{stat.value}</Text>
@@ -337,172 +592,69 @@ export default function ProfileTab() {
         </View>
       ) : null}
 
-      {/* Personal data (only for auth users) */}
-      {!isGuest ? (
-        <Card>
-          <Label>Особисті дані</Label>
-          <Row
-            title="Ім'я" detail={displayName || "Вкажіть ім'я"} icon="👤"
-            onPress={() => setEditField("name")}
-          />
-          <Row
-            title="Телефон" detail={displayPhone || "Вкажіть телефон"} icon="📱"
-            onPress={() => setEditField("phone")}
-          />
-          <Row
-            title="Місто" detail={displayCity || "Вкажіть місто"} icon="🏙️"
-            onPress={() => setEditField("city")}
-          />
-          <Row
-            title="Категорія прав" detail={displayCategory || "Оберіть категорію"} icon="🚗"
-            onPress={() => setEditField("category")}
-          />
-          <Row
-            title="Мої документи" detail="Дані та фото для НАІС МВС" icon="🪪"
-            onPress={() => router.push("/documents" as Href)}
-          />
-        </Card>
-      ) : null}
+      {/* Main navigation menu */}
+      <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.border, overflow: "hidden" }}>
+        {!isGuest ? (
+          <>
+            <NavItem icon="👤" title="Особиста інформація" subtitle={localName || "Ім'я, телефон, місто, категорія"} onPress={() => setActiveSheet("personal")} />
+            <View style={{ height: 1, backgroundColor: colors.border, marginLeft: 70 }} />
+            <NavItem icon="🪪" title="Документи" subtitle="Дані та фото для НАІС МВС" onPress={() => router.push("/documents" as Href)} />
+            <View style={{ height: 1, backgroundColor: colors.border, marginLeft: 70 }} />
+          </>
+        ) : null}
+        <NavItem icon="⚙️" title="Налаштування" subtitle="Тема оформлення" onPress={() => setActiveSheet("settings")} />
+        {!isGuest ? (
+          <>
+            <View style={{ height: 1, backgroundColor: colors.border, marginLeft: 70 }} />
+            <NavItem icon="🔔" title="Сповіщення" subtitle="Нагадування та push" onPress={() => setActiveSheet("notifications")} />
+            <View style={{ height: 1, backgroundColor: colors.border, marginLeft: 70 }} />
+            <NavItem icon="🔐" title="Безпека та вхід" subtitle="Пароль, вихід з акаунту" onPress={() => setActiveSheet("security")} />
+          </>
+        ) : null}
+        <View style={{ height: 1, backgroundColor: colors.border, marginLeft: 70 }} />
+        <NavItem icon="💬" title="Підтримка" subtitle="Email, умови, конфіденційність" onPress={() => setActiveSheet("support")} />
+      </View>
 
-      {/* Theme */}
-      <Card>
-        <Label>Тема оформлення</Label>
-        <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
-          {THEME_OPTIONS.map((opt) => (
-            <Pressable
-              key={opt.value}
-              onPress={() => setPreference(opt.value)}
-              style={{ flex: 1, alignItems: "center", padding: 12, borderRadius: radii.sm, backgroundColor: preference === opt.value ? colors.redSoft : colors.bgElevated, borderWidth: 1.5, borderColor: preference === opt.value ? colors.red : colors.border, gap: 4 }}
-            >
-              <Text style={{ fontSize: 20 }}>{opt.icon}</Text>
-              <Text style={{ color: preference === opt.value ? colors.red : colors.textSecondary, fontSize: 11, fontWeight: "800" }}>{opt.label}</Text>
-            </Pressable>
-          ))}
-        </View>
-      </Card>
-
-      {/* Navigation */}
-      <Card>
-        <Label>Навчання</Label>
-        <Row title="ПДР Тренажер" detail="Пройти тест зараз" icon="✅" onPress={() => router.push("/(tabs)/tests")} />
-        <Row title="Курси та уроки" detail="Матеріали для підготовки" icon="📚" onPress={() => router.push("/(tabs)/learning")} />
-        <Row title="Клуб та Лідик" detail="Спільнота та AI-помічник" icon="🏆" onPress={() => router.push("/(tabs)/club")} />
-      </Card>
-
-      {/* Security (auth only) */}
-      {!isGuest ? (
-        <Card>
-          <Label>Безпека</Label>
-          {user?.email ? (
-            <Row
-              title="Змінити пароль"
-              detail="Надіслати посилання на email"
-              icon="🔐"
-              onPress={handleForgotPassword}
-            />
-          ) : null}
-          <Row
-            title="Вийти з акаунту"
-            detail="Завершити сесію"
-            icon="🚪"
-            onPress={() => {
-              Alert.alert("Вийти?", "Ваш прогрес збережено.", [
-                { text: "Скасувати", style: "cancel" },
-                { text: "Вийти", style: "destructive", onPress: signOut },
-              ]);
-            }}
-          />
-        </Card>
-      ) : null}
-
-      {/* Notifications */}
-      <Card>
-        <Label>Сповіщення</Label>
-        <Row
-          title="Щоденне нагадування"
-          detail="Тест дня та серія"
-          icon="🔔"
-          onPress={async () => {
-            const status = await requestNotificationPermission();
-            if (status !== "granted") {
-              Alert.alert(
-                "Дозвіл потрібен",
-                "Увімкніть сповіщення в Налаштуваннях → Застосунки → Автошкола Лідер.",
-                [{ text: "OK" }]
-              );
-              return;
-            }
-            await scheduleLocalNotification({
-              title: "⏰ Час тренуватися!",
-              body: "Пройди тест дня — підтримуй серію та готуйся до іспиту.",
-              channelId: "reminders",
-              delaySeconds: 5,
-            });
-            Alert.alert("Нагадування встановлено", "Отримаєш сповіщення через 5 секунд — перевір!");
-          }}
-        />
-      </Card>
-
-      {/* Instructor quick access */}
+      {/* Instructor section */}
       {user?.role === "instructor" ? (
-        <Card>
-          <Label variant="red">Інструктор</Label>
-          <Row
-            title="Мої учні"
-            detail="Список учнів та заняття"
-            icon="👥"
-            onPress={() => router.push("/instructor-students" as Href)}
-          />
-          <Row
-            title="Розклад занять"
-            detail="На головній вкладці"
-            icon="📅"
-            onPress={() => router.push("/(tabs)" as Href)}
-          />
-        </Card>
+        <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.red + "33", overflow: "hidden" }}>
+          <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 2 }}>
+            <Text style={{ fontSize: 11, fontWeight: "800", color: colors.red, letterSpacing: 0.8, textTransform: "uppercase" }}>Інструктор</Text>
+          </View>
+          <NavItem icon="👥" title="Мої учні" subtitle="Список учнів та заняття" onPress={() => router.push("/instructor-students" as Href)} accent />
+          <View style={{ height: 1, backgroundColor: colors.border, marginLeft: 70 }} />
+          <NavItem icon="📅" title="Розклад занять" subtitle="Перейти до головної" onPress={() => router.push("/(tabs)" as Href)} />
+        </View>
       ) : null}
 
-      {/* Support */}
-      <Card>
-        <Label>Підтримка</Label>
-        <Row title="Написати в підтримку" detail="support@lider-avtoschool.ua" icon="💬" onPress={handleSupport} />
-        <Row title="Умови використання" detail="Правила та угода" icon="📄" onPress={() => Linking.openURL("https://lider-avtoschool.ua/terms").catch(() => {})} />
-        <Row title="Політика конфіденційності" detail="Обробка даних" icon="🔒" onPress={() => Linking.openURL("https://lider-avtoschool.ua/privacy").catch(() => {})} />
-      </Card>
-
-      {/* Version footer — hidden dev entry (no hints) */}
-      <Pressable onPress={handleVersionTap} style={{ alignItems: "center", paddingVertical: 16 }}>
+      {/* Version — dev tap entry */}
+      <Pressable onPress={() => {
+        const next = devTapCount + 1;
+        setDevTapCount(next);
+        if (next >= 10) { setDevTapCount(0); setDevUnlocked(true); }
+      }} style={{ alignItems: "center", paddingVertical: 16 }}>
         <Text style={{ color: colors.textTertiary, fontSize: 12, fontWeight: "600" }}>
           Автошкола Лідер · v{APP_VERSION}
         </Text>
       </Pressable>
 
-      {/* Dev panel (unlocked silently) */}
+      {/* Dev panel */}
       {devUnlocked ? (
-        <Card>
-          <Label variant="red">Розробник</Label>
-          <Row title="Діагностика" detail="API та Firebase" icon="🔧" onPress={() => router.push("/diagnostic")} />
-          <Row
-            title="Тест-сповіщення"
-            detail="Надіслати local push зараз"
-            icon="🧪"
-            onPress={async () => {
-              const status = await requestNotificationPermission();
-              if (status !== "granted") {
-                Alert.alert("Немає дозволу", "Увімкніть сповіщення в налаштуваннях.");
-                return;
-              }
-              await scheduleLocalNotification({
-                title: "🧪 Тест-сповіщення",
-                body: "Push notifications працюють! Канал: reminders.",
-                channelId: "reminders",
-                delaySeconds: 2,
-              });
-              Alert.alert("OK", "Сповіщення через 2 сек.");
-            }}
-          />
-          <Row title="Приховати" detail="Вийти з режиму розробника" icon="🙈" onPress={() => setDevUnlocked(false)} />
-        </Card>
+        <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.border, overflow: "hidden" }}>
+          <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 2 }}>
+            <Text style={{ fontSize: 11, fontWeight: "800", color: colors.red, letterSpacing: 0.8, textTransform: "uppercase" }}>Розробник</Text>
+          </View>
+          <NavItem icon="🔧" title="Діагностика" subtitle="API та Firebase" onPress={() => router.push("/diagnostic")} />
+          <View style={{ height: 1, backgroundColor: colors.border, marginLeft: 70 }} />
+          <NavItem icon="🧪" title="Тест-сповіщення" subtitle="Надіслати local push зараз" onPress={async () => {
+            const status = await requestNotificationPermission();
+            if (status !== "granted") { Alert.alert("Немає дозволу", "Увімкніть сповіщення в налаштуваннях."); return; }
+            await scheduleLocalNotification({ title: "🧪 Тест-сповіщення", body: "Push notifications працюють!", channelId: "reminders", delaySeconds: 2 });
+            Alert.alert("OK", "Сповіщення через 2 сек.");
+          }} />
+          <View style={{ height: 1, backgroundColor: colors.border, marginLeft: 70 }} />
+          <NavItem icon="🙈" title="Приховати" subtitle="Вийти з режиму розробника" onPress={() => setDevUnlocked(false)} />
+        </View>
       ) : null}
 
       {/* Guest sign-in CTA */}
