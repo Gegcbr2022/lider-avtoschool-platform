@@ -9,11 +9,12 @@ const config: Config = {
           red: "#ff1e1e",
           redDark: "#d81414",
           green: "#004d40",
+          greenDark: "#003329",
           yellow: "#ffd600",
-          graphite: "#1a1a1a",
+          graphite: "#111111",
           muted: "#666666",
           line: "#e5e5e5",
-          background: "#f4f4f4"
+          background: "#f5f5f5"
         }
       },
       boxShadow: {

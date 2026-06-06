@@ -313,12 +313,12 @@ export default async function HomePage({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-lider-line bg-white/95 backdrop-blur-xl">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl" style={{ borderBottom: "1px solid #e5e5e5" }}>
         <div className="mx-auto flex min-h-[72px] max-w-7xl items-center justify-between px-4 sm:px-6">
           <BrandLogo priority />
           <nav className="hidden items-center gap-1 lg:flex" aria-label="Основна навігація">
             {navItems.map((item) => (
-              <a key={item.href} href={item.href} className="rounded-full px-4 py-2 text-sm font-bold text-lider-muted transition hover:bg-lider-background hover:text-lider-graphite">
+              <a key={item.href} href={item.href} className="rounded-full px-4 py-2 text-sm font-bold text-lider-muted transition hover:bg-lider-background hover:text-lider-graphite hover:border-l-2 hover:border-lider-green hover:pl-3">
                 {item.label}
               </a>
             ))}
@@ -336,7 +336,7 @@ export default async function HomePage({
       <main className="overflow-hidden bg-white pb-24 text-lider-graphite md:pb-0">
 
         {/* Hero */}
-        <section className="motion-section relative border-b border-lider-line bg-[linear-gradient(180deg,#ffffff_0%,#fff8f8_100%)]">
+        <section className="motion-section grain-overlay relative border-b border-lider-line" style={{ background: "linear-gradient(160deg, #004d40 0%, #002d27 18%, #111111 42%, #1a0a0a 65%, #fff8f8 100%)" }}>
           <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-[1.02fr_0.98fr] lg:items-center lg:py-16">
             <div className="space-y-6">
               <StatusPill tone="success">{copy.heroBadge}</StatusPill>
@@ -354,10 +354,20 @@ export default async function HomePage({
                 </div>
               </div>
               <div className="space-y-4">
-                <h1 className="max-w-3xl text-[2.05rem] font-black leading-[1.02] text-lider-graphite sm:text-6xl lg:text-7xl">
-                  {copy.heroTitle}
+                <h1 className="max-w-3xl text-5xl font-black leading-[1.0] tracking-[-0.03em] text-white sm:text-6xl lg:text-7xl">
+                  {copy.heroTitle.split(" ").map((word, i) =>
+                    i === 0 ? (
+                      <span key={i} className="relative inline-block">
+                        {word}
+                        <span className="absolute -bottom-1 left-0 right-0 h-[3px] rounded-full" style={{ background: "#004d40", opacity: 0.85 }} />
+                        {" "}
+                      </span>
+                    ) : (
+                      <span key={i}>{word} </span>
+                    )
+                  )}
                 </h1>
-                <p className="max-w-2xl text-[0.98rem] font-semibold leading-7 text-lider-muted sm:text-lg">
+                <p className="max-w-2xl text-[0.98rem] font-semibold leading-7 text-white/75 sm:text-lg">
                   {copy.heroText}
                 </p>
               </div>
@@ -369,7 +379,7 @@ export default async function HomePage({
                 {telegram ? (
                   <a
                     href={telegram.href} target="_blank" rel="noreferrer"
-                    className="tap-target hidden items-center justify-center gap-2 rounded-2xl border border-lider-line bg-white px-6 py-4 text-base font-black text-lider-graphite shadow-soft transition hover:border-lider-red hover:text-lider-red sm:inline-flex sm:rounded-full"
+                    className="tap-target green-cta hidden items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-black sm:inline-flex sm:rounded-full"
                   >
                     <Send className="h-5 w-5" aria-hidden />
                     {copy.telegramCta}
@@ -378,7 +388,7 @@ export default async function HomePage({
               </div>
               <div className="grid grid-cols-3 gap-2 sm:max-w-2xl sm:gap-3">
                 {copy.heroHighlights.map((item) => (
-                  <div key={item} className="rounded-2xl border border-white bg-white/80 px-3 py-3 text-center text-xs font-black text-lider-graphite shadow-soft sm:text-sm">
+                  <div key={item} className="rounded-2xl border border-white/15 bg-white/10 px-3 py-3 text-center text-xs font-black text-white shadow-soft sm:text-sm">
                     {item}
                   </div>
                 ))}
@@ -413,7 +423,7 @@ export default async function HomePage({
         </section>
 
         {/* Stats */}
-        <section className="motion-section border-b border-lider-line bg-white py-6 sm:py-8">
+        <section className="motion-section border-b border-white/10 py-6 sm:py-8" style={{ background: "#004d40" }}>
           <div className="stagger mx-auto grid max-w-7xl gap-3 px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
             {socialProofStats.map((stat) => (
               <MetricCard key={stat.value} value={stat.value} label={stat.label} detail={stat.detail} />

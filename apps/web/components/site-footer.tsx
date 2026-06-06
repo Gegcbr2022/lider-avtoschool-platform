@@ -34,7 +34,7 @@ export function SiteFooter({ activeLocale }: { activeLocale: Locale }) {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-white/10 bg-lider-graphite text-white">
+    <footer className="border-t border-white/10 text-white" style={{ background: "#004d40" }}>
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div className="grid gap-6 sm:grid-cols-[1fr_auto] sm:items-end">
           <div>
