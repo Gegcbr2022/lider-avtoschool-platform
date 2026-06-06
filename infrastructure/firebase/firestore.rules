@@ -126,8 +126,9 @@ service cloud.firestore {
     match /userProfiles/{userId} {
       // Anyone signed in can read public profiles
       allow read: if signedIn();
-      // Users can only write their own profile
-      allow create, update: if signedIn() && uid() == userId;
+      // Users can only write their own profile; staff can update role field
+      allow create: if signedIn() && uid() == userId;
+      allow update: if (signedIn() && uid() == userId) || staff();
       allow delete: if signedIn() && uid() == userId || isAdmin();
     }
 

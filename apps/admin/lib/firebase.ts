@@ -4,7 +4,7 @@ import { getAuth } from "firebase/auth";
 import {
   getFirestore, collection, query, orderBy, limit,
   getDocs, onSnapshot, where, deleteDoc, doc,
-  addDoc, updateDoc, serverTimestamp,
+  addDoc, updateDoc, setDoc, serverTimestamp,
   type QuerySnapshot, type DocumentData,
 } from "firebase/firestore";
 
@@ -141,6 +141,7 @@ export type UserProfile = {
   city?: string;
   category?: string;
   avatarEmoji?: string;
+  role?: string;
   updatedAt: Date | null;
 };
 
@@ -234,9 +235,21 @@ export async function getUserProfiles(limitCount = 100): Promise<UserProfile[]> 
       city: data.city,
       category: data.category,
       avatarEmoji: data.avatarEmoji,
+      role: data.role,
       updatedAt: toDate(data.updatedAt),
     };
   });
+}
+
+// Set or clear a user's role in userProfiles.
+export async function setUserRole(userId: string, role: string | null): Promise<void> {
+  const ref = doc(db, "userProfiles", userId);
+  if (role) {
+    await setDoc(ref, { role, updatedAt: serverTimestamp() }, { merge: true });
+  } else {
+    const { deleteField } = await import("firebase/firestore");
+    await setDoc(ref, { role: deleteField(), updatedAt: serverTimestamp() }, { merge: true });
+  }
 }
 
 export type NaisDocFile = { kind: string; storagePath: string; downloadURL?: string; uploadedAt?: string };

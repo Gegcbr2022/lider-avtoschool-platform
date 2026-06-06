@@ -18,6 +18,7 @@ import {
   getAiLogs, getClubPosts, getComments, getConversations, getConversationsAdmin, getConversationMessages,
   getDashboardStats, getLeads, getNaisRecords, getStories, getSupportThreads,
   getUserProfiles,
+  setUserRole,
   type AiLogEntry, type BookingAdmin, type ClubPost, type CommentEntry, type ConversationEntry, type ConversationMessage,
   type FirestoreLead, type InstructorAdmin, type LessonAdmin, type NaisRecord, type ServiceCenterAdmin, type StoryEntry, type SupportThread, type UserProfile,
 } from "../lib/firebase";
@@ -231,11 +232,25 @@ function LeadsSection() {
 
 // ─── Section: USERS ───────────────────────────────────────────────────────────
 
+const ROLE_LABELS: Record<string, { label: string; color: string }> = {
+  student:    { label: "Учень",       color: "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
+  instructor: { label: "Інструктор", color: "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
+  manager:    { label: "Менеджер",   color: "bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" },
+  admin:      { label: "Адмін",      color: "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
+};
+
+function UserRoleBadge({ role }: { role?: string }) {
+  if (!role) return <span className="px-2 py-1 rounded-lg text-xs bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">учень</span>;
+  const r = ROLE_LABELS[role] ?? { label: role, color: "bg-neutral-100 text-neutral-600" };
+  return <span className={`px-2 py-1 rounded-lg text-xs font-bold ${r.color}`}>{r.label}</span>;
+}
+
 function UsersSection() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [settingRole, setSettingRole] = useState<string | null>(null);
 
   useEffect(() => {
     getUserProfiles(200).then(setUsers).catch(e => setError(e?.message ?? "Помилка")).finally(() => setLoading(false));
@@ -246,6 +261,18 @@ function UsersSection() {
     const q = search.toLowerCase();
     return users.filter(u => u.name.toLowerCase().includes(q) || (u.email ?? "").toLowerCase().includes(q));
   }, [users, search]);
+
+  async function handleSetRole(userId: string, role: string | null) {
+    setSettingRole(userId);
+    try {
+      await setUserRole(userId, role);
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: role ?? undefined } : u));
+    } catch (e: unknown) {
+      alert("Помилка: " + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setSettingRole(null);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -263,15 +290,34 @@ function UsersSection() {
       ) : (
         <div className="grid gap-3">
           {filtered.map(u => (
-            <div key={u.id} className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 flex items-center gap-4">
+            <div key={u.id} className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 flex items-center gap-4 flex-wrap">
               <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-xl shrink-0">
                 {u.avatarEmoji ?? "🚗"}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-neutral-900 dark:text-white truncate">{u.name}</p>
                 <p className="text-xs text-neutral-500 mt-0.5">{u.email ?? "—"} · {u.phone ?? "немає телефону"} · {u.city ?? "—"}</p>
+                <p className="text-xs text-neutral-400 font-mono mt-0.5 truncate">{u.id}</p>
               </div>
               {u.category ? <span className="px-2 py-1 bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded-lg text-xs font-bold shrink-0">Кат. {u.category}</span> : null}
+              <UserRoleBadge role={u.role} />
+              {/* Role management dropdown */}
+              <div className="flex items-center gap-1 shrink-0">
+                {settingRole === u.id ? (
+                  <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <select
+                    value={u.role ?? ""}
+                    onChange={e => handleSetRole(u.id, e.target.value || null)}
+                    className="text-xs border border-neutral-200 dark:border-neutral-700 rounded-lg px-2 py-1.5 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 focus:outline-none focus:border-red-500 cursor-pointer"
+                  >
+                    <option value="">учень (default)</option>
+                    <option value="instructor">🚗 Інструктор</option>
+                    <option value="manager">👩‍💼 Менеджер</option>
+                    <option value="admin">🛡 Адмін</option>
+                  </select>
+                )}
+              </div>
               <span className="text-xs text-neutral-400 shrink-0">{formatRelative(u.updatedAt)}</span>
             </div>
           ))}

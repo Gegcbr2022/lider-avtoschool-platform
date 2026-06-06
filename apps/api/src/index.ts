@@ -29,6 +29,9 @@ import { paymentProviders } from "./payment-providers";
 
 const firebaseApp = getApps().length ? getApps()[0] : initializeApp();
 const db = getFirestore(firebaseApp);
+// Disable automatic Application Default Credentials discovery for FCM —
+// we obtain the access token lazily via google-auth-library only when needed.
+process.env.GOOGLE_APPLICATION_CREDENTIALS = process.env.GOOGLE_APPLICATION_CREDENTIALS ?? "";
 const app = express();
 const requestCounts = new Map<string, { count: number; resetAt: number }>();
 const leadIpBuckets = new Map<string, { count: number; resetAt: number }>();
