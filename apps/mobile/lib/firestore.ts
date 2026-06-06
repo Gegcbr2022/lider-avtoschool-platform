@@ -615,6 +615,30 @@ export async function getLessons(): Promise<Lesson[]> {
   }
 }
 
+// ─── Service centers (МВС) ──────────────────────────────────────────────────────
+
+export type ServiceCenter = {
+  id: string;
+  name: string;
+  city: string;
+  address?: string;
+  mapsQuery?: string;  // text used for Google Maps directions/search
+  order?: number;
+  active?: boolean;
+};
+
+export async function getServiceCenters(): Promise<ServiceCenter[]> {
+  try {
+    const snap = await getDocs(query(collection(db, "serviceCenters"), limit(200)));
+    return snap.docs
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<ServiceCenter, "id">) }))
+      .filter((c) => c.active !== false)
+      .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+  } catch {
+    return [];
+  }
+}
+
 // ─── Conversations / Chat ─────────────────────────────────────────────────────
 
 export type ConversationType = "support" | "manager" | "instructor" | "system";

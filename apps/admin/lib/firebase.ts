@@ -349,6 +349,33 @@ export async function deleteLesson(id: string): Promise<void> {
   await deleteDoc(doc(db, "lessons", id));
 }
 
+// ─── Service centers (МВС) CRUD ─────────────────────────────────────────────────
+
+export type ServiceCenterAdmin = {
+  id: string;
+  name: string;
+  city: string;
+  address?: string;
+  mapsQuery?: string;
+  order?: number;
+  active?: boolean;
+};
+
+export async function getServiceCentersAdmin(): Promise<ServiceCenterAdmin[]> {
+  const snap = await getDocs(query(collection(db, "serviceCenters"), limit(200)));
+  return snap.docs
+    .map(d => ({ id: d.id, ...(d.data() as Omit<ServiceCenterAdmin, "id">) }))
+    .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+}
+
+export async function addServiceCenter(data: Omit<ServiceCenterAdmin, "id">): Promise<void> {
+  await addDoc(collection(db, "serviceCenters"), { ...data, active: data.active ?? true, createdAt: serverTimestamp() });
+}
+
+export async function deleteServiceCenter(id: string): Promise<void> {
+  await deleteDoc(doc(db, "serviceCenters", id));
+}
+
 export async function getConversations(limitCount = 100): Promise<ConversationEntry[]> {
   const q = query(collection(db, "conversations"), orderBy("updatedAt", "desc"), limit(limitCount));
   const snap = await getDocs(q);

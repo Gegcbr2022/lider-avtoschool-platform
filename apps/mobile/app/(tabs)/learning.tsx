@@ -115,6 +115,18 @@ export default function LearningTab() {
         </Pressable>
       ) : null}
 
+      {/* ─── Сервісні центри МВС ───────────────────────────────────────────── */}
+      <Pressable onPress={() => router.push("/service-centers" as Href)}>
+        <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, padding: 16, flexDirection: "row", alignItems: "center", gap: 14 }}>
+          <Text style={{ fontSize: 30 }}>🏛️</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 16, fontWeight: "900", color: colors.textPrimary }}>Сервісні центри МВС</Text>
+            <Text style={{ marginTop: 3, fontSize: 13, color: colors.textSecondary, lineHeight: 18 }}>Де отримати права + маршрут на карті</Text>
+          </View>
+          <Text style={{ fontSize: 20, color: colors.textTertiary }}>›</Text>
+        </View>
+      </Pressable>
+
       {/* ─── Тести ПДР за категоріями ─────────────────────────────────────── */}
       <Card>
         <SectionHeader title="Тести ПДР за категоріями" />

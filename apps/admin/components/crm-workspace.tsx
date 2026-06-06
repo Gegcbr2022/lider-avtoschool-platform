@@ -6,7 +6,7 @@ import type { LeadStatus } from "@lider/types";
 import {
   Activity, AlertCircle, BarChart3, Bell, BookOpen, Bot, Calendar,
   CheckCircle2, ChevronRight, CircleDollarSign, Copy, Download, FileText,
-  Gauge, GraduationCap, MessageSquare, Plus, Search, Settings, Shield,
+  Gauge, GraduationCap, MapPin, MessageSquare, Plus, Search, Settings, Shield,
   Trash2, Users, UsersRound, type LucideIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -14,11 +14,12 @@ import {
   adminDeleteComment, adminDeletePost, adminDeleteStory,
   addInstructor, deleteInstructor, getBookings, getInstructorsAdmin, updateBookingStatus,
   addLesson, deleteLesson, getLessonsAdmin,
+  addServiceCenter, deleteServiceCenter, getServiceCentersAdmin,
   getAiLogs, getClubPosts, getComments, getConversations,
   getDashboardStats, getLeads, getNaisRecords, getStories, getSupportThreads,
   getUserProfiles,
   type AiLogEntry, type BookingAdmin, type ClubPost, type CommentEntry, type ConversationEntry,
-  type FirestoreLead, type InstructorAdmin, type LessonAdmin, type NaisRecord, type StoryEntry, type SupportThread, type UserProfile,
+  type FirestoreLead, type InstructorAdmin, type LessonAdmin, type NaisRecord, type ServiceCenterAdmin, type StoryEntry, type SupportThread, type UserProfile,
 } from "../lib/firebase";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -26,7 +27,7 @@ import {
 type Section =
   | "dashboard" | "leads" | "users" | "chat"
   | "posts" | "stories" | "comments"
-  | "nais" | "instructors" | "bookings" | "lessons"
+  | "nais" | "instructors" | "bookings" | "lessons" | "servicecenters"
   | "ailogs" | "pdrquestions" | "notifications" | "settings";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -1067,6 +1068,85 @@ function LessonsSection() {
   );
 }
 
+// ─── Section: СЕРВІСНІ ЦЕНТРИ МВС ───────────────────────────────────────────────
+
+function ServiceCentersSection() {
+  const [items, setItems] = useState<ServiceCenterAdmin[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState("Сервісний центр МВС");
+  const [cityV, setCityV] = useState("");
+  const [address, setAddress] = useState("");
+  const [mapsQuery, setMapsQuery] = useState("");
+
+  function reload() {
+    setLoading(true);
+    getServiceCentersAdmin().then(setItems).catch(e => setError(e?.message ?? "Помилка")).finally(() => setLoading(false));
+  }
+  useEffect(reload, []);
+
+  async function handleAdd() {
+    if (!name.trim() || !cityV.trim()) return;
+    setAdding(true);
+    try {
+      await addServiceCenter({
+        name: name.trim(), city: cityV.trim(), address: address.trim(),
+        mapsQuery: (mapsQuery.trim() || `${name.trim()} ${address.trim()} ${cityV.trim()}`.trim()),
+        order: items.length + 1, active: true,
+      });
+      setCityV(""); setAddress(""); setMapsQuery("");
+      reload();
+    } catch { alert("Не вдалось додати"); } finally { setAdding(false); }
+  }
+  async function handleDelete(id: string) {
+    if (!confirm("Видалити центр?")) return;
+    await deleteServiceCenter(id).catch(() => alert("Помилка"));
+    setItems(prev => prev.filter(i => i.id !== id));
+  }
+
+  const inputCls = "px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-sm focus:outline-none focus:border-red-500";
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-black tracking-tight text-neutral-900 dark:text-white">Сервісні центри МВС</h2>
+        <p className="text-neutral-500 text-sm">{items.length} · показуються в застосунку з маршрутом на карті</p>
+      </div>
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 space-y-3">
+        <p className="text-sm font-bold text-neutral-700 dark:text-neutral-300">Додати центр</p>
+        <div className="grid gap-2 md:grid-cols-2">
+          <input className={inputCls} value={name} onChange={e => setName(e.target.value)} placeholder="Назва" />
+          <input className={inputCls} value={cityV} onChange={e => setCityV(e.target.value)} placeholder="Місто" />
+          <input className={inputCls} value={address} onChange={e => setAddress(e.target.value)} placeholder="Адреса" />
+          <input className={inputCls} value={mapsQuery} onChange={e => setMapsQuery(e.target.value)} placeholder="Запит для Google Maps (опц.)" />
+        </div>
+        <button onClick={handleAdd} disabled={adding || !name.trim() || !cityV.trim()} className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg font-bold text-sm hover:bg-red-700 disabled:opacity-50">
+          <Plus size={14} /> {adding ? "Додавання…" : "Додати"}
+        </button>
+      </div>
+      {loading ? <Spinner /> : error ? <ErrorBox message={error} /> : items.length === 0 ? (
+        <EmptyBox label="Центрів ще немає" icon={<MapPin size={32} />} />
+      ) : (
+        <div className="space-y-2">
+          {items.map(c => (
+            <div key={c.id} className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 flex items-center gap-3">
+              <span className="text-xl">🏛️</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-neutral-900 dark:text-white">{c.name}</p>
+                <p className="text-xs text-neutral-500">{c.address ? `${c.address}, ` : ""}{c.city}</p>
+              </div>
+              <button onClick={() => handleDelete(c.id)} className="shrink-0 w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-500 hover:bg-red-100">
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── SIDEBAR NAV ──────────────────────────────────────────────────────────────
 
 const NAV_ITEMS: { id: Section; label: string; Icon: LucideIcon }[] = [
@@ -1081,6 +1161,7 @@ const NAV_ITEMS: { id: Section; label: string; Icon: LucideIcon }[] = [
   { id: "instructors",   label: "Інструктори",   Icon: GraduationCap },
   { id: "bookings",      label: "Записи",         Icon: Calendar },
   { id: "lessons",       label: "Уроки / ПДР",   Icon: BookOpen },
+  { id: "servicecenters", label: "Сервісні центри", Icon: MapPin },
   { id: "ailogs",        label: "AI Логи",        Icon: Bot },
   { id: "pdrquestions",  label: "ПДР Питання",   Icon: CheckCircle2 },
   { id: "notifications", label: "Повідомлення",  Icon: Bell },
@@ -1160,6 +1241,7 @@ export function CrmWorkspace() {
           {section === "instructors"   && <InstructorsSection />}
           {section === "bookings"      && <BookingsSection />}
           {section === "lessons"       && <LessonsSection />}
+          {section === "servicecenters" && <ServiceCentersSection />}
           {section === "ailogs"        && <AiLogsSection />}
           {section === "pdrquestions"  && <PDRQuestionsSection />}
           {section === "notifications" && <NotificationsSection />}

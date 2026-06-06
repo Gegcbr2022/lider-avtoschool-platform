@@ -292,6 +292,7 @@ export default function RootLayout() {
           <Stack.Screen name="documents" />
           <Stack.Screen name="booking" />
           <Stack.Screen name="lessons" />
+          <Stack.Screen name="service-centers" />
           <Stack.Screen name="(tabs)" />
         </Stack>
         <StatusBar style="light" />
