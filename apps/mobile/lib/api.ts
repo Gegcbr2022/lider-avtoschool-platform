@@ -138,15 +138,20 @@ export async function notifyChat(params: {
   userName: string;
   text: string;
 }): Promise<void> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10_000);
+
   try {
     await fetch(`${API_BASE}/chat/notify`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(params),
-      signal: AbortSignal.timeout(10_000),
+      signal: controller.signal,
     });
   } catch {
     // Bridge is best-effort; the message is already saved in Firestore.
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 

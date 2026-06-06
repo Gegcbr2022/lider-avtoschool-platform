@@ -91,6 +91,11 @@ app.get("/health/email", (_request, response) => {
 });
 
 app.get("/health/email/send-test", async (_request, response) => {
+  if (process.env.ENABLE_EMAIL_TEST_ENDPOINTS !== "true") {
+    response.status(404).json({ ok: false, error: "not_found" });
+    return;
+  }
+
   const transport = createMailTransport();
 
   if (!transport) {
@@ -123,6 +128,11 @@ app.get("/health/email/send-test", async (_request, response) => {
 });
 
 app.get("/health/email/test-lead", async (_request, response) => {
+  if (process.env.ENABLE_EMAIL_TEST_ENDPOINTS !== "true") {
+    response.status(404).json({ ok: false, error: "not_found" });
+    return;
+  }
+
   const fakeLead: Record<string, unknown> = {
     name: "Тест Тестенко",
     phone: "050 000 00 00",

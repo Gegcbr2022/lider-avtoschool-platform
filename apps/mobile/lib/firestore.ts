@@ -353,15 +353,26 @@ export type UserStats = {
   testsCompleted: number;
   bestScorePct: number;
   streakDays: number;
+  bestStreak: number;
   lastActiveDate: string | null; // YYYY-MM-DD (local)
   totalCorrect: number;
   totalAnswered: number;
 };
 
-export type Award = { id: string; icon: string; title: string; unlocked: boolean };
+export type Award = {
+  id: string;
+  icon: string;
+  title: string;
+  description: string;
+  group: "tests" | "streak" | "learning" | "practice" | "community" | "graduation";
+  earned: boolean;
+  progress?: number;
+  maxProgress?: number;
+  earnedAt?: string;
+};
 
-const EMPTY_STATS: UserStats = {
-  testsCompleted: 0, bestScorePct: 0, streakDays: 0,
+export const EMPTY_STATS: UserStats = {
+  testsCompleted: 0, bestScorePct: 0, streakDays: 0, bestStreak: 0,
   lastActiveDate: null, totalCorrect: 0, totalAnswered: 0,
 };
 
@@ -386,6 +397,7 @@ export async function getUserStats(userId: string): Promise<UserStats> {
       testsCompleted: d.testsCompleted ?? 0,
       bestScorePct: d.bestScorePct ?? 0,
       streakDays: d.streakDays ?? 0,
+      bestStreak: d.bestStreak ?? d.streakDays ?? 0,
       lastActiveDate: d.lastActiveDate ?? null,
       totalCorrect: d.totalCorrect ?? 0,
       totalAnswered: d.totalAnswered ?? 0,
@@ -417,6 +429,7 @@ export async function recordTestCompletion(
     testsCompleted: prev.testsCompleted + 1,
     bestScorePct: Math.max(prev.bestScorePct, scorePct),
     streakDays: streak,
+    bestStreak: Math.max(prev.bestStreak, streak),
     lastActiveDate: today,
     totalCorrect: prev.totalCorrect + params.correct,
     totalAnswered: prev.totalAnswered + params.total,
@@ -430,16 +443,23 @@ export async function recordTestCompletion(
   return next;
 }
 
-// Derived from stats — no separate storage needed.
+// Derived from stats — no separate storage needed. Returns ClubAward-compatible objects.
 export function computeAwards(stats: UserStats): Award[] {
   return [
-    { id: "first_test", icon: "🎯", title: "Перший тест",        unlocked: stats.testsCompleted >= 1 },
-    { id: "ten_tests",  icon: "📚", title: "10 тестів",          unlocked: stats.testsCompleted >= 10 },
-    { id: "fifty",      icon: "🏅", title: "50 тестів",          unlocked: stats.testsCompleted >= 50 },
-    { id: "streak_3",   icon: "🔥", title: "Серія 3 дні",        unlocked: stats.streakDays >= 3 },
-    { id: "streak_7",   icon: "⚡", title: "Серія 7 днів",       unlocked: stats.streakDays >= 7 },
-    { id: "pass",       icon: "✅", title: "Іспит 75%+",          unlocked: stats.bestScorePct >= 75 },
-    { id: "perfect",    icon: "💯", title: "100% результат",      unlocked: stats.bestScorePct >= 100 },
+    { id: "first_test", icon: "🎯", title: "Перший тест", description: "Пройди свій перший тест ПДР",
+      group: "tests", earned: stats.testsCompleted >= 1, progress: Math.min(stats.testsCompleted, 1), maxProgress: 1 },
+    { id: "ten_tests", icon: "📚", title: "10 тестів", description: "Пройди 10 тестів ПДР",
+      group: "tests", earned: stats.testsCompleted >= 10, progress: Math.min(stats.testsCompleted, 10), maxProgress: 10 },
+    { id: "fifty_tests", icon: "🏅", title: "50 тестів", description: "Пройди 50 тестів ПДР",
+      group: "tests", earned: stats.testsCompleted >= 50, progress: Math.min(stats.testsCompleted, 50), maxProgress: 50 },
+    { id: "pass", icon: "✅", title: "Склав іспит", description: "Набери 75%+ у тесті",
+      group: "tests", earned: stats.bestScorePct >= 75, progress: Math.min(stats.bestScorePct, 75), maxProgress: 75 },
+    { id: "perfect", icon: "💯", title: "Без помилок", description: "Пройди тест на 100%",
+      group: "tests", earned: stats.bestScorePct >= 100, progress: Math.min(stats.bestScorePct, 100), maxProgress: 100 },
+    { id: "streak_3", icon: "🔥", title: "Серія 3 дні", description: "Займайся 3 дні поспіль",
+      group: "streak", earned: stats.bestStreak >= 3, progress: Math.min(stats.bestStreak, 3), maxProgress: 3 },
+    { id: "streak_7", icon: "⚡", title: "Серія 7 днів", description: "Займайся 7 днів поспіль",
+      group: "streak", earned: stats.bestStreak >= 7, progress: Math.min(stats.bestStreak, 7), maxProgress: 7 },
   ];
 }
 

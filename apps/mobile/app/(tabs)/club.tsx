@@ -1,24 +1,25 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView,
   Modal, Platform, Pressable, ScrollView, Share, Text, TextInput,
   TouchableOpacity, View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import {
   Card, Label, MascotMessage, Pill, PrimaryButton, ProgressBar,
 } from "../../components/mobile-ui";
 import { askLidyk } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import {
-  type ClubPostDoc, type ClubCommentDoc, type StoryDoc,
+  type ClubPostDoc, type ClubCommentDoc, type StoryDoc, type Award, type UserStats,
   subscribeToClubPosts, createClubPost, togglePostLike, deletePost,
   subscribeToComments, createComment, toggleCommentLike,
   subscribeToStories, createStory, viewStory, reactToStory, deleteStory,
+  getUserStats, computeAwards, EMPTY_STATS,
 } from "../../lib/firestore";
 import {
-  clubAwards, driverClubStreak, getMascotState,
+  getMascotState,
   mascotQuickPrompts, mascotStates, roadTips,
   storyToneBg, todayChallenge,
 } from "../../lib/mobile-data";
@@ -681,11 +682,11 @@ function FeedView({ onBack }: { onBack: () => void }) {
 
 // ─── AWARDS VIEW ──────────────────────────────────────────────────────────────
 
-function AwardsView({ onBack }: { onBack: () => void }) {
+function AwardsView({ awards, onBack }: { awards: Award[]; onBack: () => void }) {
   const { colors } = useTheme();
   const [awardFilter, setAwardFilter] = useState("all");
 
-  const filtered = awardFilter === "all" ? clubAwards : clubAwards.filter(a => a.group === awardFilter);
+  const filtered = awardFilter === "all" ? awards : awards.filter(a => a.group === awardFilter);
   const earned = filtered.filter(a => a.earned);
   const locked = filtered.filter(a => !a.earned);
 
@@ -764,18 +765,30 @@ export default function ClubTab() {
   const [showCreateStory, setShowCreateStory] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [tipIndex] = useState(Math.floor(Date.now() / 86_400_000) % roadTips.length);
+  const [stats, setStats] = useState<UserStats>(EMPTY_STATS);
 
   const isAuth = mode !== "guest";
-  const mascot = getMascotState(isAuth ? driverClubStreak : { current: 0, best: 0, lastActiveDate: "" });
+  const streak = { current: stats.streakDays, best: stats.bestStreak, lastActiveDate: stats.lastActiveDate ?? "" };
+  const awards = computeAwards(stats);
+  const mascot = getMascotState(isAuth ? streak : { current: 0, best: 0, lastActiveDate: "" });
   const isAnswered = selectedAnswer !== null;
   const isCorrect = selectedAnswer === todayChallenge.correctIndex;
-  const earnedCount = clubAwards.filter(a => a.earned).length;
+  const earnedCount = awards.filter(a => a.earned).length;
 
   // Subscribe to live stories
   useEffect(() => {
     const unsub = subscribeToStories(setStories, () => {});
     return unsub;
   }, []);
+
+  // Load real gamification stats when the Club tab gains focus (reflects tests
+  // just completed). Guests have no stats.
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.id || !isAuth) { setStats(EMPTY_STATS); return; }
+      getUserStats(user.id).then(setStats).catch(() => {});
+    }, [user?.id, isAuth])
+  );
 
   async function handleReferral() {
     const baseUrl = "https://lider-avtoschool.ua";
@@ -801,7 +814,7 @@ export default function ClubTab() {
   );
   if (view === "awards") return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <AwardsView onBack={() => setView("main")} />
+      <AwardsView awards={awards} onBack={() => setView("main")} />
     </SafeAreaView>
   );
 
@@ -871,12 +884,12 @@ export default function ClubTab() {
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 11, fontWeight: "900", color: "rgba(255,255,255,0.6)", letterSpacing: 0.8, textTransform: "uppercase" }}>Ваша серія</Text>
                 <Text style={{ fontSize: 22, fontWeight: "900", color: "#fff", marginTop: 2 }}>
-                  {driverClubStreak.current} {driverClubStreak.current === 1 ? "день" : driverClubStreak.current < 5 ? "дні" : "днів"} поспіль
+                  {streak.current} {streak.current === 1 ? "день" : streak.current < 5 ? "дні" : "днів"} поспіль
                 </Text>
               </View>
               <View style={{ alignItems: "flex-end" }}>
                 <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", fontWeight: "700" }}>Рекорд</Text>
-                <Text style={{ fontSize: 18, fontWeight: "900", color: "#fff" }}>{driverClubStreak.best} д.</Text>
+                <Text style={{ fontSize: 18, fontWeight: "900", color: "#fff" }}>{streak.best} д.</Text>
               </View>
             </View>
           ) : (
@@ -961,15 +974,15 @@ export default function ClubTab() {
                 <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 16, fontWeight: "900", color: colors.textPrimary }}>Нагороди</Text>
-                    <Text style={{ marginTop: 3, fontSize: 13, color: colors.textSecondary }}>{earnedCount} з {clubAwards.length} отримано</Text>
+                    <Text style={{ marginTop: 3, fontSize: 13, color: colors.textSecondary }}>{earnedCount} з {awards.length} отримано</Text>
                   </View>
                   <View style={{ flexDirection: "row", gap: 2 }}>
-                    {clubAwards.filter(a => a.earned).slice(0, 3).map(a => (
+                    {awards.filter(a => a.earned).slice(0, 3).map(a => (
                       <Text key={a.id} style={{ fontSize: 22 }}>{a.icon}</Text>
                     ))}
                   </View>
                 </View>
-                <ProgressBar value={(earnedCount / clubAwards.length) * 100} color={colors.red} height={6} />
+                <ProgressBar value={awards.length ? (earnedCount / awards.length) * 100 : 0} color={colors.red} height={6} />
                 <Text style={{ marginTop: 8, fontSize: 12, fontWeight: "700", color: colors.red, textAlign: "right" }}>Переглянути всі →</Text>
               </View>
             </Pressable>

@@ -81,9 +81,17 @@ service cloud.firestore {
     }
 
     match /lessonProgress/{docId} {
-      allow read, write: if signedIn() && resource.data.userId == uid();
+      allow read: if signedIn() && resource.data.userId == uid();
       allow create: if signedIn() && request.resource.data.userId == uid();
+      allow update: if signedIn()
+        && resource.data.userId == uid()
+        && request.resource.data.userId == uid();
+      allow delete: if signedIn() && resource.data.userId == uid();
       allow read: if staff();
+    }
+
+    match /supportThreads/{threadId} {
+      allow read, create, update, delete: if staff();
     }
 
     match /auditLogs/{logId} {
