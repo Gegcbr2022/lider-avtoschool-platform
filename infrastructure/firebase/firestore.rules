@@ -140,6 +140,12 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ─── Instructors (read by any signed-in user; managed by staff) ─────────────
+    match /instructors/{instructorId} {
+      allow read: if signedIn();
+      allow write: if staff();
+    }
+
     // ─── Club Posts ───────────────────────────────────────────────────────────
 
     match /clubPosts/{postId} {

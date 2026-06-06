@@ -1,5 +1,5 @@
 import { Pressable, Text, View } from "react-native";
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import {
   Card,
   Label,
@@ -100,6 +100,20 @@ export default function LearningTab() {
           </Pressable>
         ))}
       </View>
+
+      {/* ─── Практичне водіння ─────────────────────────────────────────────── */}
+      {isAuth ? (
+        <Pressable onPress={() => router.push("/booking" as Href)}>
+          <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, padding: 16, flexDirection: "row", alignItems: "center", gap: 14 }}>
+            <Text style={{ fontSize: 30 }}>🚗</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 16, fontWeight: "900", color: colors.textPrimary }}>Практичне водіння</Text>
+              <Text style={{ marginTop: 3, fontSize: 13, color: colors.textSecondary, lineHeight: 18 }}>Обери інструктора та запишись на заняття</Text>
+            </View>
+            <Text style={{ fontSize: 20, color: colors.textTertiary }}>›</Text>
+          </View>
+        </Pressable>
+      ) : null}
 
       {/* ─── Тести ПДР за категоріями ─────────────────────────────────────── */}
       <Card>

@@ -516,6 +516,79 @@ export async function addNaisDocument(uid: string, document: NaisDocument): Prom
   );
 }
 
+// ─── Instructors & practice bookings ────────────────────────────────────────────
+
+export type Instructor = {
+  id: string;
+  name: string;
+  photoEmoji?: string;
+  description?: string;
+  categories?: string[];
+  branchId?: string;
+  active?: boolean;
+};
+
+export async function getInstructors(): Promise<Instructor[]> {
+  try {
+    const snap = await getDocs(query(collection(db, "instructors"), limit(50)));
+    return snap.docs
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<Instructor, "id">) }))
+      .filter((i) => i.active !== false);
+  } catch {
+    return [];
+  }
+}
+
+export type BookingDoc = {
+  id: string;
+  studentId: string;
+  studentName: string;
+  instructorId: string;
+  instructorName: string;
+  startsAt: string; // ISO datetime
+  status: string;
+  createdAt: Date | null;
+};
+
+export async function createBooking(params: {
+  studentId: string;
+  studentName: string;
+  instructorId: string;
+  instructorName: string;
+  startsAt: string;
+}): Promise<string> {
+  const ref = await addDoc(collection(db, "bookings"), {
+    ...params,
+    status: "pending",
+    createdAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+export async function getMyBookings(studentId: string): Promise<BookingDoc[]> {
+  try {
+    const snap = await getDocs(
+      query(collection(db, "bookings"), where("studentId", "==", studentId), limit(50))
+    );
+    const rows = snap.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        studentId: data.studentId ?? "",
+        studentName: data.studentName ?? "",
+        instructorId: data.instructorId ?? "",
+        instructorName: data.instructorName ?? "",
+        startsAt: data.startsAt ?? "",
+        status: data.status ?? "pending",
+        createdAt: toDate(data.createdAt),
+      };
+    });
+    return rows.sort((a, b) => (a.startsAt < b.startsAt ? 1 : -1)); // soonest-newest, client-side
+  } catch {
+    return [];
+  }
+}
+
 // ─── Conversations / Chat ─────────────────────────────────────────────────────
 
 export type ConversationType = "support" | "manager" | "instructor" | "system";
