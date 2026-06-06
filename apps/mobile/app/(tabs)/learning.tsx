@@ -20,7 +20,7 @@ const PDR_CATEGORIES = ["Знаки", "Перехрестя", "Безпека", 
 const HUB_TILES = [
   { icon: "🎯", title: "Тренажер ПДР", sub: `${PDR_QUESTIONS.length} питань`, route: "/(tabs)/tests" as const, accent: true },
   { icon: "🎓", title: "Екзамен", sub: "20 питань", route: "/(tabs)/tests" as const, accent: false },
-  { icon: "📖", title: "Уроки", sub: "Теорія та відео", route: null, accent: false },
+  { icon: "📖", title: "Уроки", sub: "Теорія та відео", route: "/lessons", accent: false },
   { icon: "🚗", title: "Запитати Лідика", sub: "AI-помічник", route: "/(tabs)/assistant" as const, accent: false },
 ];
 
@@ -77,7 +77,7 @@ export default function LearningTab() {
         {HUB_TILES.map((tile) => (
           <Pressable
             key={tile.title}
-            onPress={() => (tile.route ? router.push(tile.route) : undefined)}
+            onPress={() => (tile.route ? router.push(tile.route as Href) : undefined)}
             disabled={!tile.route}
             style={{
               width: "47%",

@@ -4,7 +4,7 @@ import { leadStatusLabels, leadStatuses } from "@lider/shared";
 import { StatusPill } from "@lider/ui";
 import type { LeadStatus } from "@lider/types";
 import {
-  Activity, AlertCircle, BarChart3, Bell, Bot, Calendar,
+  Activity, AlertCircle, BarChart3, Bell, BookOpen, Bot, Calendar,
   CheckCircle2, ChevronRight, CircleDollarSign, Copy, Download, FileText,
   Gauge, GraduationCap, MessageSquare, Plus, Search, Settings, Shield,
   Trash2, Users, UsersRound, type LucideIcon,
@@ -13,11 +13,12 @@ import { useEffect, useMemo, useState } from "react";
 import {
   adminDeleteComment, adminDeletePost, adminDeleteStory,
   addInstructor, deleteInstructor, getBookings, getInstructorsAdmin, updateBookingStatus,
+  addLesson, deleteLesson, getLessonsAdmin,
   getAiLogs, getClubPosts, getComments, getConversations,
   getDashboardStats, getLeads, getNaisRecords, getStories, getSupportThreads,
   getUserProfiles,
   type AiLogEntry, type BookingAdmin, type ClubPost, type CommentEntry, type ConversationEntry,
-  type FirestoreLead, type InstructorAdmin, type NaisRecord, type StoryEntry, type SupportThread, type UserProfile,
+  type FirestoreLead, type InstructorAdmin, type LessonAdmin, type NaisRecord, type StoryEntry, type SupportThread, type UserProfile,
 } from "../lib/firebase";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -25,7 +26,7 @@ import {
 type Section =
   | "dashboard" | "leads" | "users" | "chat"
   | "posts" | "stories" | "comments"
-  | "nais" | "instructors" | "bookings"
+  | "nais" | "instructors" | "bookings" | "lessons"
   | "ailogs" | "pdrquestions" | "notifications" | "settings";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -974,6 +975,98 @@ function BookingsSection() {
   );
 }
 
+// ─── Section: УРОКИ / ПДР ──────────────────────────────────────────────────────
+
+function LessonsSection() {
+  const [items, setItems] = useState<LessonAdmin[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [type, setType] = useState<"video" | "text">("video");
+  const [title, setTitle] = useState("");
+  const [desc, setDesc] = useState("");
+  const [videoUrl, setVideoUrl] = useState("");
+  const [body, setBody] = useState("");
+  const [category, setCategory] = useState("");
+
+  function reload() {
+    setLoading(true);
+    getLessonsAdmin().then(setItems).catch(e => setError(e?.message ?? "Помилка")).finally(() => setLoading(false));
+  }
+  useEffect(reload, []);
+
+  async function handleAdd() {
+    if (!title.trim()) return;
+    setAdding(true);
+    try {
+      await addLesson({
+        title: title.trim(), description: desc.trim(), type,
+        videoUrl: type === "video" ? videoUrl.trim() : "",
+        body: type === "text" ? body.trim() : "",
+        category: category.trim(), order: items.length + 1, active: true,
+      });
+      setTitle(""); setDesc(""); setVideoUrl(""); setBody(""); setCategory("");
+      reload();
+    } catch { alert("Не вдалось додати"); } finally { setAdding(false); }
+  }
+  async function handleDelete(id: string) {
+    if (!confirm("Видалити матеріал?")) return;
+    await deleteLesson(id).catch(() => alert("Помилка"));
+    setItems(prev => prev.filter(i => i.id !== id));
+  }
+
+  const inputCls = "px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-sm focus:outline-none focus:border-red-500";
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-black tracking-tight text-neutral-900 dark:text-white">Уроки / ПДР</h2>
+        <p className="text-neutral-500 text-sm">{items.length} · відео-теорія та розділи ПДР для застосунку</p>
+      </div>
+
+      {/* Add form */}
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 space-y-3">
+        <div className="flex gap-2">
+          <button onClick={() => setType("video")} className={`px-3 py-1.5 rounded-lg text-sm font-bold ${type === "video" ? "bg-red-600 text-white" : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300"}`}>🎬 Відео</button>
+          <button onClick={() => setType("text")} className={`px-3 py-1.5 rounded-lg text-sm font-bold ${type === "text" ? "bg-red-600 text-white" : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300"}`}>📖 ПДР текст</button>
+        </div>
+        <div className="grid gap-2 md:grid-cols-2">
+          <input className={inputCls} value={title} onChange={e => setTitle(e.target.value)} placeholder="Назва" />
+          <input className={inputCls} value={category} onChange={e => setCategory(e.target.value)} placeholder="Категорія (напр. Знаки)" />
+        </div>
+        <input className={`${inputCls} w-full`} value={desc} onChange={e => setDesc(e.target.value)} placeholder="Короткий опис" />
+        {type === "video" ? (
+          <input className={`${inputCls} w-full`} value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="Посилання на відео (YouTube)" />
+        ) : (
+          <textarea className={`${inputCls} w-full`} value={body} onChange={e => setBody(e.target.value)} placeholder="Текст розділу ПДР" rows={4} />
+        )}
+        <button onClick={handleAdd} disabled={adding || !title.trim()} className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg font-bold text-sm hover:bg-red-700 disabled:opacity-50">
+          <Plus size={14} /> {adding ? "Додавання…" : "Додати матеріал"}
+        </button>
+      </div>
+
+      {loading ? <Spinner /> : error ? <ErrorBox message={error} /> : items.length === 0 ? (
+        <EmptyBox label="Матеріалів ще немає" icon={<BookOpen size={32} />} />
+      ) : (
+        <div className="space-y-2">
+          {items.map(l => (
+            <div key={l.id} className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 flex items-center gap-3">
+              <span className="text-xl">{l.type === "video" ? "🎬" : "📖"}</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-neutral-900 dark:text-white">{l.title}</p>
+                <p className="text-xs text-neutral-500 truncate">{l.category ? `${l.category} · ` : ""}{l.type === "video" ? (l.videoUrl || "немає посилання") : (l.description || "текст")}</p>
+              </div>
+              <button onClick={() => handleDelete(l.id)} className="shrink-0 w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-500 hover:bg-red-100">
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── SIDEBAR NAV ──────────────────────────────────────────────────────────────
 
 const NAV_ITEMS: { id: Section; label: string; Icon: LucideIcon }[] = [
@@ -987,6 +1080,7 @@ const NAV_ITEMS: { id: Section; label: string; Icon: LucideIcon }[] = [
   { id: "nais",          label: "Документи НАІС", Icon: FileText },
   { id: "instructors",   label: "Інструктори",   Icon: GraduationCap },
   { id: "bookings",      label: "Записи",         Icon: Calendar },
+  { id: "lessons",       label: "Уроки / ПДР",   Icon: BookOpen },
   { id: "ailogs",        label: "AI Логи",        Icon: Bot },
   { id: "pdrquestions",  label: "ПДР Питання",   Icon: CheckCircle2 },
   { id: "notifications", label: "Повідомлення",  Icon: Bell },
@@ -1065,6 +1159,7 @@ export function CrmWorkspace() {
           {section === "nais"          && <NaisSection />}
           {section === "instructors"   && <InstructorsSection />}
           {section === "bookings"      && <BookingsSection />}
+          {section === "lessons"       && <LessonsSection />}
           {section === "ailogs"        && <AiLogsSection />}
           {section === "pdrquestions"  && <PDRQuestionsSection />}
           {section === "notifications" && <NotificationsSection />}

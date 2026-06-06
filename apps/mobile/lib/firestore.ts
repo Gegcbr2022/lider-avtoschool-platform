@@ -589,6 +589,32 @@ export async function getMyBookings(studentId: string): Promise<BookingDoc[]> {
   }
 }
 
+// ─── Lessons: video theory + ПДР sections ──────────────────────────────────────
+
+export type Lesson = {
+  id: string;
+  title: string;
+  description?: string;
+  type: "video" | "text";
+  videoUrl?: string;
+  body?: string;
+  category?: string;
+  order?: number;
+  active?: boolean;
+};
+
+export async function getLessons(): Promise<Lesson[]> {
+  try {
+    const snap = await getDocs(query(collection(db, "lessons"), limit(100)));
+    return snap.docs
+      .map((d) => ({ id: d.id, ...(d.data() as Omit<Lesson, "id">) }))
+      .filter((l) => l.active !== false)
+      .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+  } catch {
+    return [];
+  }
+}
+
 // ─── Conversations / Chat ─────────────────────────────────────────────────────
 
 export type ConversationType = "support" | "manager" | "instructor" | "system";

@@ -320,6 +320,35 @@ export async function updateBookingStatus(id: string, status: string): Promise<v
   await updateDoc(doc(db, "bookings", id), { status });
 }
 
+// ─── Lessons (video theory + ПДР) CRUD ──────────────────────────────────────────
+
+export type LessonAdmin = {
+  id: string;
+  title: string;
+  description?: string;
+  type: "video" | "text";
+  videoUrl?: string;
+  body?: string;
+  category?: string;
+  order?: number;
+  active?: boolean;
+};
+
+export async function getLessonsAdmin(): Promise<LessonAdmin[]> {
+  const snap = await getDocs(query(collection(db, "lessons"), limit(200)));
+  return snap.docs
+    .map(d => ({ id: d.id, ...(d.data() as Omit<LessonAdmin, "id">) }))
+    .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+}
+
+export async function addLesson(data: Omit<LessonAdmin, "id">): Promise<void> {
+  await addDoc(collection(db, "lessons"), { ...data, active: data.active ?? true, createdAt: serverTimestamp() });
+}
+
+export async function deleteLesson(id: string): Promise<void> {
+  await deleteDoc(doc(db, "lessons", id));
+}
+
 export async function getConversations(limitCount = 100): Promise<ConversationEntry[]> {
   const q = query(collection(db, "conversations"), orderBy("updatedAt", "desc"), limit(limitCount));
   const snap = await getDocs(q);

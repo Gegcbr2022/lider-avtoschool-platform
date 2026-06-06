@@ -146,6 +146,12 @@ service cloud.firestore {
       allow write: if staff();
     }
 
+    // ─── Lessons: video theory + ПДР sections (read any signed-in; staff manages) ─
+    match /lessons/{lessonId} {
+      allow read: if signedIn();
+      allow write: if staff();
+    }
+
     // ─── Club Posts ───────────────────────────────────────────────────────────
 
     match /clubPosts/{postId} {
