@@ -1,5 +1,5 @@
 import { Pressable, Text, View } from "react-native";
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import { Card, Label, Row, Screen } from "../../components/mobile-ui";
 import { useAuth } from "../../lib/auth";
 import { useTheme, radii, shadows, spacing } from "../../lib/theme";
@@ -78,6 +78,8 @@ function GuestHome() {
         <Row title="Переглянути курси" detail="Категорії, ціни, програми" icon="📚" onPress={() => router.push("/(tabs)/learning")} />
         <Row title="Запитати Лідика" detail="AI-помічник 24/7" icon="🤖" onPress={() => router.push("/(tabs)/assistant")} />
         <Row title="Написати в автошколу" detail="Менеджер відповість" icon="💬" onPress={() => router.push("/(tabs)/chat")} />
+        <Row title="Страховка 🛡️" detail="ОСЦПВ та КАСКО для вашого авто" icon="🛡️" onPress={() => router.push("/insurance" as Href)} />
+        <Row title="Автоюрист ⚖️" detail="Правова допомога водіям" icon="⚖️" onPress={() => router.push("/lawyer" as Href)} />
       </Card>
 
       <Pressable
@@ -141,6 +143,29 @@ function StudentHome({ firstName }: { firstName: string }) {
           <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>До навчання →</Text>
         </Pressable>
       </View>
+
+      {/* 4. Ecosystem services — insurance & lawyer (ТЗ п.3, п.4) */}
+      <Card>
+        <Label>Для автомобіліста</Label>
+        <Row
+          title="Страховка 🛡️"
+          detail="ОСЦПВ та КАСКО — оформити онлайн"
+          icon="🛡️"
+          onPress={() => router.push("/insurance" as Href)}
+        />
+        <Row
+          title="Автоюрист ⚖️"
+          detail="Роз'яснення, шаблони, консультація"
+          icon="⚖️"
+          onPress={() => router.push("/lawyer" as Href)}
+        />
+        <Row
+          title="Сервісні центри МВС"
+          detail="Де скласти іспит і отримати права"
+          icon="🗺️"
+          onPress={() => router.push("/service-centers" as Href)}
+        />
+      </Card>
 
     </Screen>
   );
