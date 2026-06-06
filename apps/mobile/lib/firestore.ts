@@ -806,3 +806,45 @@ export async function ensureConversation(
 export async function ensureSupportConversation(userId: string, userName: string): Promise<string> {
   return ensureConversation(userId, userName, "support", "Підтримка");
 }
+
+// Instructor↔student conversation keyed by BOTH real uids so Firestore rules
+// (participantIds.hasAny([uid])) allow read/write for both sides. Queries by the
+// caller's own uid (read-safe), matches the convo containing the other party.
+export async function ensureInstructorConversation(params: {
+  callerId: string;
+  studentId: string;
+  studentName: string;
+  instructorId: string;
+  instructorName: string;
+}): Promise<string> {
+  const { callerId, studentId, studentName, instructorId, instructorName } = params;
+  const q = query(
+    collection(db, "conversations"),
+    where("participantIds", "array-contains", callerId),
+    orderBy("updatedAt", "desc"),
+    limit(15)
+  );
+  const snap = await getDocs(q);
+  const existing = snap.docs.find((d) => {
+    const x = d.data();
+    const p: string[] = x.participantIds ?? [];
+    return x.type === "instructor" && p.includes(studentId) && p.includes(instructorId);
+  });
+  if (existing) return existing.id;
+
+  const ref = await addDoc(collection(db, "conversations"), {
+    participantIds: [studentId, instructorId],
+    type: "instructor",
+    title: `Інструктор · ${studentName}`,
+    studentId,
+    studentName,
+    instructorId,
+    instructorName,
+    lastMessage: null,
+    lastMessageAt: null,
+    updatedAt: serverTimestamp(),
+    createdBy: callerId,
+    createdByName: callerId === instructorId ? instructorName : studentName,
+  });
+  return ref.id;
+}

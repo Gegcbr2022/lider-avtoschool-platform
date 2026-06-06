@@ -17,10 +17,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useAuth } from "../lib/auth";
+import { notifyChat } from "../lib/api";
 import { useTheme, radii, spacing } from "../lib/theme";
 import {
   getInstructorBookings,
-  ensureConversation,
+  ensureInstructorConversation,
   subscribeToMessages,
   sendMessage,
   type BookingDoc,
@@ -98,13 +99,14 @@ function ConversationView({ studentId, studentName, onClose }: ConvViewProps) {
 
     (async () => {
       try {
-        // Use studentId as second participant; type = instructor
-        const id = await ensureConversation(
+        // Conversation keyed by both real uids (student + this instructor)
+        const id = await ensureInstructorConversation({
+          callerId: user.id,
           studentId,
           studentName,
-          "instructor",
-          `Інструктор – ${studentName}`
-        );
+          instructorId: user.id,
+          instructorName: user.name,
+        });
         if (!active) return;
         setConvId(id);
         unsub = subscribeToMessages(id, (msgs) => {
@@ -133,6 +135,14 @@ function ConversationView({ studentId, studentName, onClose }: ConvViewProps) {
     setSending(true);
     try {
       await sendMessage(convId, { senderId: user.id, senderName: user.name, text });
+      // Mirror to Telegram (best-effort); admin syncs via Firestore automatically.
+      void notifyChat({
+        conversationId: convId,
+        userId: user.id,
+        userName: user.name,
+        text,
+        conversationType: "instructor",
+      });
     } catch {
       setError("Повідомлення не надіслано. Спробуй ще раз.");
       setInput(text);

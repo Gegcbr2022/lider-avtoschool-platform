@@ -21,6 +21,8 @@ import { useAuth } from "../../lib/auth";
 import { notifyChat } from "../../lib/api";
 import {
   ensureConversation,
+  ensureInstructorConversation,
+  getMyBookings,
   sendMessage,
   subscribeToMessages,
   type MessageDoc,
@@ -117,7 +119,28 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
 
     (async () => {
       try {
-        const convId = await ensureConversation(user.id, user.name, chat.type, chat.title);
+        let convId: string;
+        if (chat.type === "instructor") {
+          // Resolve the student's assigned instructor from their bookings.
+          const bookings = await getMyBookings(user.id);
+          const withInstructor = bookings.find((b) => b.instructorId);
+          if (!withInstructor) {
+            if (active) {
+              setError("Запишись на практику, щоб написати інструктору.");
+              setLoading(false);
+            }
+            return;
+          }
+          convId = await ensureInstructorConversation({
+            callerId: user.id,
+            studentId: user.id,
+            studentName: user.name,
+            instructorId: withInstructor.instructorId,
+            instructorName: withInstructor.instructorName,
+          });
+        } else {
+          convId = await ensureConversation(user.id, user.name, chat.type, chat.title);
+        }
         if (!active) return;
         setConversationId(convId);
         unsub = subscribeToMessages(convId, (msgs) => {
