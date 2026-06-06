@@ -1,5 +1,8 @@
 import { Tabs } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import { Platform, Text, View } from "react-native";
+import { useAuth } from "../../lib/auth";
+import { subscribeToConversations } from "../../lib/firestore";
 import { useTheme, radii } from "../../lib/theme";
 
 function TabIcon({ icon, active, badge }: { icon: string; active: boolean; badge?: number }) {
@@ -33,6 +36,20 @@ function TabIcon({ icon, active, badge }: { icon: string; active: boolean; badge
 
 export default function TabsLayout() {
   const { colors } = useTheme();
+  const { user, mode } = useAuth();
+  const [chatBadge, setChatBadge] = useState(0);
+  const lastSeenRef = useRef(new Date());
+
+  useEffect(() => {
+    if (mode !== "authenticated" || !user?.id || user.isGuest) return;
+    const unsub = subscribeToConversations(user.id, (convs) => {
+      const n = convs.filter(
+        (c) => c.lastMessageAt && c.lastMessageAt > lastSeenRef.current
+      ).length;
+      setChatBadge(n);
+    });
+    return unsub;
+  }, [user?.id, mode]);
 
   return (
     <Tabs
@@ -82,7 +99,13 @@ export default function TabsLayout() {
         name="chat"
         options={{
           title: "Чат",
-          tabBarIcon: ({ focused }) => <TabIcon icon="💬" active={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon icon="💬" active={focused} badge={chatBadge} />,
+        }}
+        listeners={{
+          tabPress: () => {
+            lastSeenRef.current = new Date();
+            setChatBadge(0);
+          },
         }}
       />
       <Tabs.Screen

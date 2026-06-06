@@ -3,7 +3,7 @@
 // conversation. Backend mirrors each thread to a separate Telegram supergroup
 // topic named after the client. First message in topic = client card.
 // Manager/instructor reply in TG → FCM push → message appears here live.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -72,7 +72,21 @@ const CHATS: ChatDef[] = [
 
 function ChatList({ onOpen }: { onOpen: (id: string) => void }) {
   const { colors } = useTheme();
+  const { user } = useAuth();
   const s = makeStyles(colors);
+  const [convMap, setConvMap] = useState<Record<string, ConversationDoc>>({});
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const unsub = subscribeToConversations(user.id, (convs) => {
+      const m: Record<string, ConversationDoc> = {};
+      for (const c of convs) {
+        if (c.type === "manager" || c.type === "instructor") m[c.type] = c;
+      }
+      setConvMap(m);
+    });
+    return unsub;
+  }, [user?.id]);
 
   return (
     <SafeAreaView style={s.safe} edges={["top"]}>
@@ -81,18 +95,35 @@ function ChatList({ onOpen }: { onOpen: (id: string) => void }) {
         <Text style={s.headerSub}>Зв'язок з автошколою</Text>
       </View>
       <ScrollView style={{ flex: 1 }}>
-        {CHATS.map((chat) => (
-          <Pressable key={chat.id} style={s.chatRow} onPress={() => onOpen(chat.id)}>
-            <View style={s.chatAvatar}>
-              <Text style={{ fontSize: 22 }}>{chat.emoji}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.chatName}>{chat.title}</Text>
-              <Text style={s.chatSub} numberOfLines={1}>{chat.subtitle}</Text>
-            </View>
-            <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
-          </Pressable>
-        ))}
+        {CHATS.map((chat) => {
+          const conv = convMap[chat.type];
+          const lastMsg = conv?.lastMessage;
+          const lastAt = conv?.lastMessageAt;
+          const timeStr = lastAt
+            ? lastAt.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })
+            : null;
+          return (
+            <Pressable key={chat.id} style={s.chatRow} onPress={() => onOpen(chat.id)}>
+              <View style={s.chatAvatar}>
+                <Text style={{ fontSize: 22 }}>{chat.emoji}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.chatName}>{chat.title}</Text>
+                <Text style={s.chatSub} numberOfLines={1}>
+                  {lastMsg ?? chat.subtitle}
+                </Text>
+              </View>
+              <View style={{ alignItems: "flex-end", gap: 4 }}>
+                {timeStr ? (
+                  <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "600" }}>
+                    {timeStr}
+                  </Text>
+                ) : null}
+                <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
+              </View>
+            </Pressable>
+          );
+        })}
       </ScrollView>
     </SafeAreaView>
   );
