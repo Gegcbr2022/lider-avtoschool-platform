@@ -506,7 +506,8 @@ function FeedView({ onBack }: { onBack: () => void }) {
     return unsub;
   }, []);
 
-  const isAuth = mode !== "guest";
+  // Only fully authenticated (non-anonymous) users can post/like
+  const isAuth = mode === "authenticated";
   const authorEmoji = user?.avatarEmoji ?? "🚗";
   const authorName = user?.name ?? "Учень";
   const authorId = user?.id ?? "guest";
@@ -579,7 +580,20 @@ function FeedView({ onBack }: { onBack: () => void }) {
               Поділитися думкою або порадою...
             </Text>
           </Pressable>
-        ) : null}
+        ) : (
+          <Pressable
+            onPress={() => router.push("/auth?mode=register" as import("expo-router").Href)}
+            style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 14, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", gap: 10 }}
+          >
+            <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ fontSize: 18 }}>🔐</Text>
+            </View>
+            <Text style={{ color: colors.textTertiary, fontSize: 14, fontWeight: "600", flex: 1 }}>
+              Зареєструйся, щоб писати у стрічку
+            </Text>
+            <Text style={{ color: colors.red, fontSize: 13, fontWeight: "800" }}>Увійти →</Text>
+          </Pressable>
+        )}
 
         {showCompose ? (
           <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 14, borderWidth: 1, borderColor: colors.red + "55", gap: 10 }}>
@@ -767,7 +781,8 @@ export default function ClubTab() {
   const [tipIndex] = useState(Math.floor(Date.now() / 86_400_000) % roadTips.length);
   const [stats, setStats] = useState<UserStats>(EMPTY_STATS);
 
-  const isAuth = mode !== "guest";
+  // Only fully authenticated (non-anonymous) users can post stories / see awards
+  const isAuth = mode === "authenticated";
   const streak = { current: stats.streakDays, best: stats.bestStreak, lastActiveDate: stats.lastActiveDate ?? "" };
   const awards = computeAwards(stats);
   const mascot = getMascotState(isAuth ? streak : { current: 0, best: 0, lastActiveDate: "" });
@@ -848,7 +863,15 @@ export default function ClubTab() {
             >
               <Text style={{ fontSize: 13, fontWeight: "800", color: colors.red }}>+ Історія</Text>
             </TouchableOpacity>
-          ) : null}
+          ) : (
+            <TouchableOpacity
+              hitSlop={{ top: 12, bottom: 12, left: 16, right: 16 }}
+              onPress={() => router.push("/auth?mode=register" as import("expo-router").Href)}
+              style={{ backgroundColor: colors.redSoft, borderRadius: radii.sm, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: colors.red + "44" }}
+            >
+              <Text style={{ fontSize: 13, fontWeight: "800", color: colors.red }}>Увійти</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Stories */}
