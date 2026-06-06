@@ -1,4 +1,5 @@
 import { initializeApp, getApps } from "firebase/app";
+import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
 import { getAuth } from "firebase/auth";
 import {
   getFirestore, collection, query, orderBy, limit,
@@ -16,6 +17,25 @@ const firebaseConfig = {
 };
 
 export const firebaseApp = getApps().length ? getApps()[0]! : initializeApp(firebaseConfig);
+
+// App Check (BUG-064 hardening). Browser-only; activates when a reCAPTCHA v3 site key
+// is configured. No-op without the key, so local/dev keeps working unchanged.
+// Set NEXT_PUBLIC_RECAPTCHA_SITE_KEY in Vercel; paste the matching secret into
+// Firebase Console → App Check → web app. Do NOT enforce Firestore until live.
+if (typeof window !== "undefined") {
+  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+  if (siteKey) {
+    try {
+      initializeAppCheck(firebaseApp, {
+        provider: new ReCaptchaV3Provider(siteKey),
+        isTokenAutoRefreshEnabled: true,
+      });
+    } catch {
+      // already initialized (HMR / double import) — ignore
+    }
+  }
+}
+
 export const auth = getAuth(firebaseApp);
 export const db = getFirestore(firebaseApp);
 

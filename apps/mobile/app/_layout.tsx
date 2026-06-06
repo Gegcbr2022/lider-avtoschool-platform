@@ -30,6 +30,7 @@ import {
 } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { firebaseAuth } from "../lib/firebase";
+import { initAppCheck } from "../lib/appCheck";
 import { AuthContext } from "../lib/auth";
 import type { AuthContextValue, AuthMode, SignUpData, User } from "../lib/auth";
 import { GUEST_USER } from "../lib/auth";
@@ -91,9 +92,10 @@ export default function RootLayout() {
   const authGateCallback = useRef<(() => void) | undefined>(undefined);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // Configure Google Sign-In once
+  // Configure Google Sign-In + App Check once
   useEffect(() => {
     configureGoogleSignIn();
+    initAppCheck();
   }, []);
 
   // ─── Setup push notifications (Android channels + request permission) ───────

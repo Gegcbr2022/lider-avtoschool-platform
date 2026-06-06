@@ -26,7 +26,7 @@ const config: ExpoConfig = {
       backgroundColor: "#0d0d0d"
     }
   },
-  plugins: ["expo-router", "expo-secure-store"],
+  plugins: ["expo-router", "expo-secure-store", "@react-native-firebase/app", "@react-native-firebase/app-check"],
   experiments: {
     typedRoutes: true
   },
