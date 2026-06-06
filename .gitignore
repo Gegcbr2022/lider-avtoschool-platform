@@ -48,3 +48,7 @@ screens/v10-testing/
 QUICK_CAROUSEL_TEST.ps1
 *.log
 gradle_build.log
+
+# Dev tooling / Gemini artifacts
+.agents/
+firebase.json.bak
