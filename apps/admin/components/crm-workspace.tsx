@@ -15,17 +15,17 @@ import {
   addInstructor, deleteInstructor, getBookings, getInstructorsAdmin, updateBookingStatus,
   addLesson, deleteLesson, getLessonsAdmin,
   addServiceCenter, deleteServiceCenter, getServiceCentersAdmin,
-  getAiLogs, getClubPosts, getComments, getConversations,
+  getAiLogs, getClubPosts, getComments, getConversations, getConversationsAdmin, getConversationMessages,
   getDashboardStats, getLeads, getNaisRecords, getStories, getSupportThreads,
   getUserProfiles,
-  type AiLogEntry, type BookingAdmin, type ClubPost, type CommentEntry, type ConversationEntry,
+  type AiLogEntry, type BookingAdmin, type ClubPost, type CommentEntry, type ConversationEntry, type ConversationMessage,
   type FirestoreLead, type InstructorAdmin, type LessonAdmin, type NaisRecord, type ServiceCenterAdmin, type StoryEntry, type SupportThread, type UserProfile,
 } from "../lib/firebase";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Section =
-  | "dashboard" | "leads" | "users" | "chat"
+  | "dashboard" | "leads" | "users" | "chat" | "chatmonitor"
   | "posts" | "stories" | "comments"
   | "nais" | "instructors" | "bookings" | "lessons" | "servicecenters"
   | "ailogs" | "pdrquestions" | "notifications" | "settings";
@@ -1149,11 +1149,186 @@ function ServiceCentersSection() {
 
 // ─── SIDEBAR NAV ──────────────────────────────────────────────────────────────
 
+// ─── Section: ЧАТИ (АНАЛІЗ) ──────────────────────────────────────────────────
+
+function ChatMonitorSection() {
+  const [convs, setConvs] = useState<ConversationEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ConversationMessage[]>([]);
+  const [msgsLoading, setMsgsLoading] = useState(false);
+
+  useEffect(() => {
+    getConversationsAdmin()
+      .then(setConvs)
+      .catch(e => setError(e?.message ?? "Помилка завантаження"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return convs;
+    const q = search.toLowerCase();
+    return convs.filter(c =>
+      c.title.toLowerCase().includes(q) ||
+      (c.createdByName ?? "").toLowerCase().includes(q)
+    );
+  }, [convs, search]);
+
+  function selectConv(id: string) {
+    setSelectedId(id);
+    setMessages([]);
+    setMsgsLoading(true);
+    getConversationMessages(id)
+      .then(setMessages)
+      .catch(() => setMessages([]))
+      .finally(() => setMsgsLoading(false));
+  }
+
+  function exportCsv() {
+    const selected = convs.find(c => c.id === selectedId);
+    if (!selected || messages.length === 0) return;
+    type MsgRow = { conv: string; sender: string; text: string; time: string };
+    const rows: MsgRow[] = messages.map(m => ({
+      conv: selected.title,
+      sender: m.senderName,
+      text: m.text,
+      time: m.createdAt ? m.createdAt.toLocaleString("uk-UA") : "—",
+    }));
+    exportCSV<MsgRow>(rows, `chat-${selected.id}`, ["conv", "sender", "text", "time"]);
+  }
+
+  function typePill(type: string) {
+    if (type === "manager") return <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">менеджер</span>;
+    if (type === "instructor") return <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300">інструктор</span>;
+    return <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300">підтримка</span>;
+  }
+
+  const selectedConv = convs.find(c => c.id === selectedId) ?? null;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h2 className="text-2xl font-black tracking-tight text-neutral-900 dark:text-white">Чати (аналіз)</h2>
+          <p className="text-neutral-500 text-sm">{convs.length} розмов · натисни на чат, щоб переглянути повідомлення</p>
+        </div>
+        {selectedId && (
+          <button
+            onClick={exportCsv}
+            disabled={msgsLoading || messages.length === 0}
+            className="flex items-center gap-1.5 px-4 py-2 bg-neutral-800 dark:bg-neutral-700 text-white rounded-lg font-bold text-sm hover:bg-neutral-700 disabled:opacity-40"
+          >
+            <Download size={14} /> Експорт CSV
+          </button>
+        )}
+      </div>
+
+      {loading ? <Spinner /> : error ? <ErrorBox message={error} /> : (
+        <div className="flex gap-4 min-h-[480px]">
+          {/* Left: conversation list */}
+          <div className="w-80 shrink-0 flex flex-col gap-2">
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Пошук за ім'ям…"
+                className="w-full pl-8 pr-3 py-2 text-sm bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:outline-none focus:border-red-500"
+              />
+            </div>
+            {filtered.length === 0 ? (
+              <EmptyBox label="Розмов не знайдено" icon={<MessageSquare size={28} />} />
+            ) : (
+              <div className="space-y-1 overflow-y-auto max-h-[600px] pr-1">
+                {filtered.map(c => (
+                  <button
+                    key={c.id}
+                    onClick={() => selectConv(c.id)}
+                    className={`w-full text-left rounded-xl border px-3 py-2.5 transition-colors ${
+                      selectedId === c.id
+                        ? "bg-red-600 border-red-500 text-white"
+                        : "bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-0.5">
+                      <span className={`font-bold text-sm truncate ${selectedId === c.id ? "text-white" : "text-neutral-900 dark:text-white"}`}>{c.title}</span>
+                      {typePill(c.type)}
+                    </div>
+                    {c.createdByName && (
+                      <p className={`text-xs truncate ${selectedId === c.id ? "text-red-200" : "text-neutral-500"}`}>👤 {c.createdByName}</p>
+                    )}
+                    {c.lastMessage && (
+                      <p className={`text-xs truncate mt-0.5 ${selectedId === c.id ? "text-red-100" : "text-neutral-400"}`}>{c.lastMessage}</p>
+                    )}
+                    <p className={`text-xs mt-0.5 ${selectedId === c.id ? "text-red-200" : "text-neutral-400"}`}>{formatRelative(c.updatedAt)}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Right: message thread */}
+          <div className="flex-1 bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 flex flex-col overflow-hidden">
+            {!selectedConv ? (
+              <div className="flex-1 flex items-center justify-center text-neutral-400 font-semibold">
+                ← Вибери розмову
+              </div>
+            ) : (
+              <>
+                {/* Thread header */}
+                <div className="px-5 py-3 border-b border-neutral-200 dark:border-neutral-800 flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-black text-neutral-900 dark:text-white truncate">{selectedConv.title}</p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      {typePill(selectedConv.type)}
+                      {selectedConv.createdByName && (
+                        <span className="text-xs text-neutral-400">👤 {selectedConv.createdByName}</span>
+                      )}
+                      {!msgsLoading && (
+                        <span className="text-xs text-neutral-400">{messages.length} повід.</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                  {msgsLoading ? (
+                    <Spinner />
+                  ) : messages.length === 0 ? (
+                    <EmptyBox label="Повідомлень немає" icon={<MessageSquare size={28} />} />
+                  ) : (
+                    messages.map(m => {
+                      // heuristic: if senderId matches first participantId, treat as client (right/red)
+                      const isClient = selectedConv.participantIds[0] === m.senderId || selectedConv.participantIds.length === 0;
+                      return (
+                        <div key={m.id} className={`flex ${isClient ? "justify-end" : "justify-start"}`}>
+                          <div className={`max-w-[72%] rounded-2xl px-4 py-2.5 ${isClient ? "bg-red-600 text-white" : "bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white"}`}>
+                            <p className={`text-xs font-bold mb-0.5 ${isClient ? "text-red-200" : "text-neutral-500"}`}>{m.senderName}</p>
+                            <p className="text-sm break-words">{m.text}</p>
+                            <p className={`text-xs mt-1 text-right ${isClient ? "text-red-200" : "text-neutral-400"}`}>{m.createdAt ? m.createdAt.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" }) : ""}</p>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const NAV_ITEMS: { id: Section; label: string; Icon: LucideIcon }[] = [
   { id: "dashboard",     label: "Дашборд",      Icon: Gauge },
   { id: "leads",         label: "Заявки",        Icon: UsersRound },
   { id: "users",         label: "Користувачі",   Icon: Users },
   { id: "chat",          label: "Чат / Підтримка", Icon: MessageSquare },
+  { id: "chatmonitor",   label: "💬 Чати (аналіз)", Icon: MessageSquare },
   { id: "posts",         label: "Пости клубу",   Icon: BarChart3 },
   { id: "stories",       label: "Stories",       Icon: CircleDollarSign },
   { id: "comments",      label: "Коментарі",     Icon: MessageSquare },
@@ -1234,6 +1409,7 @@ export function CrmWorkspace() {
           {section === "leads"         && <LeadsSection />}
           {section === "users"         && <UsersSection />}
           {section === "chat"          && <ChatInboxSection />}
+          {section === "chatmonitor"   && <ChatMonitorSection />}
           {section === "posts"         && <PostsSection />}
           {section === "stories"       && <StoriesSection />}
           {section === "comments"      && <CommentsSection />}

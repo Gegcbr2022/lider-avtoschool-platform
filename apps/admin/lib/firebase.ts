@@ -152,6 +152,16 @@ export type ConversationEntry = {
   lastMessageAt: Date | null;
   updatedAt: Date | null;
   participantIds: string[];
+  createdByName?: string;
+};
+
+export type ConversationMessage = {
+  id: string;
+  senderId: string;
+  senderName: string;
+  text: string;
+  createdAt: Date | null;
+  readBy: string[];
 };
 
 export type SupportThread = {
@@ -389,6 +399,41 @@ export async function getConversations(limitCount = 100): Promise<ConversationEn
       lastMessageAt: toDate(data.lastMessageAt),
       updatedAt: toDate(data.updatedAt),
       participantIds: data.participantIds ?? [],
+      createdByName: data.createdByName,
+    };
+  });
+}
+
+export async function getConversationsAdmin(): Promise<ConversationEntry[]> {
+  const q = query(collection(db, "conversations"), orderBy("updatedAt", "desc"), limit(200));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => {
+    const data = d.data();
+    return {
+      id: d.id,
+      title: data.title ?? "Чат",
+      type: data.type ?? "support",
+      lastMessage: data.lastMessage,
+      lastMessageAt: toDate(data.lastMessageAt),
+      updatedAt: toDate(data.updatedAt),
+      participantIds: data.participantIds ?? [],
+      createdByName: data.createdByName,
+    };
+  });
+}
+
+export async function getConversationMessages(convId: string): Promise<ConversationMessage[]> {
+  const q = query(collection(db, "conversations", convId, "messages"), orderBy("createdAt", "asc"));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => {
+    const data = d.data();
+    return {
+      id: d.id,
+      senderId: data.senderId ?? "",
+      senderName: data.senderName ?? "Невідомий",
+      text: data.text ?? "",
+      createdAt: toDate(data.createdAt),
+      readBy: data.readBy ?? [],
     };
   });
 }

@@ -387,6 +387,11 @@ app.post("/chat/notify", async (request, response) => {
   const userId = typeof body.userId === "string" ? body.userId : "";
   const userName = typeof body.userName === "string" && body.userName.trim() ? body.userName.trim() : "Учень";
   const text = typeof body.text === "string" ? body.text.trim() : "";
+  const conversationType = typeof body.conversationType === "string" ? body.conversationType : undefined;
+  const userPhone = typeof body.userPhone === "string" ? body.userPhone.trim() : undefined;
+  const userEmail = typeof body.userEmail === "string" ? body.userEmail.trim() : undefined;
+  const userCity = typeof body.userCity === "string" ? body.userCity.trim() : undefined;
+  const userCategory = typeof body.userCategory === "string" ? body.userCategory.trim() : undefined;
 
   if (!conversationId || !userId || !text) {
     response.status(422).json({ error: "Invalid chat notify payload" });
@@ -399,7 +404,13 @@ app.post("/chat/notify", async (request, response) => {
   }
 
   try {
-    const topicId = await getOrCreateSupportTopic(conversationId, userId, userName);
+    const topicId = await getOrCreateSupportTopic(conversationId, userId, userName, {
+      conversationType,
+      userPhone,
+      userEmail,
+      userCity,
+      userCategory
+    });
     await telegramCall("sendMessage", {
       chat_id: process.env.TELEGRAM_LOG_CHAT_ID,
       message_thread_id: topicId,
@@ -852,31 +863,132 @@ async function telegramCall<T = Record<string, unknown>>(method: string, payload
   return json.result as T;
 }
 
+type SupportTopicOptions = {
+  conversationType?: string;
+  userPhone?: string;
+  userEmail?: string;
+  userCity?: string;
+  userCategory?: string;
+};
+
 // One Telegram forum topic per client conversation. Mapping lives in supportThreads/{conversationId}.
-async function getOrCreateSupportTopic(conversationId: string, userId: string, userName: string): Promise<number> {
+async function getOrCreateSupportTopic(
+  conversationId: string,
+  userId: string,
+  userName: string,
+  options: SupportTopicOptions = {}
+): Promise<number> {
   const ref = db.collection("supportThreads").doc(conversationId);
   const snap = await ref.get();
   const existing = snap.exists ? (snap.data()?.telegramTopicId as number | undefined) : undefined;
   if (existing) return existing;
 
+  const { conversationType, userPhone, userEmail, userCity, userCategory } = options;
+
+  // Choose topic name emoji based on conversation type
+  const topicEmoji = conversationType === "instructor" ? "🚗" : "👩‍💼";
+  const topicName = `${topicEmoji} ${userName}`;
+
   const topic = await telegramCall<{ message_thread_id: number }>("createForumTopic", {
     chat_id: process.env.TELEGRAM_LOG_CHAT_ID,
-    name: `👤 ${userName} · ${userId.slice(0, 6)}`
+    name: topicName
   });
+
+  const threadId = topic.message_thread_id;
+
+  // Send pinned client-card as first message in the new topic
+  try {
+    const cardLines = [
+      `📋 <b>Клієнт: ${escapeHtml(userName)}</b>`,
+      `Телефон: ${escapeHtml(userPhone ?? "-")}`,
+      `Email: ${escapeHtml(userEmail ?? "-")}`,
+      `Місто: ${escapeHtml(userCity ?? "-")}`,
+      `Категорія: ${escapeHtml(userCategory ?? "-")}`,
+      `ID: ${escapeHtml(userId)}`
+    ].join("\n");
+
+    const cardMsg = await telegramCall<{ message_id: number }>("sendMessage", {
+      chat_id: process.env.TELEGRAM_LOG_CHAT_ID,
+      message_thread_id: threadId,
+      text: cardLines,
+      parse_mode: "HTML",
+      disable_web_page_preview: true
+    });
+
+    await telegramCall("pinChatMessage", {
+      chat_id: process.env.TELEGRAM_LOG_CHAT_ID,
+      message_id: cardMsg.message_id,
+      disable_notification: true
+    });
+  } catch (cardErr) {
+    console.warn("getOrCreateSupportTopic: failed to send/pin client card", cardErr);
+  }
 
   await ref.set(
     {
       conversationId,
       userId,
       userName,
-      telegramTopicId: topic.message_thread_id,
+      telegramTopicId: threadId,
       status: "open",
       createdAt: FieldValue.serverTimestamp(),
       lastMessageAt: FieldValue.serverTimestamp()
     },
     { merge: true }
   );
-  return topic.message_thread_id;
+  return threadId;
+}
+
+// Send FCM push notification to a user's device (non-throwing).
+async function sendFCMPush(
+  userId: string,
+  title: string,
+  body: string,
+  data: Record<string, string>
+): Promise<void> {
+  try {
+    const profileSnap = await db.collection("userProfiles").doc(userId).get();
+    const pushToken = profileSnap.exists ? (profileSnap.data()?.pushToken as string | undefined) : undefined;
+    if (!pushToken) return;
+
+    const projectId = process.env.FIREBASE_PROJECT_ID ?? "lider-avtoschool-prod";
+
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { GoogleAuth } = require("google-auth-library") as { GoogleAuth: new (opts: { scopes: string }) => { getClient(): Promise<{ getAccessToken(): Promise<{ token?: string | null }> }> } };
+    const auth = new GoogleAuth({ scopes: "https://www.googleapis.com/auth/firebase.messaging" });
+    const client = await auth.getClient();
+    const tokenResult = await client.getAccessToken();
+    const accessToken = tokenResult.token;
+    if (!accessToken) {
+      console.warn("sendFCMPush: could not obtain FCM access token");
+      return;
+    }
+
+    const fcmUrl = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
+    const fcmPayload = {
+      message: {
+        token: pushToken,
+        notification: { title, body },
+        data
+      }
+    };
+
+    const res = await fetch(fcmUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`
+      },
+      body: JSON.stringify(fcmPayload)
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn(`sendFCMPush: FCM responded ${res.status}:`, errText);
+    }
+  } catch (err) {
+    console.error("sendFCMPush: unexpected error", err);
+  }
 }
 
 // Manager typed a reply inside the client's topic → write it back into the app chat.
@@ -891,27 +1003,35 @@ async function handleManagerReply(update: TelegramUpdate): Promise<void> {
     .get();
   if (lookup.empty) return;
 
-  const conversationId = lookup.docs[0].data().conversationId as string;
+  const threadData = lookup.docs[0].data();
+  const conversationId = threadData.conversationId as string;
   if (!conversationId) return;
 
+  const conversationUserId = threadData.userId as string | undefined;
   const managerName = [msg.from?.first_name, msg.from?.last_name].filter(Boolean).join(" ") || "Менеджер";
+  const messageText = msg.text;
 
   await db.collection("conversations").doc(conversationId).collection("messages").add({
     senderId: "support",
     senderName: managerName,
-    text: msg.text,
+    text: messageText,
     createdAt: FieldValue.serverTimestamp(),
     readBy: ["support"],
     source: "telegram"
   });
   await db.collection("conversations").doc(conversationId).set(
     {
-      lastMessage: msg.text,
+      lastMessage: messageText,
       lastMessageAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp()
     },
     { merge: true }
   );
+
+  // Send FCM push to the student's device
+  if (conversationUserId) {
+    await sendFCMPush(conversationUserId, managerName, messageText, { conversationId, type: "chat" });
+  }
 }
 
 async function sendLeadToTelegram(leadInput: Record<string, unknown>, leadId: string) {

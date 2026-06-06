@@ -137,6 +137,11 @@ export async function notifyChat(params: {
   userId: string;
   userName: string;
   text: string;
+  conversationType?: string;
+  userPhone?: string;
+  userEmail?: string;
+  userCity?: string;
+  userCategory?: string;
 }): Promise<void> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10_000);

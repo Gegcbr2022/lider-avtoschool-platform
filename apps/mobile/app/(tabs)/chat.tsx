@@ -1,7 +1,8 @@
-// ─── Чат — Telegram-like chat list → conversation ──────────────────────────────
-// Architecture: list of chats (currently just "Автошкола Лідер"), tap → conversation.
-// Conversation is a real Firestore real-time messenger. Backend mirrors each
-// thread to a Telegram supergroup topic; manager replies come back here.
+// ─── Чат — Менеджер + Інструктор ─────────────────────────────────────────────
+// Architecture: 2 chats (manager + instructor). Each maps to a real Firestore
+// conversation. Backend mirrors each thread to a separate Telegram supergroup
+// topic named after the client. First message in topic = client card.
+// Manager/instructor reply in TG → FCM push → message appears here live.
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -33,71 +34,59 @@ function formatTime(d: Date | null): string {
   return d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
 }
 
-// ─── Chat List ────────────────────────────────────────────────────────────────
+// ─── Chat list definition ─────────────────────────────────────────────────────
 
-type ChatItem = {
+type ChatDef = {
   id: string;
+  type: ConversationType;
   title: string;
-  subtitle: string;
   emoji: string;
-  lastMessage?: string;
-  lastTime?: string;
-  unread?: number;
+  subtitle: string;
+  systemMessage: string;
 };
+
+const CHATS: ChatDef[] = [
+  {
+    id: "manager",
+    type: "manager",
+    title: "Менеджер",
+    emoji: "👩‍💼",
+    subtitle: "Оплата, документи, запис на навчання",
+    systemMessage: "Напиши своє питання — менеджер відповість якнайшвидше (зазвичай протягом робочого дня).",
+  },
+  {
+    id: "instructor",
+    type: "instructor",
+    title: "Інструктор",
+    emoji: "🚗",
+    subtitle: "Практичні заняття, розклад, питання по водінню",
+    systemMessage: "Напиши питання своєму інструктору. Відповідь прийде сюди та в Telegram.",
+  },
+];
+
+// ─── Chat List ────────────────────────────────────────────────────────────────
 
 function ChatList({ onOpen }: { onOpen: (id: string) => void }) {
   const { colors } = useTheme();
   const s = makeStyles(colors);
 
-  const chats: ChatItem[] = [
-    {
-      id: "support",
-      title: "Автошкола Лідер",
-      subtitle: "Загальний чат з автошколою",
-      emoji: "🏫",
-      lastMessage: "Напишіть своє питання...",
-    },
-    {
-      id: "manager",
-      title: "Менеджер",
-      subtitle: "Оплата, документи, запис",
-      emoji: "👩‍💼",
-    },
-    {
-      id: "instructor",
-      title: "Інструктор",
-      subtitle: "Практичні заняття",
-      emoji: "🚗",
-    },
-  ];
-
   return (
     <SafeAreaView style={s.safe} edges={["top"]}>
       <View style={s.header}>
         <Text style={s.headerTitle}>Чати</Text>
+        <Text style={s.headerSub}>Зв'язок з автошколою</Text>
       </View>
       <ScrollView style={{ flex: 1 }}>
-        {chats.map((chat) => (
+        {CHATS.map((chat) => (
           <Pressable key={chat.id} style={s.chatRow} onPress={() => onOpen(chat.id)}>
             <View style={s.chatAvatar}>
               <Text style={{ fontSize: 22 }}>{chat.emoji}</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text style={s.chatName}>{chat.title}</Text>
-                {chat.lastTime ? (
-                  <Text style={s.chatTime}>{chat.lastTime}</Text>
-                ) : null}
-              </View>
-              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 3 }}>
-                <Text style={s.chatSub} numberOfLines={1}>{chat.subtitle}</Text>
-                {chat.unread ? (
-                  <View style={s.badge}>
-                    <Text style={s.badgeText}>{chat.unread}</Text>
-                  </View>
-                ) : null}
-              </View>
+              <Text style={s.chatName}>{chat.title}</Text>
+              <Text style={s.chatSub} numberOfLines={1}>{chat.subtitle}</Text>
             </View>
+            <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
           </Pressable>
         ))}
       </ScrollView>
@@ -107,9 +96,7 @@ function ChatList({ onOpen }: { onOpen: (id: string) => void }) {
 
 // ─── Conversation ─────────────────────────────────────────────────────────────
 
-function Conversation({ chatType, title, emoji, onBack }: {
-  chatType: ConversationType; title: string; emoji: string; onBack: () => void;
-}) {
+function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
   const { colors } = useTheme();
   const { user } = useAuth();
   const isOffline = useNetworkStatus() === "offline";
@@ -130,7 +117,7 @@ function Conversation({ chatType, title, emoji, onBack }: {
 
     (async () => {
       try {
-        const convId = await ensureConversation(user.id, user.name, chatType, title);
+        const convId = await ensureConversation(user.id, user.name, chat.type, chat.title);
         if (!active) return;
         setConversationId(convId);
         unsub = subscribeToMessages(convId, (msgs) => {
@@ -150,7 +137,7 @@ function Conversation({ chatType, title, emoji, onBack }: {
       active = false;
       unsub?.();
     };
-  }, [user, chatType]);
+  }, [user, chat.type]);
 
   async function handleSend() {
     const text = input.trim();
@@ -159,7 +146,18 @@ function Conversation({ chatType, title, emoji, onBack }: {
     setSending(true);
     try {
       await sendMessage(conversationId, { senderId: user.id, senderName: user.name, text });
-      void notifyChat({ conversationId, userId: user.id, userName: user.name, text });
+      // Notify backend — sends to TG topic + triggers FCM on reply
+      void notifyChat({
+        conversationId,
+        userId: user.id,
+        userName: user.name,
+        text,
+        conversationType: chat.type,
+        userPhone: user.phone,
+        userEmail: user.email,
+        userCity: user.city,
+        userCategory: user.category,
+      });
     } catch {
       setError("Повідомлення не надіслано. Спробуй ще раз.");
       setInput(text);
@@ -175,17 +173,17 @@ function Conversation({ chatType, title, emoji, onBack }: {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
       >
-        {/* Header with back button */}
+        {/* Header */}
         <View style={s.header}>
           <Pressable hitSlop={12} onPress={onBack} style={{ marginRight: 8 }}>
             <Text style={{ color: colors.red, fontSize: 22, fontWeight: "600" }}>‹</Text>
           </Pressable>
           <View style={s.chatAvatar}>
-            <Text style={{ fontSize: 20 }}>{emoji}</Text>
+            <Text style={{ fontSize: 20 }}>{chat.emoji}</Text>
           </View>
           <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={s.headerTitle}>{title}</Text>
-            <Text style={s.headerSub}>Зазвичай відповідає протягом робочого дня</Text>
+            <Text style={s.headerTitle}>{chat.title}</Text>
+            <Text style={s.headerSub}>Відповідь приходить сюди та push-сповіщенням</Text>
           </View>
         </View>
 
@@ -205,9 +203,7 @@ function Conversation({ chatType, title, emoji, onBack }: {
           onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
         >
           <View style={s.systemRow}>
-            <Text style={s.systemText}>
-              Напиши своє питання — менеджер автошколи відповість якнайшвидше (зазвичай протягом робочого дня).
-            </Text>
+            <Text style={s.systemText}>{chat.systemMessage}</Text>
           </View>
 
           {loading ? (
@@ -227,7 +223,7 @@ function Conversation({ chatType, title, emoji, onBack }: {
             return (
               <View key={m.id} style={[s.bubbleWrap, mine ? s.bubbleWrapMine : s.bubbleWrapTheirs]}>
                 <View style={[s.bubble, mine ? s.bubbleMine : s.bubbleTheirs]}>
-                  {!mine ? <Text style={s.senderName}>{m.senderName || "Автошкола"}</Text> : null}
+                  {!mine ? <Text style={s.senderName}>{m.senderName || chat.title}</Text> : null}
                   <Text style={[s.bubbleText, mine && s.bubbleTextMine]}>{m.text}</Text>
                   <Text style={[s.time, mine && s.timeMine]}>{formatTime(m.createdAt)}</Text>
                 </View>
@@ -237,9 +233,9 @@ function Conversation({ chatType, title, emoji, onBack }: {
 
           {!loading && messages.length === 0 && !error ? (
             <View style={{ alignItems: "center", paddingVertical: 24 }}>
-              <Text style={{ fontSize: 40, marginBottom: 8 }}>👋</Text>
+              <Text style={{ fontSize: 40, marginBottom: 8 }}>{chat.emoji}</Text>
               <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: "center" }}>
-                Привіт! Це твій чат з автошколою.{"\n"}Постав перше питання нижче.
+                Постав перше питання нижче.{"\n"}Відповідь прийде сюди та push-сповіщенням.
               </Text>
             </View>
           ) : null}
@@ -268,14 +264,6 @@ function Conversation({ chatType, title, emoji, onBack }: {
   );
 }
 
-// ─── Chat metadata: each id maps to a real Firestore conversation type ──────────
-
-const CHAT_META: Record<string, { type: ConversationType; title: string; emoji: string }> = {
-  support: { type: "support", title: "Автошкола Лідер", emoji: "🏫" },
-  manager: { type: "manager", title: "Менеджер", emoji: "👩‍💼" },
-  instructor: { type: "instructor", title: "Інструктор", emoji: "🚗" },
-};
-
 // ─── Root tab component ───────────────────────────────────────────────────────
 
 export default function ChatTab() {
@@ -294,9 +282,9 @@ export default function ChatTab() {
         </View>
         <View style={s.center}>
           <Text style={{ fontSize: 56, marginBottom: 16 }}>💬</Text>
-          <Text style={s.gateTitle}>Чат з автошколою</Text>
+          <Text style={s.gateTitle}>Зв'язок з автошколою</Text>
           <Text style={s.gateSub}>
-            Увійди в акаунт, щоб написати менеджеру, підтримці чи інструктору. Відповідь приходить прямо сюди.
+            Увійди в акаунт, щоб написати менеджеру або інструктору.{"\n"}Відповідь прийде сюди та push-сповіщенням.
           </Text>
           <Pressable style={s.gateBtn} onPress={() => router.push("/auth?mode=login")}>
             <Text style={s.gateBtnText}>Увійти</Text>
@@ -307,8 +295,8 @@ export default function ChatTab() {
   }
 
   if (activeChat) {
-    const meta = CHAT_META[activeChat] ?? CHAT_META.support;
-    return <Conversation chatType={meta.type} title={meta.title} emoji={meta.emoji} onBack={() => setActiveChat(null)} />;
+    const chat = CHATS.find((c) => c.id === activeChat) ?? CHATS[0];
+    return <Conversation chat={chat} onBack={() => setActiveChat(null)} />;
   }
 
   return <ChatList onOpen={(id) => setActiveChat(id)} />;
@@ -321,23 +309,23 @@ function makeStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     safe: { flex: 1, backgroundColor: colors.bg },
     center: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl },
     header: {
-      flexDirection: "row",
-      alignItems: "center",
       paddingHorizontal: spacing.md,
       paddingVertical: 12,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
       backgroundColor: colors.bgCard,
+      flexDirection: "row",
+      alignItems: "center",
     },
     headerTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: "900" },
-    headerSub: { color: colors.textSecondary, fontSize: 11, marginTop: 1 },
+    headerSub: { color: colors.textSecondary, fontSize: 11, marginTop: 1, flex: 1 },
 
     chatRow: {
       flexDirection: "row",
       alignItems: "center",
       gap: 14,
       paddingHorizontal: spacing.md,
-      paddingVertical: 14,
+      paddingVertical: 16,
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
       backgroundColor: colors.bg,
@@ -351,19 +339,7 @@ function makeStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       justifyContent: "center",
     },
     chatName: { color: colors.textPrimary, fontSize: 16, fontWeight: "800" },
-    chatSub: { flex: 1, color: colors.textSecondary, fontSize: 13, lineHeight: 18 },
-    chatTime: { color: colors.textTertiary, fontSize: 12 },
-    badge: {
-      backgroundColor: colors.red,
-      borderRadius: 10,
-      minWidth: 20,
-      height: 20,
-      alignItems: "center",
-      justifyContent: "center",
-      paddingHorizontal: 5,
-      marginLeft: 8,
-    },
-    badgeText: { color: "#fff", fontSize: 11, fontWeight: "900" },
+    chatSub: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 2 },
 
     offlineBar: {
       backgroundColor: colors.warningSoft,
