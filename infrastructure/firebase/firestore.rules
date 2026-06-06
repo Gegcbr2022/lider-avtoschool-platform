@@ -131,6 +131,15 @@ service cloud.firestore {
       allow delete: if signedIn() && uid() == userId || isAdmin();
     }
 
+    // ─── НАІС data (SENSITIVE: passport / tax id / registration) ───────────────
+    // Private: only the owner and staff can read. NOT world-readable (unlike
+    // userProfiles). Used to prepare data entry into НАІС МВС by school staff.
+    match /naisData/{userId} {
+      allow read: if staff() || (signedIn() && uid() == userId);
+      allow create, update: if signedIn() && uid() == userId;
+      allow delete: if isAdmin();
+    }
+
     // ─── Club Posts ───────────────────────────────────────────────────────────
 
     match /clubPosts/{postId} {

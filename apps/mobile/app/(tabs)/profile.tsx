@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Alert, Image, Linking, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, type Href } from "expo-router";
 import Constants from "expo-constants";
 import { useAuth } from "../../lib/auth";
 import { Card, GhostButton, Label, Pill, Row, Screen } from "../../components/mobile-ui";
@@ -356,6 +356,10 @@ export default function ProfileTab() {
           <Row
             title="Категорія прав" detail={displayCategory || "Оберіть категорію"} icon="🚗"
             onPress={() => setEditField("category")}
+          />
+          <Row
+            title="Мої документи" detail="Дані та фото для НАІС МВС" icon="🪪"
+            onPress={() => router.push("/documents" as Href)}
           />
         </Card>
       ) : null}

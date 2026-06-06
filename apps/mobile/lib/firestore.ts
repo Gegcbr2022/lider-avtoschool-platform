@@ -463,6 +463,59 @@ export function computeAwards(stats: UserStats): Award[] {
   ];
 }
 
+// ─── НАІС data (sensitive: passport / tax id / registration) ────────────────────
+// Stored in a private collection naisData/{uid} (owner + staff only — NOT public).
+
+export type NaisDocument = {
+  kind: string;          // "passport" | "taxId" | "medCert" | "registration"
+  storagePath: string;
+  downloadURL?: string;
+  uploadedAt: string;
+};
+
+export type NaisData = {
+  fullName?: string;
+  birthDate?: string;
+  passportSeries?: string;
+  passportNumber?: string;
+  taxId?: string;            // ІПН / код
+  registrationAddress?: string;
+  medCertNumber?: string;
+  documents?: NaisDocument[];
+};
+
+export async function getNaisData(uid: string): Promise<NaisData | null> {
+  try {
+    const snap = await getDoc(doc(db, "naisData", uid));
+    if (!snap.exists()) return null;
+    const d = snap.data();
+    return {
+      fullName: d.fullName,
+      birthDate: d.birthDate,
+      passportSeries: d.passportSeries,
+      passportNumber: d.passportNumber,
+      taxId: d.taxId,
+      registrationAddress: d.registrationAddress,
+      medCertNumber: d.medCertNumber,
+      documents: d.documents ?? [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function saveNaisData(uid: string, patch: Partial<NaisData>): Promise<void> {
+  await setDoc(doc(db, "naisData", uid), { ...patch, updatedAt: serverTimestamp() }, { merge: true });
+}
+
+export async function addNaisDocument(uid: string, document: NaisDocument): Promise<void> {
+  await setDoc(
+    doc(db, "naisData", uid),
+    { documents: arrayUnion(document), updatedAt: serverTimestamp() },
+    { merge: true }
+  );
+}
+
 // ─── Conversations / Chat ─────────────────────────────────────────────────────
 
 export type ConversationDoc = {
