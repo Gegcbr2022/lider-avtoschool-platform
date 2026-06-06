@@ -150,9 +150,9 @@ export default function RootLayout() {
     if (isLoading || !roleLoaded) return;
     if (mode === "unauthenticated") {
       router.replace("/onboarding");
-    } else if (user?.role === "instructor") {
-      router.replace("/instructor-home");
     } else {
+      // Both students AND instructors go to the tab layout.
+      // The (tabs)/index.tsx renders InstructorHome or StudentHome based on role.
       router.replace("/(tabs)");
     }
   }, [isLoading, roleLoaded, mode, user?.role]);

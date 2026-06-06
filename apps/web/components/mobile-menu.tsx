@@ -30,13 +30,21 @@ export function MobileMenu({ navItems, activeLocale }: { navItems: readonly NavI
   }, []);
 
   useEffect(() => {
-    document.body.dataset.liderMobileMenuOpen = String(isOpen);
-    document.body.style.overflow = isOpen ? "hidden" : "";
+    if (isOpen) {
+      document.body.dataset.liderMobileMenuOpen = "true";
+      document.body.style.overflow = "hidden";
+      document.body.style.overscrollBehavior = "none";
+    } else {
+      delete document.body.dataset.liderMobileMenuOpen;
+      document.body.style.overflow = "";
+      document.body.style.overscrollBehavior = "";
+    }
     window.dispatchEvent(new CustomEvent("lider-mobile-menu-state", { detail: { open: isOpen } }));
 
     return () => {
       delete document.body.dataset.liderMobileMenuOpen;
       document.body.style.overflow = "";
+      document.body.style.overscrollBehavior = "";
     };
   }, [isOpen]);
 
@@ -59,7 +67,7 @@ export function MobileMenu({ navItems, activeLocale }: { navItems: readonly NavI
             <AnimatePresence>
               {isOpen ? (
                 <motion.div
-                  className="fixed inset-0 z-[70] overflow-hidden bg-lider-graphite/60 px-3 py-3 backdrop-blur-md sm:px-4 sm:py-4 lg:hidden"
+                  className="fixed inset-0 z-[100] flex justify-end overflow-hidden bg-lider-graphite/60 backdrop-blur-sm lg:hidden"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
@@ -70,14 +78,14 @@ export function MobileMenu({ navItems, activeLocale }: { navItems: readonly NavI
                   }}
                 >
                   <motion.nav
-                    className="safe-bottom ml-auto flex h-full w-[min(92vw,400px)] flex-col overflow-hidden rounded-[28px] bg-white shadow-[0_28px_90px_rgba(0,0,0,0.22)]"
-                    initial={{ opacity: 0, x: 34, scale: 0.98 }}
-                    animate={{ opacity: 1, x: 0, scale: 1 }}
-                    exit={{ opacity: 0, x: 24, scale: 0.98 }}
-                    transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                    className="safe-bottom flex h-full w-[min(90vw,400px)] flex-col overflow-hidden bg-white shadow-[-10px_0_40px_rgba(0,0,0,0.15)]"
+                    initial={{ x: "100%" }}
+                    animate={{ x: 0 }}
+                    exit={{ x: "100%" }}
+                    transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                     aria-label="Мобільне меню"
                   >
-                    <div className="flex items-center justify-between gap-3 border-b border-lider-line p-4">
+                    <div className="flex items-center justify-between gap-3 border-b border-lider-line p-4 sm:p-5">
                       <BrandLogo imageClassName="w-24 sm:w-[112px]" onClick={close} />
                       <button
                         type="button"
@@ -88,8 +96,8 @@ export function MobileMenu({ navItems, activeLocale }: { navItems: readonly NavI
                         <X size={20} />
                       </button>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-4">
-                      <p className="mb-3 text-xs font-black uppercase tracking-[0.16em] text-lider-muted">
+                    <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-5">
+                      <p className="mb-4 text-xs font-black uppercase tracking-[0.16em] text-lider-muted">
                         {mc.quickNav}
                       </p>
                       <div className="grid gap-2">
@@ -98,23 +106,23 @@ export function MobileMenu({ navItems, activeLocale }: { navItems: readonly NavI
                             key={item.href}
                             href={item.href}
                             onClick={close}
-                            className="tap-target rounded-[18px] border border-lider-line bg-white px-4 py-4 text-base font-black text-lider-graphite transition hover:border-lider-red hover:bg-[#fff1f1]"
+                            className="tap-target rounded-[18px] border border-lider-line bg-white px-5 py-4 text-base font-black text-lider-graphite transition hover:border-lider-red hover:bg-[#fff1f1]"
                           >
                             {item.label}
                           </Link>
                         ))}
                       </div>
-                      <div className="mt-5 grid gap-3">
+                      <div className="mt-8 grid gap-3">
                         <Link href="#signup" data-lead-source="sticky_mobile" onClick={close} className="red-cta tap-target px-5 py-4 text-base">
                           {mc.apply}
                           <Send size={18} />
                         </Link>
-                        <div className="rounded-[18px] border border-lider-line bg-lider-background p-3">
+                        <div className="rounded-[18px] border border-lider-line bg-lider-background p-4">
                           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-lider-muted">
                             <Languages size={16} aria-hidden />
                             {mc.language}
                           </div>
-                          <div className="mt-3">
+                          <div className="mt-4">
                             <LanguageSwitcher activeLocale={activeLocale} compact />
                           </div>
                         </div>

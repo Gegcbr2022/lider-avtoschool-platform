@@ -443,6 +443,25 @@ export default function ProfileTab() {
         />
       </Card>
 
+      {/* Instructor quick access */}
+      {user?.role === "instructor" ? (
+        <Card>
+          <Label variant="red">Інструктор</Label>
+          <Row
+            title="Мої учні"
+            detail="Список учнів та заняття"
+            icon="👥"
+            onPress={() => router.push("/instructor-students" as Href)}
+          />
+          <Row
+            title="Розклад занять"
+            detail="На головній вкладці"
+            icon="📅"
+            onPress={() => router.push("/(tabs)" as Href)}
+          />
+        </Card>
+      ) : null}
+
       {/* Support */}
       <Card>
         <Label>Підтримка</Label>

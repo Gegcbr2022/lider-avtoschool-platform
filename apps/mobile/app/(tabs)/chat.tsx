@@ -25,8 +25,10 @@ import {
   getMyBookings,
   sendMessage,
   subscribeToMessages,
+  subscribeToConversations,
   type MessageDoc,
   type ConversationType,
+  type ConversationDoc,
 } from "../../lib/firestore";
 import { useTheme, radii, spacing } from "../../lib/theme";
 import { useNetworkStatus } from "../../lib/useNetwork";
@@ -287,6 +289,90 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
   );
 }
 
+// ─── Instructor Chat View ────────────────────────────────────────────────────
+// Instructors see their student conversations directly (not the student chat list)
+
+function InstructorChatTab() {
+  const { colors } = useTheme();
+  const { user } = useAuth();
+  const s = makeStyles(colors);
+  const [convs, setConvs] = useState<ConversationDoc[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    const unsub = subscribeToConversations(user.id, (list) => {
+      setConvs(list);
+      setLoading(false);
+    });
+    return unsub;
+  }, [user?.id]);
+
+  if (activeChatId) {
+    // Reuse the student Conversation component with a synthesized ChatDef
+    const conv = convs.find((c) => c.id === activeChatId);
+    const chatDef: ChatDef = {
+      id: activeChatId,
+      type: "instructor",
+      title: conv?.title ?? "Учень",
+      emoji: "👤",
+      subtitle: "Чат з учнем",
+      systemMessage: "Відповідайте учню. Повідомлення відображаються у його додатку та Telegram.",
+    };
+    return <Conversation chat={chatDef} onBack={() => setActiveChatId(null)} />;
+  }
+
+  return (
+    <SafeAreaView style={s.safe} edges={["top"]}>
+      <View style={s.header}>
+        <Text style={s.headerTitle}>Чати з учнями</Text>
+        <Text style={s.headerSub}>Відповідайте учням та менеджерам</Text>
+      </View>
+      {loading ? (
+        <View style={s.center}>
+          <ActivityIndicator color={colors.red} />
+        </View>
+      ) : convs.length === 0 ? (
+        <View style={s.center}>
+          <Text style={{ fontSize: 56, marginBottom: 16 }}>💬</Text>
+          <Text style={s.gateTitle}>Немає чатів</Text>
+          <Text style={s.gateSub}>
+            Учні, які записались до вас на практику,{"\n"}з'являться тут автоматично.
+          </Text>
+        </View>
+      ) : (
+        <ScrollView style={{ flex: 1 }}>
+          {convs.map((c) => (
+            <Pressable
+              key={c.id}
+              style={s.chatRow}
+              onPress={() => setActiveChatId(c.id)}
+            >
+              <View style={s.chatAvatar}>
+                <Text style={{ fontSize: 22 }}>👤</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.chatName}>{c.title}</Text>
+                {c.lastMessage ? (
+                  <Text style={s.chatSub} numberOfLines={1}>
+                    {c.lastMessage}
+                  </Text>
+                ) : (
+                  <Text style={[s.chatSub, { fontStyle: "italic" }]}>
+                    Немає повідомлень
+                  </Text>
+                )}
+              </View>
+              <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      )}
+    </SafeAreaView>
+  );
+}
+
 // ─── Root tab component ───────────────────────────────────────────────────────
 
 export default function ChatTab() {
@@ -315,6 +401,11 @@ export default function ChatTab() {
         </View>
       </SafeAreaView>
     );
+  }
+
+  // Instructor gets a dedicated view showing student conversations
+  if (user?.role === "instructor") {
+    return <InstructorChatTab />;
   }
 
   if (activeChat) {

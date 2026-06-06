@@ -9,7 +9,7 @@ def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
 // which causes Metro to resolve index.js from the wrong directory on Windows.
 // Setting this env var makes getMetroServerRoot return the projectRoot directly.
 project.ext.reactEnv = [
-    "EXPO_NO_METRO_WORKSPACE_ROOT": "1"
+    "EXPO_NO_METRO_WORKSPACE_ROOT": "true"
 ]
 
 /**
@@ -198,7 +198,7 @@ tasks.configureEach { task ->
     if (task.name.contains("BundleReleaseJsAndAssets") || task.name.contains("BundleDebugJsAndAssets")) {
         task.doFirst {
             if (task.hasProperty('environment')) {
-                task.environment("EXPO_NO_METRO_WORKSPACE_ROOT", "1")
+                task.environment("EXPO_NO_METRO_WORKSPACE_ROOT", "true")
             }
         }
     }

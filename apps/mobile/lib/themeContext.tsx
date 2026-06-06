@@ -1,4 +1,3 @@
-// ─── Theme system: dark / light / auto ───────────────────────────────────────
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { Appearance, useColorScheme } from "react-native";
@@ -8,89 +7,82 @@ export type ResolvedTheme = "dark" | "light";
 
 const STORAGE_KEY = "@lider:theme_preference";
 
-// ─── Color tokens ─────────────────────────────────────────────────────────────
-
+// $10K Aesthetic: OLED Black, absolute contrast, zero muddy grays.
 export const darkColors = {
-  // Brand
-  red:        "#ff1e1e",
-  redDark:    "#cc0000",
-  redSoft:    "rgba(255,30,30,0.12)",
-  redGlow:    "rgba(255,30,30,0.25)",
-  // Backgrounds
-  bg:         "#0d0d0d",
-  bgCard:     "#1a1a1a",
-  bgElevated: "#242424",
-  bgSheet:    "#181818",
-  // Text
-  textPrimary:   "#ffffff",
-  textSecondary: "#a0a0a0",
-  textTertiary:  "#606060",
-  textInverse:   "#0d0d0d",
-  // UI
-  border:     "#2a2a2a",
-  divider:    "#1f1f1f",
-  icon:       "#707070",
-  iconActive: "#ff1e1e",
+  // Brand (Red) - Deep, visceral red. Not a default CSS red.
+  red:        "#E51D1D",
+  redDark:    "#990F0F",
+  redSoft:    "rgba(229, 29, 29, 0.1)",
+  redGlow:    "rgba(229, 29, 29, 0.2)",
+  // Brand (Green) - For success states, desaturated.
+  green:      "#004033",
+  // Backgrounds - Pure OLED black for depth. 
+  bg:         "#000000",
+  bgCard:     "#0A0A0A",
+  bgElevated: "#121212",
+  bgSheet:    "#0F0F0F",
+  // Text - Not pure white to prevent halation.
+  textPrimary:   "#F5F5F5",
+  textSecondary: "#8A8A8A",
+  textTertiary:  "#525252",
+  textInverse:   "#000000",
+  // UI - Hairline borders, no heavy shadows.
+  border:     "rgba(255,255,255,0.08)",
+  divider:    "rgba(255,255,255,0.04)",
+  icon:       "#525252",
+  iconActive: "#E51D1D",
   // Semantic
   success:     "#22c55e",
-  successSoft: "rgba(34,197,94,0.12)",
+  successSoft: "rgba(34,197,94,0.1)",
   warning:     "#f59e0b",
-  warningSoft: "rgba(245,158,11,0.12)",
+  warningSoft: "rgba(245,158,11,0.1)",
   info:        "#3b82f6",
-  infoSoft:    "rgba(59,130,246,0.12)",
+  infoSoft:    "rgba(59,130,246,0.1)",
   // Compat aliases
-  white:      "#ffffff",
+  white:      "#FFFFFF",
   black:      "#000000",
-  muted:      "#606060",
-  line:       "#2a2a2a",
-  green:      "#22c55e",
-  yellow:     "#f59e0b",
-  graphite:   "#1a1a1a",
-  background: "#0d0d0d",
+  muted:      "#8A8A8A",
+  line:       "rgba(255,255,255,0.08)",
+  yellow:     "#ffd600",
+  graphite:   "#0A0A0A",
+  background: "#000000",
 } as const;
 
+// Light theme: Off-white, stark architectural contrast.
 export const lightColors = {
-  // Brand
-  red:        "#e8000e",
-  redDark:    "#b50009",
-  redSoft:    "rgba(232,0,14,0.07)",
-  redGlow:    "rgba(232,0,14,0.18)",
-  // Backgrounds — clean white, subtle hierarchy
-  bg:         "#f5f5f7",
-  bgCard:     "#ffffff",
-  bgElevated: "#ededf0",
-  bgSheet:    "#ffffff",
-  // Text — deep charcoal not pure black (premium feel)
-  textPrimary:   "#1a1a1f",
-  textSecondary: "#4a4a5a",
-  textTertiary:  "#8a8a9a",
-  textInverse:   "#ffffff",
-  // UI — soft borders
-  border:     "#dcdde5",
-  divider:    "#e8e9f0",
-  icon:       "#7a7a8a",
-  iconActive: "#e8000e",
-  // Semantic
+  red:        "#DF1616",
+  redDark:    "#A60F0F",
+  redSoft:    "rgba(223, 22, 22, 0.06)",
+  redGlow:    "rgba(223, 22, 22, 0.15)",
+  green:      "#004d40",
+  bg:         "#F7F7F7",
+  bgCard:     "#FFFFFF",
+  bgElevated: "#F2F2F2",
+  bgSheet:    "#FFFFFF",
+  textPrimary:   "#0A0A0A",
+  textSecondary: "#666666",
+  textTertiary:  "#A3A3A3",
+  textInverse:   "#FFFFFF",
+  border:     "rgba(0,0,0,0.06)",
+  divider:    "rgba(0,0,0,0.03)",
+  icon:       "#A3A3A3",
+  iconActive: "#DF1616",
   success:     "#15803d",
-  successSoft: "rgba(21,128,61,0.09)",
-  warning:     "#c2620a",
-  warningSoft: "rgba(194,98,10,0.09)",
+  successSoft: "rgba(21,128,61,0.08)",
+  warning:     "#d97706",
+  warningSoft: "rgba(217,119,6,0.08)",
   info:        "#1d4ed8",
   infoSoft:    "rgba(29,78,216,0.08)",
-  // Compat aliases
-  white:      "#ffffff",
+  white:      "#FFFFFF",
   black:      "#000000",
-  muted:      "#8a8a9a",
-  line:       "#dcdde5",
-  green:      "#15803d",
-  yellow:     "#c2620a",
-  graphite:   "#2a2a3a",
-  background: "#f5f5f7",
+  muted:      "#666666",
+  line:       "rgba(0,0,0,0.06)",
+  yellow:     "#d97706",
+  graphite:   "#0A0A0A",
+  background: "#F7F7F7",
 } as const;
 
 export type ThemeColors = typeof darkColors | typeof lightColors;
-
-// ─── Context ──────────────────────────────────────────────────────────────────
 
 type ThemeContextValue = {
   preference: ThemePreference;
@@ -105,8 +97,6 @@ export const ThemeContext = createContext<ThemeContextValue>({
   colors: darkColors,
   setPreference: () => {},
 });
-
-// ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const systemScheme = useColorScheme() ?? "dark";
@@ -132,7 +122,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const colors = resolvedTheme === "light" ? lightColors : darkColors;
 
-  // Don't block render - show dark theme while loading preference from storage
   return (
     <ThemeContext.Provider value={{ preference, resolvedTheme, colors, setPreference }}>
       {children}
@@ -140,10 +129,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// ─── Hook ─────────────────────────────────────────────────────────────────────
-
 export function useTheme() {
   return useContext(ThemeContext);
 }
-
-// NOTE: Import darkColors directly — don't use 'colors' alias to avoid Hermes barrel issues

@@ -11,7 +11,7 @@ export function BranchSelector() {
   const activeBranch = useMemo(() => branches.find((branch) => branch.id === activeId) ?? branches[0], [activeId]);
 
   return (
-    <div className="rounded-[30px] bg-[#1a1a1a] p-4 text-white shadow-[0_28px_90px_rgba(0,0,0,0.18)] sm:p-6 lg:p-8">
+    <div className="rounded-[30px] bg-lider-graphite p-4 text-white shadow-[0_28px_90px_rgba(26,26,26,0.18)] sm:p-6 lg:p-8">
       <div className="grid gap-8 lg:grid-cols-[0.72fr_1.08fr] lg:items-start">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-white/58">Філіали</p>
@@ -75,7 +75,7 @@ export function BranchSelector() {
                     href={activeBranch.routeUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="tap-target inline-flex items-center justify-center gap-2 rounded-[16px] bg-[#f4f4f4] px-4 py-3 text-sm font-bold text-lider-graphite"
+                    className="tap-target inline-flex items-center justify-center gap-2 rounded-[16px] bg-[#f4f4f4] px-4 py-3 text-sm font-bold text-lider-graphite transition hover:bg-lider-graphite hover:text-white"
                   >
                     <Route size={17} />
                     Маршрут

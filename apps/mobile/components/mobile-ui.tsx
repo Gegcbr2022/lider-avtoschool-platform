@@ -595,8 +595,8 @@ const styles = StyleSheet.create({
   noPaddingContainer: { padding: 0, paddingBottom: 120 },
   header: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
   headerText: { flex: 1 },
-  title: { color: colors.textPrimary, fontSize: 28, fontWeight: "900", letterSpacing: -0.5 },
-  subtitle: { marginTop: 4, color: colors.textSecondary, fontSize: 14, lineHeight: 20 },
+  title: { color: colors.textPrimary, fontSize: 32, fontWeight: "900", letterSpacing: -0.8 },
+  subtitle: { marginTop: 6, color: colors.textSecondary, fontSize: 15, lineHeight: 22, fontWeight: "500" },
 
   // Cards
   card: { borderRadius: radii.md, padding: 18, overflow: "hidden" },
@@ -607,13 +607,13 @@ const styles = StyleSheet.create({
   cardDark: { backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border },
 
   // Labels
-  label: { color: colors.textTertiary, fontSize: 11, fontWeight: "700", letterSpacing: 0.8, textTransform: "uppercase" },
+  label: { color: colors.textTertiary, fontSize: 10, fontWeight: "900", letterSpacing: 1.2, textTransform: "uppercase" },
   labelInverse: { color: "rgba(255,255,255,0.6)" },
   labelRed: { color: colors.red },
   labelMuted: { color: colors.textTertiary },
 
   // Headings
-  headingXl: { color: colors.textPrimary, fontSize: 32, fontWeight: "900", letterSpacing: -1 },
+  headingXl: { color: colors.textPrimary, fontSize: 36, fontWeight: "900", letterSpacing: -1.2 },
   headingLg: { color: colors.textPrimary, fontSize: 24, fontWeight: "800", letterSpacing: -0.5 },
   headingMd: { color: colors.textPrimary, fontSize: 18, fontWeight: "700" },
   headingSm: { color: colors.textPrimary, fontSize: 15, fontWeight: "700" },
@@ -672,7 +672,7 @@ const styles = StyleSheet.create({
   statCard: { flex: 1, alignItems: "center", padding: 14, borderRadius: radii.md, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border },
   statCardAccent: { backgroundColor: colors.redSoft, borderColor: colors.red + "40" },
   statIcon: { fontSize: 24, marginBottom: 4 },
-  statValue: { color: colors.textPrimary, fontSize: 22, fontWeight: "900" },
+  statValue: { color: colors.textPrimary, fontSize: 24, fontWeight: "900", fontVariant: ["tabular-nums"], letterSpacing: -0.5 },
   statValueAccent: { color: colors.red },
   statLabel: { color: colors.textSecondary, fontSize: 12, fontWeight: "600", textAlign: "center", marginTop: 2 },
 

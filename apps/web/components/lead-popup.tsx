@@ -11,7 +11,7 @@ import { LeadForm } from "./lead-form";
 const NEXT_SHOW_KEY = "lider-lead-popup-next-show-at";
 const LEAD_SUBMITTED_KEY = "lider-lead-submitted";
 const SESSION_SHOWS_KEY = "lider-lead-popup-session-shows";
-const DEFAULT_DELAY_MS = 45_000;
+const DEFAULT_DELAY_MS = 30_000;
 const DEFAULT_REOPEN_MS = 15 * 60_000;
 const MAX_SESSION_SHOWS = 1;
 
@@ -150,11 +150,13 @@ export function LeadPopup({
     }
 
     document.body.style.overflow = "hidden";
+    document.body.style.overscrollBehavior = "none";
     window.addEventListener("keydown", onKeyDown);
 
     return () => {
       if (document.body.dataset.liderMobileMenuOpen !== "true") {
         document.body.style.overflow = "";
+        document.body.style.overscrollBehavior = "";
       }
       window.removeEventListener("keydown", onKeyDown);
     };
@@ -204,7 +206,7 @@ export function LeadPopup({
       <AnimatePresence>
         {isOpen ? (
           <motion.div
-            className="fixed inset-0 z-[80] flex items-end justify-center bg-[#171b1a]/58 px-3 py-3 backdrop-blur-sm sm:items-center sm:px-4"
+            className="fixed inset-0 z-[100] flex items-end justify-center bg-[#171b1a]/58 px-3 py-3 backdrop-blur-sm sm:items-center sm:px-4"
             role="presentation"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -219,14 +221,22 @@ export function LeadPopup({
               role="dialog"
               aria-modal="true"
               aria-labelledby="lead-popup-title"
-              className="safe-bottom w-full max-w-[460px] overflow-hidden rounded-[26px] border border-white/70 bg-white shadow-[0_28px_90px_rgba(0,0,0,0.22)]"
+              className="safe-bottom relative flex w-full max-w-[460px] flex-col overflow-hidden rounded-[26px] border border-white/70 bg-white shadow-[0_28px_90px_rgba(0,0,0,0.22)] max-h-[calc(100dvh-24px)] sm:max-h-[calc(100vh-48px)]"
               initial={{ opacity: 0, y: 24, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 18, scale: 0.98 }}
               transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
             >
-              <div className="flex items-start justify-between gap-4 px-5 pb-2 pt-5">
-                <div>
+              <div className="relative flex-1 overflow-y-auto">
+                <button
+                  type="button"
+                  aria-label={copy.close}
+                  onClick={() => closePopup("button")}
+                  className="tap-target absolute right-4 top-4 z-10 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f4f4f4] text-lider-graphite transition hover:bg-[#e7ecea]"
+                >
+                  <X size={18} />
+                </button>
+                <div className="px-5 pb-2 pt-5 pr-14">
                   <div className="inline-flex h-10 w-10 items-center justify-center rounded-[14px] bg-[#fff1f1] text-lider-red">
                     <PhoneCall size={20} aria-hidden />
                   </div>
@@ -235,29 +245,21 @@ export function LeadPopup({
                   </h2>
                   <p className="mt-3 text-base font-semibold leading-7 text-lider-muted">{copy.text}</p>
                 </div>
-                <button
-                  type="button"
-                  aria-label={copy.close}
-                  onClick={() => closePopup("button")}
-                  className="tap-target inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-lider-background text-lider-graphite transition hover:bg-[#e7ecea]"
-                >
-                  <X size={18} />
-                </button>
-              </div>
 
-              <div className="px-5 pb-5">
-                <div className="mb-4 flex items-center gap-2 rounded-[16px] bg-lider-background px-4 py-3 text-sm font-semibold text-lider-muted">
-                  <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden />
-                  {copy.note}
+                <div className="px-5 pb-5">
+                  <div className="mb-4 flex items-center gap-2 rounded-[16px] bg-lider-background px-4 py-3 text-sm font-semibold text-lider-muted">
+                    <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden />
+                    {copy.note}
+                  </div>
+                  <LeadForm
+                    variant="popup"
+                    analyticsSource="popup"
+                    initialContext={leadContext}
+                    locale={locale}
+                    submitLabel={copy.submit}
+                    onSuccess={() => closePopup("lead-created")}
+                  />
                 </div>
-                <LeadForm
-                  variant="popup"
-                  analyticsSource="popup"
-                  initialContext={leadContext}
-                  locale={locale}
-                  submitLabel={copy.submit}
-                  onSuccess={() => closePopup("lead-created")}
-                />
               </div>
             </motion.section>
           </motion.div>
