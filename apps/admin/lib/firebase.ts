@@ -4,6 +4,7 @@ import { getAuth } from "firebase/auth";
 import {
   getFirestore, collection, query, orderBy, limit,
   getDocs, onSnapshot, where, deleteDoc, doc,
+  addDoc, updateDoc, serverTimestamp,
   type QuerySnapshot, type DocumentData,
 } from "firebase/firestore";
 
@@ -261,6 +262,62 @@ export async function getNaisRecords(limitCount = 200): Promise<NaisRecord[]> {
       updatedAt: toDate(data.updatedAt),
     };
   });
+}
+
+// ─── Instructors (CRUD) ─────────────────────────────────────────────────────
+
+export type InstructorAdmin = {
+  id: string;
+  name: string;
+  photoEmoji?: string;
+  description?: string;
+  categories?: string[];
+  branchId?: string;
+  active?: boolean;
+};
+
+export async function getInstructorsAdmin(): Promise<InstructorAdmin[]> {
+  const snap = await getDocs(query(collection(db, "instructors"), limit(100)));
+  return snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<InstructorAdmin, "id">) }));
+}
+
+export async function addInstructor(data: Omit<InstructorAdmin, "id">): Promise<void> {
+  await addDoc(collection(db, "instructors"), { ...data, active: data.active ?? true, createdAt: serverTimestamp() });
+}
+
+export async function deleteInstructor(id: string): Promise<void> {
+  await deleteDoc(doc(db, "instructors", id));
+}
+
+// ─── Bookings ────────────────────────────────────────────────────────────────
+
+export type BookingAdmin = {
+  id: string;
+  studentName: string;
+  instructorName: string;
+  startsAt: string;
+  status: string;
+  createdAt: Date | null;
+};
+
+export async function getBookings(limitCount = 200): Promise<BookingAdmin[]> {
+  const snap = await getDocs(query(collection(db, "bookings"), limit(limitCount)));
+  const rows = snap.docs.map(d => {
+    const data = d.data();
+    return {
+      id: d.id,
+      studentName: data.studentName ?? data.studentId ?? "—",
+      instructorName: data.instructorName ?? "—",
+      startsAt: data.startsAt ?? "",
+      status: data.status ?? "pending",
+      createdAt: toDate(data.createdAt),
+    };
+  });
+  return rows.sort((a, b) => (a.startsAt < b.startsAt ? 1 : -1));
+}
+
+export async function updateBookingStatus(id: string, status: string): Promise<void> {
+  await updateDoc(doc(db, "bookings", id), { status });
 }
 
 export async function getConversations(limitCount = 100): Promise<ConversationEntry[]> {

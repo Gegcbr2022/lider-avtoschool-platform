@@ -4,19 +4,20 @@ import { leadStatusLabels, leadStatuses } from "@lider/shared";
 import { StatusPill } from "@lider/ui";
 import type { LeadStatus } from "@lider/types";
 import {
-  Activity, AlertCircle, BarChart3, Bell, Bot,
+  Activity, AlertCircle, BarChart3, Bell, Bot, Calendar,
   CheckCircle2, ChevronRight, CircleDollarSign, Copy, Download, FileText,
-  Gauge, MessageSquare, Search, Settings, Shield,
+  Gauge, GraduationCap, MessageSquare, Plus, Search, Settings, Shield,
   Trash2, Users, UsersRound, type LucideIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   adminDeleteComment, adminDeletePost, adminDeleteStory,
+  addInstructor, deleteInstructor, getBookings, getInstructorsAdmin, updateBookingStatus,
   getAiLogs, getClubPosts, getComments, getConversations,
   getDashboardStats, getLeads, getNaisRecords, getStories, getSupportThreads,
   getUserProfiles,
-  type AiLogEntry, type ClubPost, type CommentEntry, type ConversationEntry,
-  type FirestoreLead, type NaisRecord, type StoryEntry, type SupportThread, type UserProfile,
+  type AiLogEntry, type BookingAdmin, type ClubPost, type CommentEntry, type ConversationEntry,
+  type FirestoreLead, type InstructorAdmin, type NaisRecord, type StoryEntry, type SupportThread, type UserProfile,
 } from "../lib/firebase";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -24,7 +25,8 @@ import {
 type Section =
   | "dashboard" | "leads" | "users" | "chat"
   | "posts" | "stories" | "comments"
-  | "nais" | "ailogs" | "pdrquestions" | "notifications" | "settings";
+  | "nais" | "instructors" | "bookings"
+  | "ailogs" | "pdrquestions" | "notifications" | "settings";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -811,6 +813,167 @@ function NaisSection() {
   );
 }
 
+// ─── Section: ІНСТРУКТОРИ ──────────────────────────────────────────────────────
+
+function InstructorsSection() {
+  const [items, setItems] = useState<InstructorAdmin[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  // new instructor form
+  const [name, setName] = useState("");
+  const [emoji, setEmoji] = useState("🧑‍🏫");
+  const [desc, setDesc] = useState("");
+  const [cats, setCats] = useState("B");
+  const [branch, setBranch] = useState("kyiv");
+
+  function reload() {
+    setLoading(true);
+    getInstructorsAdmin().then(setItems).catch(e => setError(e?.message ?? "Помилка")).finally(() => setLoading(false));
+  }
+  useEffect(reload, []);
+
+  async function handleAdd() {
+    if (!name.trim()) return;
+    setAdding(true);
+    try {
+      await addInstructor({
+        name: name.trim(), photoEmoji: emoji.trim() || "🧑‍🏫",
+        description: desc.trim(),
+        categories: cats.split(",").map(c => c.trim()).filter(Boolean),
+        branchId: branch.trim(), active: true,
+      });
+      setName(""); setDesc(""); setCats("B");
+      reload();
+    } catch { alert("Не вдалось додати"); } finally { setAdding(false); }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Видалити інструктора?")) return;
+    await deleteInstructor(id).catch(() => alert("Помилка"));
+    setItems(prev => prev.filter(i => i.id !== id));
+  }
+
+  const inputCls = "px-3 py-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg text-sm focus:outline-none focus:border-red-500";
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-black tracking-tight text-neutral-900 dark:text-white">Інструктори</h2>
+        <p className="text-neutral-500 text-sm">{items.length} · керування інструкторами для запису на практику</p>
+      </div>
+
+      {/* Add form */}
+      <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 space-y-3">
+        <p className="text-sm font-bold text-neutral-700 dark:text-neutral-300">Додати інструктора</p>
+        <div className="grid gap-2 md:grid-cols-2">
+          <input className={inputCls} value={name} onChange={e => setName(e.target.value)} placeholder="Ім'я та прізвище" />
+          <input className={inputCls} value={emoji} onChange={e => setEmoji(e.target.value)} placeholder="Емодзі (🧑‍🏫)" />
+          <input className={inputCls} value={cats} onChange={e => setCats(e.target.value)} placeholder="Категорії через кому (B, C)" />
+          <input className={inputCls} value={branch} onChange={e => setBranch(e.target.value)} placeholder="Філія (kyiv)" />
+        </div>
+        <textarea className={`${inputCls} w-full`} value={desc} onChange={e => setDesc(e.target.value)} placeholder="Опис (досвід, авто, підхід)" rows={2} />
+        <button onClick={handleAdd} disabled={adding || !name.trim()}
+          className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg font-bold text-sm hover:bg-red-700 disabled:opacity-50">
+          <Plus size={14} /> {adding ? "Додавання…" : "Додати"}
+        </button>
+      </div>
+
+      {loading ? <Spinner /> : error ? <ErrorBox message={error} /> : items.length === 0 ? (
+        <EmptyBox label="Інструкторів ще немає" icon={<GraduationCap size={32} />} />
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2">
+          {items.map(i => (
+            <div key={i.id} className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 flex gap-3">
+              <div className="w-11 h-11 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-xl shrink-0">{i.photoEmoji ?? "🧑‍🏫"}</div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="font-bold text-neutral-900 dark:text-white">{i.name}</p>
+                  {i.active === false ? <span className="text-xs text-neutral-400">(неактивний)</span> : null}
+                </div>
+                {i.description ? <p className="text-xs text-neutral-500 mt-0.5 line-clamp-2">{i.description}</p> : null}
+                <p className="text-xs text-neutral-400 mt-1">Кат.: {i.categories?.join(", ") || "—"} · {i.branchId ?? "—"}</p>
+              </div>
+              <button onClick={() => handleDelete(i.id)} className="shrink-0 w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 flex items-center justify-center text-red-500 hover:bg-red-100 self-start">
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Section: ЗАПИСИ (bookings) ────────────────────────────────────────────────
+
+function BookingsSection() {
+  const [items, setItems] = useState<BookingAdmin[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getBookings(200).then(setItems).catch(e => setError(e?.message ?? "Помилка")).finally(() => setLoading(false));
+  }, []);
+
+  async function setStatus(id: string, status: string) {
+    await updateBookingStatus(id, status).catch(() => alert("Помилка"));
+    setItems(prev => prev.map(b => (b.id === id ? { ...b, status } : b)));
+  }
+
+  function fmtDT(iso: string) {
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? iso : d.toLocaleString("uk-UA", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  }
+  const STATUS: Record<string, string> = { pending: "Очікує", confirmed: "Підтверджено", cancelled: "Скасовано", done: "Проведено" };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-black tracking-tight text-neutral-900 dark:text-white">Записи на практику</h2>
+        <p className="text-neutral-500 text-sm">{items.length} · bookings</p>
+      </div>
+      {loading ? <Spinner /> : error ? <ErrorBox message={error} /> : items.length === 0 ? (
+        <EmptyBox label="Записів ще немає" icon={<Calendar size={32} />} />
+      ) : (
+        <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-neutral-100 dark:border-neutral-800">
+                {["Учень", "Інструктор", "Дата/час", "Статус", "Дії"].map(h => (
+                  <th key={h} className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider text-neutral-400">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {items.map(b => (
+                <tr key={b.id} className="border-b border-neutral-50 dark:border-neutral-800/50">
+                  <td className="px-4 py-3 font-bold text-neutral-900 dark:text-white">{b.studentName}</td>
+                  <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400">{b.instructorName}</td>
+                  <td className="px-4 py-3 text-neutral-500 text-xs whitespace-nowrap">{fmtDT(b.startsAt)}</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-1 rounded-lg text-xs font-bold ${b.status === "confirmed" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : b.status === "cancelled" ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" : "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400"}`}>{STATUS[b.status] ?? b.status}</span>
+                  </td>
+                  <td className="px-4 py-2">
+                    <div className="flex gap-1.5">
+                      {b.status !== "confirmed" ? (
+                        <button onClick={() => setStatus(b.id, "confirmed")} className="px-2.5 py-1 bg-green-600 text-white rounded-lg text-xs font-bold hover:bg-green-700">Підтвердити</button>
+                      ) : null}
+                      {b.status !== "cancelled" ? (
+                        <button onClick={() => setStatus(b.id, "cancelled")} className="px-2.5 py-1 bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 rounded-lg text-xs font-bold hover:bg-neutral-300">Скасувати</button>
+                      ) : null}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── SIDEBAR NAV ──────────────────────────────────────────────────────────────
 
 const NAV_ITEMS: { id: Section; label: string; Icon: LucideIcon }[] = [
@@ -822,6 +985,8 @@ const NAV_ITEMS: { id: Section; label: string; Icon: LucideIcon }[] = [
   { id: "stories",       label: "Stories",       Icon: CircleDollarSign },
   { id: "comments",      label: "Коментарі",     Icon: MessageSquare },
   { id: "nais",          label: "Документи НАІС", Icon: FileText },
+  { id: "instructors",   label: "Інструктори",   Icon: GraduationCap },
+  { id: "bookings",      label: "Записи",         Icon: Calendar },
   { id: "ailogs",        label: "AI Логи",        Icon: Bot },
   { id: "pdrquestions",  label: "ПДР Питання",   Icon: CheckCircle2 },
   { id: "notifications", label: "Повідомлення",  Icon: Bell },
@@ -898,6 +1063,8 @@ export function CrmWorkspace() {
           {section === "stories"       && <StoriesSection />}
           {section === "comments"      && <CommentsSection />}
           {section === "nais"          && <NaisSection />}
+          {section === "instructors"   && <InstructorsSection />}
+          {section === "bookings"      && <BookingsSection />}
           {section === "ailogs"        && <AiLogsSection />}
           {section === "pdrquestions"  && <PDRQuestionsSection />}
           {section === "notifications" && <NotificationsSection />}
