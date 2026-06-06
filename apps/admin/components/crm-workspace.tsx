@@ -5,7 +5,7 @@ import { StatusPill } from "@lider/ui";
 import type { LeadStatus } from "@lider/types";
 import {
   Activity, AlertCircle, BarChart3, Bell, Bot,
-  CheckCircle2, ChevronRight, CircleDollarSign, Download,
+  CheckCircle2, ChevronRight, CircleDollarSign, Copy, Download, FileText,
   Gauge, MessageSquare, Search, Settings, Shield,
   Trash2, Users, UsersRound, type LucideIcon,
 } from "lucide-react";
@@ -13,10 +13,10 @@ import { useEffect, useMemo, useState } from "react";
 import {
   adminDeleteComment, adminDeletePost, adminDeleteStory,
   getAiLogs, getClubPosts, getComments, getConversations,
-  getDashboardStats, getLeads, getStories, getSupportThreads,
+  getDashboardStats, getLeads, getNaisRecords, getStories, getSupportThreads,
   getUserProfiles,
   type AiLogEntry, type ClubPost, type CommentEntry, type ConversationEntry,
-  type FirestoreLead, type StoryEntry, type SupportThread, type UserProfile,
+  type FirestoreLead, type NaisRecord, type StoryEntry, type SupportThread, type UserProfile,
 } from "../lib/firebase";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -24,7 +24,7 @@ import {
 type Section =
   | "dashboard" | "leads" | "users" | "chat"
   | "posts" | "stories" | "comments"
-  | "ailogs" | "pdrquestions" | "notifications" | "settings";
+  | "nais" | "ailogs" | "pdrquestions" | "notifications" | "settings";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -713,6 +713,104 @@ function SettingsSection() {
   );
 }
 
+// ─── Section: НАІС ДОКУМЕНТИ ──────────────────────────────────────────────────
+
+function naisCopyText(r: NaisRecord): string {
+  return [
+    `ПІБ: ${r.fullName ?? "—"}`,
+    `Дата народження: ${r.birthDate ?? "—"}`,
+    `Паспорт: ${[r.passportSeries, r.passportNumber].filter(Boolean).join(" ") || "—"}`,
+    `ІПН: ${r.taxId ?? "—"}`,
+    `Адреса реєстрації: ${r.registrationAddress ?? "—"}`,
+    `Медсправка №: ${r.medCertNumber ?? "—"}`,
+  ].join("\n");
+}
+
+const DOC_LABELS: Record<string, string> = {
+  passport: "Паспорт/ID", taxId: "Код (ІПН)", registration: "Прописка", medCert: "Медсправка",
+};
+
+function NaisSection() {
+  const [records, setRecords] = useState<NaisRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    getNaisRecords(200).then(setRecords).catch(e => setError(e?.message ?? "Помилка")).finally(() => setLoading(false));
+  }, []);
+
+  const filtered = useMemo(() => {
+    if (!search) return records;
+    const q = search.toLowerCase();
+    return records.filter(r => (r.fullName ?? "").toLowerCase().includes(q) || (r.taxId ?? "").includes(q) || r.id.includes(q));
+  }, [records, search]);
+
+  async function copy(r: NaisRecord) {
+    try {
+      await navigator.clipboard.writeText(naisCopyText(r));
+      setCopiedId(r.id);
+      setTimeout(() => setCopiedId(c => (c === r.id ? null : c)), 1500);
+    } catch { /* clipboard blocked */ }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-black tracking-tight text-neutral-900 dark:text-white">Документи НАІС</h2>
+        <p className="text-neutral-500 text-sm">{filtered.length} з {records.length} · дані учнів для внесення в НАІС МВС · naisData</p>
+      </div>
+
+      <div className="relative max-w-sm">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Пошук по ПІБ, ІПН..."
+          className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl text-sm focus:outline-none focus:border-red-500" />
+      </div>
+
+      {loading ? <Spinner /> : error ? <ErrorBox message={error} /> : filtered.length === 0 ? (
+        <EmptyBox label="Дані ще не заповнені учнями" icon={<FileText size={32} />} />
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          {filtered.map(r => (
+            <div key={r.id} className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="min-w-0">
+                  <p className="font-black text-neutral-900 dark:text-white truncate">{r.fullName || "Без імені"}</p>
+                  <p className="text-xs text-neutral-400">оновлено {formatRelative(r.updatedAt)} · {r.id.slice(0, 8)}</p>
+                </div>
+                <button onClick={() => copy(r)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white rounded-lg font-bold text-xs hover:bg-red-700 shrink-0">
+                  <Copy size={13} /> {copiedId === r.id ? "Скопійовано!" : "Копіювати"}
+                </button>
+              </div>
+
+              <pre className="text-xs font-mono whitespace-pre-wrap bg-neutral-50 dark:bg-neutral-800 rounded-xl p-3 text-neutral-700 dark:text-neutral-300 leading-relaxed">{naisCopyText(r)}</pre>
+
+              {r.documents.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {r.documents.map((d, i) => (
+                    d.downloadURL ? (
+                      <a key={i} href={d.downloadURL} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-lg text-xs font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200">
+                        <FileText size={12} /> {DOC_LABELS[d.kind] ?? d.kind}
+                      </a>
+                    ) : (
+                      <span key={i} className="px-2.5 py-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-lg text-xs text-neutral-400">{DOC_LABELS[d.kind] ?? d.kind}</span>
+                    )
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-neutral-400 italic">Фото документів ще не завантажені</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── SIDEBAR NAV ──────────────────────────────────────────────────────────────
 
 const NAV_ITEMS: { id: Section; label: string; Icon: LucideIcon }[] = [
@@ -723,6 +821,7 @@ const NAV_ITEMS: { id: Section; label: string; Icon: LucideIcon }[] = [
   { id: "posts",         label: "Пости клубу",   Icon: BarChart3 },
   { id: "stories",       label: "Stories",       Icon: CircleDollarSign },
   { id: "comments",      label: "Коментарі",     Icon: MessageSquare },
+  { id: "nais",          label: "Документи НАІС", Icon: FileText },
   { id: "ailogs",        label: "AI Логи",        Icon: Bot },
   { id: "pdrquestions",  label: "ПДР Питання",   Icon: CheckCircle2 },
   { id: "notifications", label: "Повідомлення",  Icon: Bell },
@@ -798,6 +897,7 @@ export function CrmWorkspace() {
           {section === "posts"         && <PostsSection />}
           {section === "stories"       && <StoriesSection />}
           {section === "comments"      && <CommentsSection />}
+          {section === "nais"          && <NaisSection />}
           {section === "ailogs"        && <AiLogsSection />}
           {section === "pdrquestions"  && <PDRQuestionsSection />}
           {section === "notifications" && <NotificationsSection />}

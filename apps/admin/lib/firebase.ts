@@ -228,6 +228,41 @@ export async function getUserProfiles(limitCount = 100): Promise<UserProfile[]> 
   });
 }
 
+export type NaisDocFile = { kind: string; storagePath: string; downloadURL?: string; uploadedAt?: string };
+
+export type NaisRecord = {
+  id: string; // student uid
+  fullName?: string;
+  birthDate?: string;
+  passportSeries?: string;
+  passportNumber?: string;
+  taxId?: string;
+  registrationAddress?: string;
+  medCertNumber?: string;
+  documents: NaisDocFile[];
+  updatedAt: Date | null;
+};
+
+export async function getNaisRecords(limitCount = 200): Promise<NaisRecord[]> {
+  const q = query(collection(db, "naisData"), orderBy("updatedAt", "desc"), limit(limitCount));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => {
+    const data = d.data();
+    return {
+      id: d.id,
+      fullName: data.fullName,
+      birthDate: data.birthDate,
+      passportSeries: data.passportSeries,
+      passportNumber: data.passportNumber,
+      taxId: data.taxId,
+      registrationAddress: data.registrationAddress,
+      medCertNumber: data.medCertNumber,
+      documents: Array.isArray(data.documents) ? data.documents : [],
+      updatedAt: toDate(data.updatedAt),
+    };
+  });
+}
+
 export async function getConversations(limitCount = 100): Promise<ConversationEntry[]> {
   const q = query(collection(db, "conversations"), orderBy("updatedAt", "desc"), limit(limitCount));
   const snap = await getDocs(q);
