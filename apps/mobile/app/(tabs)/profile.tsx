@@ -1,12 +1,12 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Alert, Image, Linking, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import Constants from "expo-constants";
 import { useAuth } from "../../lib/auth";
 import { Card, GhostButton, Label, Pill, Row, Screen } from "../../components/mobile-ui";
 import { useTheme, radii, type ThemePreference, spacing } from "../../lib/theme";
 import { useNetworkStatus } from "../../lib/useNetwork";
-import { getUserProfile, upsertUserProfile } from "../../lib/firestore";
+import { getUserProfile, upsertUserProfile, getUserStats, type UserStats } from "../../lib/firestore";
 import { requestNotificationPermission, scheduleLocalNotification } from "../../lib/notifications";
 
 const APP_VERSION = (Constants.expoConfig?.version as string | undefined) ?? "1.0.0";
@@ -114,6 +114,9 @@ export default function ProfileTab() {
   // Sheet visibility
   const [editField, setEditField] = useState<"name" | "phone" | "city" | "category" | "avatar" | null>(null);
 
+  // Real gamification stats (Firestore)
+  const [stats, setStats] = useState<UserStats | null>(null);
+
   // Hidden dev mode
   const [devTapCount, setDevTapCount] = useState(0);
   const [devUnlocked, setDevUnlocked] = useState(false);
@@ -137,6 +140,15 @@ export default function ProfileTab() {
       if (profile.category && !localCategory) setLocalCategory(profile.category);
     }).catch(() => {});
   }, [user?.id]);
+
+  // Refresh gamification stats every time the Profile tab gains focus, so a test
+  // just completed on another tab is reflected immediately (tab stays mounted).
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.id || isGuest) return;
+      getUserStats(user.id).then(setStats).catch(() => {});
+    }, [user?.id, isGuest])
+  );
 
   async function saveField(field: string, value: string) {
     if (!user?.id || !value.trim()) return;
@@ -309,13 +321,13 @@ export default function ProfileTab() {
         ) : null}
       </Card>
 
-      {/* Stats */}
+      {/* Stats — real Firestore gamification data */}
       {!isGuest ? (
         <View style={{ flexDirection: "row", gap: 10 }}>
           {[
-            { value: "0",  label: "Тестів" },
-            { value: "—",  label: "Найкращий" },
-            { value: "1",  label: "Днів поспіль" },
+            { value: String(stats?.testsCompleted ?? 0), label: "Тестів" },
+            { value: stats && stats.bestScorePct > 0 ? `${stats.bestScorePct}%` : "—", label: "Найкращий" },
+            { value: String(stats?.streakDays ?? 0), label: "Днів поспіль" },
           ].map((stat) => (
             <View key={stat.label} style={{ flex: 1, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 14, alignItems: "center", borderWidth: 1, borderColor: colors.border }}>
               <Text style={{ color: colors.red, fontSize: 22, fontWeight: "900" }}>{stat.value}</Text>

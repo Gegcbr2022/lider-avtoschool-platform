@@ -99,8 +99,15 @@ service cloud.firestore {
     // ─── AI Logs ──────────────────────────────────────────────────────────────
 
     match /aiLogs/{logId} {
-      // Any signed-in user can write their own log entry (mobile app writes after ask)
-      allow create: if signedIn() || true;  // allow anonymous (guestMode) writes too
+      // Must be authenticated (incl. Firebase Anonymous Auth for guests).
+      // SECURITY BUG-063: previously `signedIn() || true` → always true → anyone on the
+      // internet could write unlimited docs (DoS / cost). Guests get a real uid via
+      // signInAnonymously() in app/_layout.tsx, so signedIn() covers them.
+      // NOTE: requires Anonymous Auth enabled in Firebase Console; App Check recommended
+      // as the stronger anti-abuse layer (see OwnerActionRequired.md).
+      allow create: if signedIn()
+        && request.resource.data.question is string
+        && request.resource.data.question.size() <= 2000;
       // Only admins can read — users must never see other users' questions
       allow read: if isAdmin();
       allow update, delete: if false;

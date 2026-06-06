@@ -124,6 +124,108 @@ export async function callOpenAiChat(
   }
 }
 
+// ─── Resilience: secondary AI providers (fallback chain) ────────────────────────
+// Activated ONLY if their key is set. With no extra keys, behaviour == OpenAI-only.
+// Owner adds ANTHROPIC_API_KEY and/or GEMINI_API_KEY → Лідик survives an OpenAI outage.
+
+async function callClaude(messages: ChatMessage[], maxTokens: number): Promise<OpenAiChatResult> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const model = process.env.ANTHROPIC_MODEL?.trim() || "claude-haiku-4-5-20251001";
+  if (!apiKey) return { ok: false, status: 0, error: "ANTHROPIC_API_KEY not set", model };
+
+  const system = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n\n");
+  const convo = messages
+    .filter((m) => m.role !== "system")
+    .map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.content }));
+
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({ model, max_tokens: Math.max(maxTokens, 300), system, messages: convo })
+    });
+    const payload = (await response.json()) as {
+      content?: Array<{ text?: string }>;
+      error?: { message?: string };
+    };
+    if (!response.ok) {
+      return { ok: false, status: response.status, error: payload.error?.message ?? `HTTP ${response.status}`, model };
+    }
+    const content = (payload.content?.[0]?.text ?? "").trim();
+    if (!content) return { ok: false, status: response.status, error: "empty_content", model };
+    return { ok: true, content, model };
+  } catch (error) {
+    return { ok: false, status: 0, error: error instanceof Error ? error.message : "fetch_failed", model };
+  }
+}
+
+async function callGemini(messages: ChatMessage[], maxTokens: number): Promise<OpenAiChatResult> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  const model = process.env.GEMINI_MODEL?.trim() || "gemini-2.0-flash";
+  if (!apiKey) return { ok: false, status: 0, error: "GEMINI_API_KEY not set", model };
+
+  const system = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n\n");
+  const contents = messages
+    .filter((m) => m.role !== "system")
+    .map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] }));
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: system ? { parts: [{ text: system }] } : undefined,
+          contents,
+          generationConfig: { maxOutputTokens: Math.max(maxTokens, 300) }
+        })
+      }
+    );
+    const payload = (await response.json()) as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+      error?: { message?: string };
+    };
+    if (!response.ok) {
+      return { ok: false, status: response.status, error: payload.error?.message ?? `HTTP ${response.status}`, model };
+    }
+    const content = (payload.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("") ?? "").trim();
+    if (!content) return { ok: false, status: response.status, error: "empty_content", model };
+    return { ok: true, content, model };
+  } catch (error) {
+    return { ok: false, status: 0, error: error instanceof Error ? error.message : "fetch_failed", model };
+  }
+}
+
+/**
+ * OpenAI first; on failure, fall back to Claude then Gemini (if their keys exist).
+ * Returns the same shape as callOpenAiChat. `model` reflects who actually answered.
+ */
+export async function callChatWithFallback(
+  model: string,
+  messages: ChatMessage[],
+  maxTokens: number
+): Promise<OpenAiChatResult> {
+  const primary = await callOpenAiChat(model, messages, maxTokens);
+  if (primary.ok) return primary;
+
+  if (process.env.ANTHROPIC_API_KEY) {
+    const claude = await callClaude(messages, maxTokens);
+    if (claude.ok) {
+      console.warn("AI fallback OpenAI→Claude", { openaiError: primary.error, model: claude.model });
+      return claude;
+    }
+  }
+  if (process.env.GEMINI_API_KEY) {
+    const gemini = await callGemini(messages, maxTokens);
+    if (gemini.ok) {
+      console.warn("AI fallback OpenAI→Gemini", { openaiError: primary.error, model: gemini.model });
+      return gemini;
+    }
+  }
+  return primary; // everything failed — surface the original OpenAI error
+}
+
 export async function answerStudentQuestion(input: AiConsultationRequest) {
   const result = await answerAiChat({
     messages: [{ role: "user", content: input.question }],
@@ -162,7 +264,7 @@ export async function answerAiChat(input: AiChatRequest) {
     `Контекст: ${context}`
   ].join("\n");
 
-  const result = await callOpenAiChat(
+  const result = await callChatWithFallback(
     model,
     [{ role: "system", content: systemPrompt }, ...input.messages],
     600

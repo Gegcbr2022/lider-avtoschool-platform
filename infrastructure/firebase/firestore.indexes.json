@@ -33,13 +33,6 @@
       ]
     },
     {
-      "collectionGroup": "clubPosts",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "clubComments",
       "queryScope": "COLLECTION",
       "fields": [
@@ -78,13 +71,6 @@
         { "fieldPath": "participantIds", "arrayConfig": "CONTAINS" },
         { "fieldPath": "type", "order": "ASCENDING" },
         { "fieldPath": "updatedAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "messages",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        { "fieldPath": "createdAt", "order": "ASCENDING" }
       ]
     }
   ],

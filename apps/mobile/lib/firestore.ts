@@ -346,6 +346,103 @@ export async function upsertUserProfile(
   );
 }
 
+// ─── Gamification: user stats (real data, no mock) ──────────────────────────────
+// Stored on the same userProfiles/{uid} doc (rules already allow owner writes).
+
+export type UserStats = {
+  testsCompleted: number;
+  bestScorePct: number;
+  streakDays: number;
+  lastActiveDate: string | null; // YYYY-MM-DD (local)
+  totalCorrect: number;
+  totalAnswered: number;
+};
+
+export type Award = { id: string; icon: string; title: string; unlocked: boolean };
+
+const EMPTY_STATS: UserStats = {
+  testsCompleted: 0, bestScorePct: 0, streakDays: 0,
+  lastActiveDate: null, totalCorrect: 0, totalAnswered: 0,
+};
+
+function localDayKey(d = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function wholeDaysBetween(from: string, to: string): number {
+  const a = new Date(`${from}T00:00:00`);
+  const b = new Date(`${to}T00:00:00`);
+  return Math.round((b.getTime() - a.getTime()) / 86_400_000);
+}
+
+export async function getUserStats(userId: string): Promise<UserStats> {
+  try {
+    const snap = await getDoc(doc(db, "userProfiles", userId));
+    const d = snap.exists() ? snap.data() : {};
+    return {
+      testsCompleted: d.testsCompleted ?? 0,
+      bestScorePct: d.bestScorePct ?? 0,
+      streakDays: d.streakDays ?? 0,
+      lastActiveDate: d.lastActiveDate ?? null,
+      totalCorrect: d.totalCorrect ?? 0,
+      totalAnswered: d.totalAnswered ?? 0,
+    };
+  } catch {
+    return { ...EMPTY_STATS };
+  }
+}
+
+// Call once when a quiz finishes. Updates count, best score and the daily streak.
+export async function recordTestCompletion(
+  userId: string,
+  params: { correct: number; total: number }
+): Promise<UserStats> {
+  const today = localDayKey();
+  const prev = await getUserStats(userId);
+  const scorePct = params.total > 0 ? Math.round((params.correct / params.total) * 100) : 0;
+
+  let streak: number;
+  if (prev.lastActiveDate === today) {
+    streak = prev.streakDays || 1;                       // already practised today
+  } else if (prev.lastActiveDate && wholeDaysBetween(prev.lastActiveDate, today) === 1) {
+    streak = (prev.streakDays || 0) + 1;                 // consecutive day
+  } else {
+    streak = 1;                                          // first ever or streak broken
+  }
+
+  const next: UserStats = {
+    testsCompleted: prev.testsCompleted + 1,
+    bestScorePct: Math.max(prev.bestScorePct, scorePct),
+    streakDays: streak,
+    lastActiveDate: today,
+    totalCorrect: prev.totalCorrect + params.correct,
+    totalAnswered: prev.totalAnswered + params.total,
+  };
+
+  await setDoc(
+    doc(db, "userProfiles", userId),
+    { ...next, updatedAt: serverTimestamp() },
+    { merge: true }
+  );
+  return next;
+}
+
+// Derived from stats — no separate storage needed.
+export function computeAwards(stats: UserStats): Award[] {
+  return [
+    { id: "first_test", icon: "🎯", title: "Перший тест",        unlocked: stats.testsCompleted >= 1 },
+    { id: "ten_tests",  icon: "📚", title: "10 тестів",          unlocked: stats.testsCompleted >= 10 },
+    { id: "fifty",      icon: "🏅", title: "50 тестів",          unlocked: stats.testsCompleted >= 50 },
+    { id: "streak_3",   icon: "🔥", title: "Серія 3 дні",        unlocked: stats.streakDays >= 3 },
+    { id: "streak_7",   icon: "⚡", title: "Серія 7 днів",       unlocked: stats.streakDays >= 7 },
+    { id: "pass",       icon: "✅", title: "Іспит 75%+",          unlocked: stats.bestScorePct >= 75 },
+    { id: "perfect",    icon: "💯", title: "100% результат",      unlocked: stats.bestScorePct >= 100 },
+  ];
+}
+
 // ─── Conversations / Chat ─────────────────────────────────────────────────────
 
 export type ConversationDoc = {

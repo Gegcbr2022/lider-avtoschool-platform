@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Card, Label, ProgressBar } from "../../components/mobile-ui";
 import { askLidyk } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
+import { recordTestCompletion } from "../../lib/firestore";
 import {
   getCategoryQuestions,
   getRandomQuestions,
@@ -341,6 +342,7 @@ function ResultScreen({ correct, total, onRestart, onBack }: {
 
 export default function TestsTab() {
   const { colors } = useTheme();
+  const { user, mode } = useAuth();
   const [quizState, setQuizState] = useState<QuizState>("idle");
   const [questions, setQuestions] = useState<PDRQuestion[]>([]);
   const [result, setResult] = useState<{ correct: number; total: number } | null>(null);
@@ -360,7 +362,11 @@ export default function TestsTab() {
 
   const handleFinish = useCallback((correct: number, total: number) => {
     setResult({ correct, total }); setQuizState("done");
-  }, []);
+    // Persist gamification stats for signed-in (non-guest) users. Fire-and-forget.
+    if (mode === "authenticated" && user && !user.isGuest) {
+      void recordTestCompletion(user.id, { correct, total }).catch(() => {});
+    }
+  }, [user, mode]);
 
   const handleRestart = useCallback(() => {
     activeCategory ? startCategoryTest(activeCategory) : startExam();

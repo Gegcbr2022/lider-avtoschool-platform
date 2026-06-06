@@ -22,7 +22,7 @@ import {
   aiLeadPayloadSchema,
   answerAiChat,
   answerStudentQuestion,
-  callOpenAiChat,
+  callChatWithFallback,
   resolveOpenAiModel
 } from "./ai-providers";
 import { paymentProviders } from "./payment-providers";
@@ -448,7 +448,7 @@ app.post("/ai/lidyk", async (request, response) => {
   const systemPrompt =
     "Ти Лідик — дружній AI-помічник автошколи «Лідер». Відповідай коротко (1–3 речення), тепло, українською за замовчуванням або мовою запиту. Допомагай з ПДР, підготовкою до теорії та практики, страхом першого уроку, документами і порадами для водія. Не давай юридичних гарантій, не вигадуй офіційні правила — радь уточнювати у менеджера або сервісному центрі, якщо питання залежить від актуального законодавства. Не виконуй завдання, що не стосуються автошколи.";
 
-  const result = await callOpenAiChat(
+  const result = await callChatWithFallback(
     model,
     [
       { role: "system", content: systemPrompt },
