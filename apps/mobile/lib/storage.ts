@@ -13,7 +13,17 @@ function extFromContentType(contentType: string): string {
   if (contentType.includes("webp")) return "webp";
   if (contentType.includes("mp4")) return "mp4";
   if (contentType.includes("pdf")) return "pdf";
+  if (contentType.includes("wordprocessingml")) return "docx";
+  if (contentType.includes("spreadsheetml")) return "xlsx";
+  if (contentType.includes("presentationml")) return "pptx";
+  if (contentType.includes("msword")) return "doc";
+  if (contentType.includes("text/plain")) return "txt";
   return "jpg";
+}
+
+function safeFileName(name: string): string {
+  const cleaned = name.trim().replace(/[^\w.\-() ]+/g, "_").replace(/\s+/g, "-");
+  return cleaned || `file-${Date.now()}`;
 }
 
 async function uploadLocalUri(
@@ -53,6 +63,18 @@ export async function uploadChatImage(
   return uploadLocalUri(uri, storagePath);
 }
 
+export async function uploadChatFile(
+  conversationId: string,
+  uri: string,
+  fileName?: string,
+  mimeType?: string
+): Promise<UploadResult & { fileSize?: number; contentType: string }> {
+  const fallbackContentType = mimeType || "application/octet-stream";
+  const ext = fileName?.includes(".") ? "" : `.${extFromContentType(fallbackContentType)}`;
+  const storagePath = `conversations/${conversationId}/attachments/${Date.now()}-${safeFileName(fileName ?? "file")}${ext}`;
+  return uploadLocalUri(uri, storagePath, fallbackContentType);
+}
+
 export async function uploadStoryMedia(
   storyId: string,
   uri: string
@@ -75,9 +97,22 @@ export async function uploadStudentDocument(
   kind: string,
   uri: string
 ): Promise<UploadResult> {
-  const probe = await fetch(uri);
-  const contentType = probe.headers.get("content-type") ?? "image/jpeg";
+  let blob: Blob;
+  try {
+    const response = await fetch(uri);
+    blob = await response.blob();
+  } catch (fetchErr) {
+    throw new Error(`Не вдалося прочитати файл: ${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}`);
+  }
+  const contentType = blob.type && blob.type.length > 0 ? blob.type : "image/jpeg";
   const ext = extFromContentType(contentType);
   const storagePath = `student-documents/${uid}/${kind}-${Date.now()}.${ext}`;
-  return uploadLocalUri(uri, storagePath, contentType);
+  const fileRef = ref(storage, storagePath);
+  try {
+    await uploadBytes(fileRef, blob, { contentType });
+  } catch (uploadErr) {
+    throw new Error(`Не вдалося завантажити файл: ${uploadErr instanceof Error ? uploadErr.message : String(uploadErr)}`);
+  }
+  const downloadURL = await getDownloadURL(fileRef);
+  return { storagePath, downloadURL };
 }
