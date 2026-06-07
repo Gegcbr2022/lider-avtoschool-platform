@@ -1,6 +1,6 @@
 {
   "installCommand": "cd ../.. && npm install",
-  "buildCommand": "cd ../.. && cd apps/web && next build",
+  "buildCommand": "cd ../.. && npm run build --workspace @lider/web",
   "outputDirectory": ".next",
   "framework": "nextjs"
 }
