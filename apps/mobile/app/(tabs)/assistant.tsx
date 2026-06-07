@@ -38,10 +38,12 @@ const MASCOT_LABEL: Record<MascotState, string> = {
 
 const QUICK_PROMPTS = [
   "Яка категорія B?",
-  "Скільки коштує навчання?",
+  "Скільки коштує?",
   "Де знаходиться філія?",
-  "Правило перешкоди справа",
-  "Які документи потрібні?",
+  "Перешкода справа",
+  "Які документи?",
+  "Швидкість у місті",
+  "Обгін заборонено де?",
 ];
 
 export default function AssistantTab() {
@@ -357,18 +359,28 @@ function makeStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       borderTopWidth: 1,
       borderTopColor: colors.border,
       backgroundColor: colors.bgCard,
-      maxHeight: 56,
     },
-    prompts: { paddingHorizontal: spacing.md, paddingVertical: 8, gap: 8, alignItems: "center" },
+    prompts: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: 8,
+      gap: 8,
+      alignItems: "center",
+    },
     prompt: {
       borderRadius: radii.full,
-      paddingHorizontal: 14,
+      paddingHorizontal: 12,
       paddingVertical: 8,
       backgroundColor: colors.bgElevated,
       borderWidth: 1.5,
       borderColor: colors.border,
+      flexShrink: 0,
     },
-    promptText: { color: colors.textSecondary, fontWeight: "700", fontSize: 12 },
+    promptText: {
+      color: colors.textSecondary,
+      fontWeight: "700",
+      fontSize: 12,
+      flexShrink: 0,
+    },
 
     inputRow: {
       flexDirection: "row",

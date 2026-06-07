@@ -44,7 +44,16 @@ export default function TabsLayout() {
     if (mode !== "authenticated" || !user?.id || user.isGuest) return;
     const unsub = subscribeToConversations(user.id, (convs) => {
       const n = convs.filter(
-        (c) => c.lastMessageAt && c.lastMessageAt > lastSeenRef.current
+        (c) =>
+          c.unreadBy?.includes(user.id) ||
+          (
+            !c.unreadBy?.length &&
+            c.lastMessageAt &&
+            c.lastMessageAt > lastSeenRef.current &&
+            // Only count messages from others — never from the current user themselves.
+            c.lastSenderId !== user.id &&
+            c.lastSenderId !== undefined
+          )
       ).length;
       setChatBadge(n);
     });

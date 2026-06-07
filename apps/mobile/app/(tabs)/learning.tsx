@@ -14,7 +14,12 @@ import { PDR_QUESTIONS } from "../../lib/pdr-questions";
 import { useTheme, radii } from "../../lib/theme";
 import { useAuth } from "../../lib/auth";
 
-const PDR_CATEGORIES = ["Знаки", "Перехрестя", "Безпека", "Швидкість", "Зупинка", "Розмітка", "Стоянка"];
+const PDR_CATEGORIES = [
+  { icon: "🎯", title: "Дорожні знаки", detail: "Попереджувальні, заборонні, інформаційні" },
+  { icon: "🚦", title: "Перехрестя", detail: "Пріоритет, світлофори, круговий рух" },
+  { icon: "🛡️", title: "Безпека руху", detail: "Дистанція, обгін, аварійні ситуації" },
+  { icon: "🅿️", title: "Паркування", detail: "Стоянка, зупинка, заборони" },
+];
 
 // Each tile points to a screen that actually exists and works.
 const HUB_TILES = [
@@ -129,22 +134,29 @@ export default function LearningTab() {
 
       {/* ─── Тести ПДР за категоріями ─────────────────────────────────────── */}
       <Card>
-        <SectionHeader title="Тести ПДР за категоріями" />
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+        <SectionHeader title="Тести ПДР за категоріями" action="Всі теми" onAction={() => router.push("/(tabs)/tests")} />
+        <View style={{ gap: 10, marginTop: 12 }}>
           {PDR_CATEGORIES.map((cat) => (
             <Pressable
-              key={cat}
+              key={cat.title}
               onPress={() => router.push("/(tabs)/tests")}
               style={{
-                borderRadius: radii.full,
-                paddingHorizontal: 16,
-                paddingVertical: 10,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 12,
+                borderRadius: radii.md,
+                padding: 14,
                 backgroundColor: colors.bgElevated,
-                borderWidth: 1.5,
+                borderWidth: 1,
                 borderColor: colors.border,
               }}
             >
-              <Text style={{ color: colors.textPrimary, fontWeight: "700", fontSize: 14 }}>{cat}</Text>
+              <Text style={{ fontSize: 24 }}>{cat.icon}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.textPrimary, fontWeight: "800", fontSize: 15 }}>{cat.title}</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2, lineHeight: 17 }}>{cat.detail}</Text>
+              </View>
+              <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
             </Pressable>
           ))}
         </View>

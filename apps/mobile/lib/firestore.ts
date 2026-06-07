@@ -36,9 +36,19 @@ export type ClubPostDoc = {
   authorId: string;
   authorName: string;
   authorEmoji?: string;
+  authorRole?: string;
   text: string;
   tag?: string;
   tagColor?: string;
+  mediaUrl?: string;
+  mediaPath?: string;
+  mediaType?: "image";
+  fileName?: string;
+  fileSize?: number;
+  width?: number;
+  height?: number;
+  status?: "published" | "draft";
+  visibility?: "school" | "public";
   likesCount: number;
   likedBy?: string[];
   commentsCount: number;
@@ -69,6 +79,15 @@ export type StoryDoc = {
   views: number;
   viewedBy?: string[];
   tags: string[];
+  mediaUrl?: string;
+  mediaPath?: string;
+  mediaType?: "image";
+  fileName?: string;
+  fileSize?: number;
+  width?: number;
+  height?: number;
+  status?: "published" | "draft";
+  visibility?: "school" | "public";
   createdAt: Date | null;
   expiresAt: Date | null;
 };
@@ -88,6 +107,13 @@ export type UserProfileDoc = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+// Firestore rejects `undefined` field values — strip them before any addDoc/setDoc call.
+function stripUndefined<T extends object>(obj: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([, v]) => v !== undefined)
+  ) as Partial<T>;
+}
+
 function toDate(val: unknown): Date | null {
   if (!val) return null;
   if (val instanceof Date) return val;
@@ -98,15 +124,29 @@ function toDate(val: unknown): Date | null {
   return null;
 }
 
+export function createFirestoreId(collectionName: string): string {
+  return doc(collection(db, collectionName)).id;
+}
+
 function mapPost(id: string, data: DocumentData): ClubPostDoc {
   return {
     id,
     authorId: data.authorId ?? "",
     authorName: data.authorName ?? "Учень",
     authorEmoji: data.authorEmoji,
+    authorRole: data.authorRole,
     text: data.text ?? "",
     tag: data.tag,
     tagColor: data.tagColor,
+    mediaUrl: data.mediaUrl,
+    mediaPath: data.mediaPath,
+    mediaType: data.mediaType,
+    fileName: data.fileName,
+    fileSize: data.fileSize,
+    width: data.width,
+    height: data.height,
+    status: data.status,
+    visibility: data.visibility,
     likesCount: data.likesCount ?? 0,
     likedBy: data.likedBy ?? [],
     commentsCount: data.commentsCount ?? 0,
@@ -141,6 +181,15 @@ function mapStory(id: string, data: DocumentData): StoryDoc {
     views: data.views ?? 0,
     viewedBy: data.viewedBy ?? [],
     tags: data.tags ?? [],
+    mediaUrl: data.mediaUrl,
+    mediaPath: data.mediaPath,
+    mediaType: data.mediaType,
+    fileName: data.fileName,
+    fileSize: data.fileSize,
+    width: data.width,
+    height: data.height,
+    status: data.status,
+    visibility: data.visibility,
     createdAt: toDate(data.createdAt),
     expiresAt: toDate(data.expiresAt),
   };
@@ -168,21 +217,37 @@ export function subscribeToClubPosts(
 }
 
 export async function createClubPost(params: {
+  id?: string;
   authorId: string;
   authorName: string;
   authorEmoji?: string;
+  authorRole?: string;
   text: string;
   tag?: string;
   tagColor?: string;
+  mediaUrl?: string;
+  mediaPath?: string;
+  mediaType?: "image";
+  fileName?: string;
+  fileSize?: number;
+  width?: number;
+  height?: number;
+  status?: "published" | "draft";
+  visibility?: "school" | "public";
 }): Promise<string> {
-  const ref = await addDoc(collection(db, "clubPosts"), {
-    ...params,
+  const { id, ...data } = params;
+  const postRef = id ? doc(db, "clubPosts", id) : doc(collection(db, "clubPosts"));
+  // Firestore rejects undefined field values — stripUndefined before writing
+  await setDoc(postRef, {
+    ...stripUndefined(data),
+    status: data.status ?? "published",
+    visibility: data.visibility ?? "school",
     likesCount: 0,
     likedBy: [],
     commentsCount: 0,
     createdAt: serverTimestamp(),
   });
-  return ref.id;
+  return postRef.id;
 }
 
 export async function togglePostLike(
@@ -232,7 +297,7 @@ export async function createComment(params: {
   parentId?: string | null;
 }): Promise<void> {
   await addDoc(collection(db, "clubComments"), {
-    ...params,
+    ...stripUndefined(params),
     parentId: params.parentId ?? null,
     likesCount: 0,
     likedBy: [],
@@ -278,24 +343,39 @@ export function subscribeToStories(
 }
 
 export async function createStory(params: {
+  id?: string;
   authorId: string;
   authorName: string;
   authorEmoji?: string;
   text: string;
   tone: "red" | "green" | "yellow" | "dark";
   tags: string[];
+  mediaUrl?: string;
+  mediaPath?: string;
+  mediaType?: "image";
+  fileName?: string;
+  fileSize?: number;
+  width?: number;
+  height?: number;
+  status?: "published" | "draft";
+  visibility?: "school" | "public";
 }): Promise<string> {
+  const { id, ...data } = params;
   const now = new Date();
   const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24h
-  const ref = await addDoc(collection(db, "stories"), {
-    ...params,
+  const storyRef = id ? doc(db, "stories", id) : doc(collection(db, "stories"));
+  // Firestore rejects undefined field values — stripUndefined before writing
+  await setDoc(storyRef, {
+    ...stripUndefined(data),
+    status: data.status ?? "published",
+    visibility: data.visibility ?? "school",
     reactions: 0,
     views: 0,
     viewedBy: [],
     createdAt: serverTimestamp(),
     expiresAt,
   });
-  return ref.id;
+  return storyRef.id;
 }
 
 export async function viewStory(storyId: string, userId: string): Promise<void> {
@@ -376,7 +456,7 @@ export type Award = {
   icon: string;
   title: string;
   description: string;
-  group: "tests" | "streak" | "learning" | "practice" | "community" | "graduation";
+  group: "tests" | "streak" | "learning" | "practice" | "community" | "games" | "graduation";
   earned: boolean;
   progress?: number;
   maxProgress?: number;
@@ -457,21 +537,86 @@ export async function recordTestCompletion(
 
 // Derived from stats — no separate storage needed. Returns ClubAward-compatible objects.
 export function computeAwards(stats: UserStats): Award[] {
+  const correct100 = stats.totalCorrect >= 100;
+  const correct500 = stats.totalCorrect >= 500;
   return [
+    // ─── Tests ────────────────────────────────────────────────────────────────
     { id: "first_test", icon: "🎯", title: "Перший тест", description: "Пройди свій перший тест ПДР",
       group: "tests", earned: stats.testsCompleted >= 1, progress: Math.min(stats.testsCompleted, 1), maxProgress: 1 },
+    { id: "five_tests", icon: "📖", title: "5 тестів", description: "Пройди 5 тестів ПДР",
+      group: "tests", earned: stats.testsCompleted >= 5, progress: Math.min(stats.testsCompleted, 5), maxProgress: 5 },
     { id: "ten_tests", icon: "📚", title: "10 тестів", description: "Пройди 10 тестів ПДР",
       group: "tests", earned: stats.testsCompleted >= 10, progress: Math.min(stats.testsCompleted, 10), maxProgress: 10 },
+    { id: "twenty_five_tests", icon: "🏋️", title: "25 тестів", description: "Пройди 25 тестів — справжній тренінг",
+      group: "tests", earned: stats.testsCompleted >= 25, progress: Math.min(stats.testsCompleted, 25), maxProgress: 25 },
     { id: "fifty_tests", icon: "🏅", title: "50 тестів", description: "Пройди 50 тестів ПДР",
       group: "tests", earned: stats.testsCompleted >= 50, progress: Math.min(stats.testsCompleted, 50), maxProgress: 50 },
-    { id: "pass", icon: "✅", title: "Склав іспит", description: "Набери 75%+ у тесті",
+    { id: "pass", icon: "✅", title: "Іспит складений", description: "Набери 75%+ у тесті",
       group: "tests", earned: stats.bestScorePct >= 75, progress: Math.min(stats.bestScorePct, 75), maxProgress: 75 },
-    { id: "perfect", icon: "💯", title: "Без помилок", description: "Пройди тест на 100%",
+    { id: "excellent", icon: "🌟", title: "Відмінник", description: "Набери 90%+ у тесті",
+      group: "tests", earned: stats.bestScorePct >= 90, progress: Math.min(stats.bestScorePct, 90), maxProgress: 90 },
+    { id: "perfect", icon: "💯", title: "Ідеальний результат", description: "Пройди тест на 100%",
       group: "tests", earned: stats.bestScorePct >= 100, progress: Math.min(stats.bestScorePct, 100), maxProgress: 100 },
+    { id: "correct_100", icon: "🧠", title: "100 правильних", description: "Дай 100 правильних відповідей",
+      group: "tests", earned: correct100, progress: Math.min(stats.totalCorrect, 100), maxProgress: 100 },
+    { id: "correct_500", icon: "🔬", title: "500 правильних", description: "Дай 500 правильних відповідей — майстер ПДР",
+      group: "tests", earned: correct500, progress: Math.min(stats.totalCorrect, 500), maxProgress: 500 },
+
+    // ─── Streak ───────────────────────────────────────────────────────────────
+    { id: "streak_1", icon: "✨", title: "Перший день", description: "Розпочни свою серію навчання",
+      group: "streak", earned: stats.bestStreak >= 1, progress: Math.min(stats.bestStreak, 1), maxProgress: 1 },
     { id: "streak_3", icon: "🔥", title: "Серія 3 дні", description: "Займайся 3 дні поспіль",
       group: "streak", earned: stats.bestStreak >= 3, progress: Math.min(stats.bestStreak, 3), maxProgress: 3 },
-    { id: "streak_7", icon: "⚡", title: "Серія 7 днів", description: "Займайся 7 днів поспіль",
+    { id: "streak_7", icon: "⚡", title: "Серія тиждень", description: "7 днів поспіль — ти незупинний",
       group: "streak", earned: stats.bestStreak >= 7, progress: Math.min(stats.bestStreak, 7), maxProgress: 7 },
+    { id: "streak_14", icon: "🌊", title: "2 тижні поспіль", description: "14 днів безперервного навчання",
+      group: "streak", earned: stats.bestStreak >= 14, progress: Math.min(stats.bestStreak, 14), maxProgress: 14 },
+    { id: "streak_30", icon: "🏆", title: "Місяць навчання", description: "30 днів поспіль — справжній чемпіон",
+      group: "streak", earned: stats.bestStreak >= 30, progress: Math.min(stats.bestStreak, 30), maxProgress: 30 },
+
+    // ─── Learning ─────────────────────────────────────────────────────────────
+    { id: "first_topic", icon: "📘", title: "Перша тема", description: "Пройди першу тему ПДР",
+      group: "learning", earned: stats.testsCompleted >= 1, progress: Math.min(stats.testsCompleted, 1), maxProgress: 1 },
+    { id: "category_b", icon: "🚗", title: "Категорія B", description: "Почав вивчення категорії B",
+      group: "learning", earned: stats.testsCompleted >= 1, progress: Math.min(stats.testsCompleted, 1), maxProgress: 1 },
+    { id: "signs_master", icon: "🛑", title: "Майстер знаків", description: "Пройди 5 тестів по знаках ПДР",
+      group: "learning", earned: stats.testsCompleted >= 5, progress: Math.min(stats.testsCompleted, 5), maxProgress: 5 },
+    { id: "intersection_master", icon: "🚦", title: "Майстер перехресть", description: "Опануй правила проїзду перехресть",
+      group: "learning", earned: stats.bestScorePct >= 80 && stats.testsCompleted >= 3, progress: Math.min(stats.testsCompleted, 3), maxProgress: 3 },
+    { id: "safety_pro", icon: "🛡️", title: "Безпека руху", description: "Відмінні знання правил безпеки",
+      group: "learning", earned: stats.bestScorePct >= 85, progress: Math.min(stats.bestScorePct, 85), maxProgress: 85 },
+
+    // ─── Practice ─────────────────────────────────────────────────────────────
+    { id: "first_practice", icon: "🗓️", title: "Перша практика", description: "Запишись на перше практичне заняття",
+      group: "practice", earned: false, progress: 0, maxProgress: 1 },
+    { id: "first_instructor", icon: "🚘", title: "Перша розмова з інструктором", description: "Напиши першому інструктору",
+      group: "practice", earned: false, progress: 0, maxProgress: 1 },
+
+    // ─── Games ────────────────────────────────────────────────────────────────
+    { id: "first_minigame", icon: "🎮", title: "Перша міні-гра", description: "Запусти будь-яке коротке тренування",
+      group: "games", earned: false, progress: 0, maxProgress: 1 },
+    { id: "reaction_driver", icon: "⚡", title: "Реакція водія", description: "Пройди гру на реакцію або дорожні ситуації",
+      group: "games", earned: false, progress: 0, maxProgress: 1 },
+
+    // ─── Community ────────────────────────────────────────────────────────────
+    { id: "first_story", icon: "📸", title: "Перша Історія", description: "Опублікуй першу Історію у Клубі",
+      group: "community", earned: false, progress: 0, maxProgress: 1 },
+    { id: "first_post", icon: "✍️", title: "Перший пост", description: "Напиши перший пост у Клубній стрічці",
+      group: "community", earned: false, progress: 0, maxProgress: 1 },
+    { id: "first_photo", icon: "📷", title: "Перше фото", description: "Надішли перше фото у чаті",
+      group: "community", earned: false, progress: 0, maxProgress: 1 },
+
+    // ─── Graduation ───────────────────────────────────────────────────────────
+    { id: "exam_ready", icon: "🎓", title: "Готовий до іспиту", description: "Набери 85%+ — ти готовий до МВС",
+      group: "graduation", earned: stats.bestScorePct >= 85, progress: Math.min(stats.bestScorePct, 85), maxProgress: 85 },
+    { id: "comeback", icon: "🌅", title: "Повернення", description: "Повернувся після паузи і продовжив навчання",
+      group: "graduation", earned: stats.testsCompleted >= 2, progress: Math.min(stats.testsCompleted, 2), maxProgress: 2 },
+    { id: "no_mistakes", icon: "✨", title: "Без помилок", description: "Пройди тест без жодної помилки",
+      group: "graduation", earned: stats.bestScorePct >= 100, progress: Math.min(stats.bestScorePct, 100), maxProgress: 100 },
+    { id: "night_owl", icon: "🌙", title: "Нічна сова", description: "Позаймайся у вечірній час",
+      group: "graduation", earned: false, progress: 0, maxProgress: 1 },
+    { id: "early_start", icon: "☀️", title: "Ранній старт", description: "Почни тренування зранку",
+      group: "graduation", earned: false, progress: 0, maxProgress: 1 },
   ];
 }
 
@@ -689,6 +834,9 @@ export type ConversationDoc = {
   lastMessageAt: Date | null;
   updatedAt: Date | null;
   unreadCount?: number;
+  unreadBy?: string[];
+  readBy?: string[];
+  lastSenderId?: string;
 };
 
 export type MessageDoc = {
@@ -699,7 +847,14 @@ export type MessageDoc = {
   createdAt: Date | null;
   readBy?: string[];
   mediaUrl?: string;
-  mediaType?: "image";
+  mediaPath?: string;
+  mediaType?: "image" | "video" | "document";
+  thumbnailUrl?: string;
+  fileName?: string;
+  fileSize?: number;
+  width?: number;
+  height?: number;
+  senderRole?: string;
 };
 
 export function subscribeToConversations(
@@ -725,6 +880,9 @@ export function subscribeToConversations(
           lastMessageAt: toDate(data.lastMessageAt),
           updatedAt: toDate(data.updatedAt),
           unreadCount: data.unreadCount ?? 0,
+          unreadBy: data.unreadBy ?? [],
+          readBy: data.readBy ?? [],
+          lastSenderId: data.lastSenderId,
         };
       })
     );
@@ -752,7 +910,14 @@ export function subscribeToMessages(
           createdAt: toDate(data.createdAt),
           readBy: data.readBy ?? [],
           mediaUrl: data.mediaUrl,
+          mediaPath: data.mediaPath,
           mediaType: data.mediaType,
+          thumbnailUrl: data.thumbnailUrl,
+          fileName: data.fileName,
+          fileSize: data.fileSize,
+          width: data.width,
+          height: data.height,
+          senderRole: data.senderRole,
         };
       })
     );
@@ -761,17 +926,62 @@ export function subscribeToMessages(
 
 export async function sendMessage(
   conversationId: string,
-  params: { senderId: string; senderName: string; text: string; mediaUrl?: string; mediaType?: "image" }
+  params: {
+    senderId: string;
+    senderName: string;
+    senderRole?: string;
+    text: string;
+    mediaUrl?: string;
+    mediaPath?: string;
+    mediaType?: "image" | "video" | "document";
+    thumbnailUrl?: string;
+    fileName?: string;
+    fileSize?: number;
+    width?: number;
+    height?: number;
+  }
 ): Promise<void> {
-  const { mediaUrl, mediaType, ...base } = params;
-  const payload: Record<string, unknown> = { ...base, createdAt: serverTimestamp(), readBy: [params.senderId] };
-  if (mediaUrl) { payload.mediaUrl = mediaUrl; payload.mediaType = mediaType ?? "image"; }
+  const convRef = doc(db, "conversations", conversationId);
+  const convSnap = await getDoc(convRef);
+  const participantIds = convSnap.exists() ? ((convSnap.data().participantIds ?? []) as string[]) : [];
+  const unreadBy = participantIds.filter((participantId) => participantId && participantId !== params.senderId);
+  const payload = stripUndefined({
+    senderId: params.senderId,
+    senderName: params.senderName,
+    senderRole: params.senderRole,
+    text: params.text,
+    createdAt: serverTimestamp(),
+    readBy: [params.senderId],
+    mediaUrl: params.mediaUrl,
+    mediaPath: params.mediaPath,
+    mediaType: params.mediaUrl ? (params.mediaType ?? "image") : undefined,
+    thumbnailUrl: params.thumbnailUrl,
+    fileName: params.fileName,
+    fileSize: params.fileSize,
+    width: params.width,
+    height: params.height,
+  });
   await addDoc(collection(db, "conversations", conversationId, "messages"), payload);
-  await updateDoc(doc(db, "conversations", conversationId), {
+  await updateDoc(convRef, {
     lastMessage: params.text || "📷 Фото",
     lastMessageAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
+    lastSenderId: params.senderId,
+    unreadBy,
+    readBy: [params.senderId],
   });
+}
+
+export async function markConversationRead(
+  conversationId: string,
+  userId: string
+): Promise<void> {
+  await updateDoc(doc(db, "conversations", conversationId), {
+    unreadBy: arrayRemove(userId),
+    readBy: arrayUnion(userId),
+    lastReadAt: serverTimestamp(),
+    lastReadBy: userId,
+  }).catch(() => {});
 }
 
 // Find-or-create a conversation of a given type (support / manager / instructor).
@@ -799,6 +1009,8 @@ export async function ensureConversation(
     title,
     lastMessage: null,
     lastMessageAt: null,
+    unreadBy: [],
+    readBy: [],
     updatedAt: serverTimestamp(),
     createdBy: userId,
     createdByName: userName,
@@ -846,6 +1058,8 @@ export async function ensureInstructorConversation(params: {
     instructorName,
     lastMessage: null,
     lastMessageAt: null,
+    unreadBy: [],
+    readBy: [],
     updatedAt: serverTimestamp(),
     createdBy: callerId,
     createdByName: callerId === instructorId ? instructorName : studentName,

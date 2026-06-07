@@ -29,23 +29,86 @@ type QuizState = "idle" | "running" | "done";
 // ─── PDR categories for the menu ─────────────────────────────────────────────
 const PDR_CATEGORIES = [
   { icon: "🎯", name: "Знаки", label: "Дорожні знаки", desc: "Попереджувальні, заборонні, інформаційні", color: "#e63946" },
+  { icon: "↔️", name: "Пріоритет", label: "Пріоритет", desc: "Хто має перевагу у типових ситуаціях", color: "#ffb703" },
   { icon: "🛣️", name: "Швидкість", label: "Швидкість", desc: "Обмеження та контроль швидкості", color: "#2a9d8f" },
   { icon: "🚦", name: "Перехрестя", label: "Перехрестя", desc: "Регульовані та нерегульовані", color: "#f4a261" },
   { icon: "🛑", name: "Зупинка", label: "Стоянка і зупинка", desc: "Де можна і де заборонено", color: "#e76f51" },
   { icon: "📏", name: "Розмітка", label: "Розмітка", desc: "Горизонтальна та вертикальна", color: "#457b9d" },
   { icon: "🛡️", name: "Безпека", label: "Безпека руху", desc: "Дистанція, обгін, маневри", color: "#6a4c93" },
+  { icon: "🅿️", name: "Стоянка", label: "Паркування", desc: "Стоянка, зупинка, місця заборони", color: "#118ab2" },
+  { icon: "🚶", name: "Пішоходи", label: "Пішоходи", desc: "Переходи, пріоритет і безпечний проїзд", color: "#06d6a0" },
   { icon: "🏙️", name: "Місто", label: "Міський рух", desc: "Особливості руху у місті", color: "#1d3557" },
 ];
 
 // ─── Mini-games definition ────────────────────────────────────────────────────
 const MINI_GAMES = [
-  { icon: "🚦", name: "Перехрестя", label: "Хто їде першим?", desc: "Відпрацюй пріоритет на перехрестях", difficulty: "Середній", duration: "3–5 хв", benefit: "Найчастіша помилка на іспиті" },
-  { icon: "⚠️", name: "Знаки", label: "Впізнай знак", desc: "Миттєве розпізнавання знаків", difficulty: "Легкий", duration: "2–4 хв", benefit: "Тренує реакцію та пам'ять" },
-  { icon: "🅿️", name: "Зупинка", label: "Можна зупинитись?", desc: "Правила стоянки та зупинки", difficulty: "Середній", duration: "3–5 хв", benefit: "Уникни штрафів у місті" },
-  { icon: "📏", name: "Розмітка", label: "Читай дорогу", desc: "Значення ліній та позначень", difficulty: "Легкий", duration: "2–3 хв", benefit: "База для безпечної їзди" },
-  { icon: "🛡️", name: "Безпека", label: "Правило правої руки", desc: "Перешкода справа та поступки", difficulty: "Важкий", duration: "4–6 хв", benefit: "Топ-3 питань іспиту" },
-  { icon: "🏎️", name: "Швидкість", label: "Вибери ліміт", desc: "Яка швидкість дозволена?", difficulty: "Легкий", duration: "2–4 хв", benefit: "Завжди на іспиті" },
+  { icon: "⚠️", category: "Знаки", label: "Знаки на швидкість", desc: "Швидко впізнавай знаки та їх вимоги", difficulty: "Легкий", duration: "2–4 хв", benefit: "Тренує реакцію та пам'ять" },
+  { icon: "↔️", category: "Перехрестя", label: "Хто має перевагу?", desc: "Відпрацюй пріоритет у конфліктних точках", difficulty: "Середній", duration: "3–5 хв", benefit: "Найчастіша помилка на іспиті" },
+  { icon: "🅿️", category: "Стоянка", label: "Паркування", desc: "Де можна стояти, зупинятися і чекати", difficulty: "Середній", duration: "3–5 хв", benefit: "Уникни штрафів у місті" },
+  { icon: "⚡", category: "Безпека", label: "Реакція водія", desc: "Ризики, дистанція, обгін і аварійні ситуації", difficulty: "Легкий", duration: "2–4 хв", benefit: "Допомагає не панікувати" },
+  { icon: "🏙️", category: "Безпека", label: "Дорожня ситуація", desc: "Типові сценарії міського руху", difficulty: "Середній", duration: "3–5 хв", benefit: "Переносить правила на дорогу" },
+  { icon: "🚦", category: "Перехрестя", label: "Перехрестя", desc: "Регульовані, нерегульовані, круговий рух", difficulty: "Важкий", duration: "4–6 хв", benefit: "Топ-3 питань іспиту" },
+  { icon: "🔎", category: "Безпека", label: "Знайди помилку", desc: "Визнач порушення у короткій ситуації", difficulty: "Середній", duration: "3–5 хв", benefit: "Прокачує уважність" },
+  { icon: "🚥", category: "Перехрестя", label: "Світлофор", desc: "Сигнали, додаткові секції, регулювальник", difficulty: "Легкий", duration: "2–4 хв", benefit: "Швидкі бали на іспиті" },
+  { icon: "🔄", category: "Безпека", label: "Маневр", desc: "Перестроювання, поворот, розворот, обгін", difficulty: "Середній", duration: "3–5 хв", benefit: "Менше помилок на практиці" },
+  { icon: "🏁", category: "exam", label: "Екзамен-бліц", desc: "5 випадкових питань без довгого режиму", difficulty: "Легкий", duration: "1–2 хв", benefit: "Швидка перевірка перед уроком" },
 ];
+
+const RIGHTS_CATEGORIES = [
+  { code: "A / A1", label: "Мото", active: false },
+  { code: "B", label: "Легкове авто", active: true },
+  { code: "C", label: "Вантажне", active: false },
+  { code: "D", label: "Автобус", active: false },
+  { code: "BE / CE", label: "Причепи", active: false },
+];
+
+function PdrVisual({ category }: { category: string }) {
+  const { colors } = useTheme();
+  const isIntersection = category === "Перехрестя" || category === "Пріоритет";
+  const isSigns = category === "Знаки";
+  const isParking = category === "Стоянка" || category === "Зупинка";
+  const accent = isSigns ? "#e63946" : isIntersection ? "#f4a261" : isParking ? "#118ab2" : colors.red;
+
+  return (
+    <View style={{ borderRadius: radii.md, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, padding: 14, gap: 10 }}>
+      <View style={{ height: 112, borderRadius: radii.sm, backgroundColor: colors.bgElevated, overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
+        {isSigns ? (
+          <View style={{ width: 90, height: 78, borderRadius: 12, borderWidth: 7, borderColor: accent, transform: [{ rotate: "45deg" }], alignItems: "center", justifyContent: "center", backgroundColor: "#fff" }}>
+            <Text style={{ transform: [{ rotate: "-45deg" }], color: "#111", fontSize: 24, fontWeight: "900" }}>!</Text>
+          </View>
+        ) : isIntersection ? (
+          <>
+            <View style={{ position: "absolute", width: "100%", height: 28, backgroundColor: "#495057" }} />
+            <View style={{ position: "absolute", height: "100%", width: 28, backgroundColor: "#495057" }} />
+            <View style={{ position: "absolute", width: 8, height: 92, backgroundColor: "#f8f9fa", opacity: 0.8 }} />
+            <View style={{ position: "absolute", height: 8, width: 92, backgroundColor: "#f8f9fa", opacity: 0.8 }} />
+            <Text style={{ position: "absolute", right: 22, top: 16, fontSize: 24 }}>🚗</Text>
+            <Text style={{ position: "absolute", left: 24, bottom: 16, fontSize: 24 }}>🚙</Text>
+          </>
+        ) : isParking ? (
+          <>
+            <View style={{ position: "absolute", left: 18, right: 18, top: 52, height: 34, backgroundColor: "#495057", borderRadius: 4 }} />
+            {[0, 1, 2, 3].map(i => (
+              <View key={i} style={{ position: "absolute", left: 26 + i * 48, top: 56, width: 2, height: 26, backgroundColor: "#f8f9fa" }} />
+            ))}
+            <View style={{ width: 54, height: 54, borderRadius: 12, backgroundColor: accent, alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ color: "#fff", fontSize: 30, fontWeight: "900" }}>P</Text>
+            </View>
+          </>
+        ) : (
+          <>
+            <View style={{ position: "absolute", width: "100%", height: 44, backgroundColor: "#495057" }} />
+            <View style={{ position: "absolute", width: "78%", height: 4, backgroundColor: "#f8f9fa", opacity: 0.85 }} />
+            <Text style={{ fontSize: 38 }}>🚗</Text>
+          </>
+        )}
+      </View>
+      <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "700", lineHeight: 18 }}>
+        Візуальна підказка до теми: {category}. Розбери схему перед відповіддю.
+      </Text>
+    </View>
+  );
+}
 
 // ─── Lidyk Explanation Modal ──────────────────────────────────────────────────
 
@@ -241,6 +304,8 @@ function QuizScreen({
       </View>
 
       <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: 140 }}>
+        <PdrVisual category={q.category} />
+
         {/* Question */}
         <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "800", lineHeight: 26 }}>{q.question}</Text>
 
@@ -456,7 +521,7 @@ export default function TestsTab() {
             const diffColor = g.difficulty === "Легкий" ? colors.success : g.difficulty === "Важкий" ? colors.red : colors.warning;
             return (
               <Pressable
-                key={g.name} onPress={() => startCategoryTest(g.name)}
+                key={g.label} onPress={() => g.category === "exam" ? (setQuestions(getRandomQuestions(5)), setResult(null), setActiveCategory(null), setQuizState("running")) : startCategoryTest(g.category)}
                 style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, overflow: "hidden" }}
               >
                 <View style={{ padding: 16 }}>
@@ -515,6 +580,34 @@ export default function TestsTab() {
             <Text style={{ color: "#fff", fontWeight: "900", fontSize: 16 }}>🚀 Почати іспит</Text>
           </View>
         </Pressable>
+
+        <View style={{ gap: 10 }}>
+          <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "900" }}>Категорії прав</Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            {RIGHTS_CATEGORIES.map((cat) => (
+              <Pressable
+                key={cat.code}
+                onPress={cat.active ? () => setSubView("categories") : undefined}
+                disabled={!cat.active}
+                style={{
+                  minWidth: "30%",
+                  flexGrow: 1,
+                  borderRadius: radii.md,
+                  padding: 12,
+                  backgroundColor: cat.active ? colors.bgCard : colors.bgElevated,
+                  borderWidth: 1,
+                  borderColor: cat.active ? colors.red + "55" : colors.border,
+                  opacity: cat.active ? 1 : 0.65,
+                }}
+              >
+                <Text style={{ color: cat.active ? colors.red : colors.textSecondary, fontWeight: "900", fontSize: 15 }}>{cat.code}</Text>
+                <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "700", marginTop: 2 }}>
+                  {cat.active ? cat.label : `${cat.label} · скоро`}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
 
         {/* Швидкий старт */}
         <Pressable

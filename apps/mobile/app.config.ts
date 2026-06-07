@@ -37,6 +37,12 @@ const config: ExpoConfig = {
     // alias relies on a redirect that some networks/clients mishandle on POST.
     // For local emulator dev: set API_URL=http://10.0.2.2:5001/lider-avtoschool/europe-west1/api
     apiUrl: process.env.API_URL ?? "https://api-jd6b6vy57a-ew.a.run.app",
+    ...(process.env.FIREBASE_APP_CHECK_DEBUG_TOKEN
+      ? { firebaseAppCheckDebugToken: process.env.FIREBASE_APP_CHECK_DEBUG_TOKEN }
+      : {}),
+    ...(process.env.FIREBASE_APP_CHECK_DEBUG_TOKEN || process.env.FIREBASE_APP_CHECK_DEBUG_PROVIDER === "true"
+      ? { firebaseAppCheckDebugProvider: true }
+      : {}),
     eas: {
       projectId: "74bb8f9a-fc35-4016-b110-a17da4dcd31c"
     }

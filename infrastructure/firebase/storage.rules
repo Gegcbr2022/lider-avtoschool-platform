@@ -26,6 +26,21 @@ service firebase.storage {
         && isImageOrPdf();
     }
 
+    match /users/{userId}/documents/{fileName} {
+      allow read: if staff() || (signedIn() && request.auth.uid == userId);
+      allow write: if (staff() || (signedIn() && request.auth.uid == userId))
+        && underSizeLimit()
+        && isImageOrPdf();
+    }
+
+    match /avatars/{userId}/{fileName} {
+      allow read: if signedIn();
+      allow write: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches("image/.*");
+    }
+
     // Документы, приложенные к публичным заявкам (анонимный upload)
     // Путь содержит leadId, сгенерированный на бэкенде, — случайный UUID, не угадываемый
     match /lead-documents/{leadId}/{fileName} {
@@ -57,6 +72,14 @@ service firebase.storage {
     }
 
     // Club post media
+    match /clubMedia/{postId}/{fileName} {
+      allow read: if true;
+      allow write: if signedIn()
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches("image/.*");
+    }
+
+    // Legacy sprint-24 path kept so old already-uploaded drafts do not break.
     match /clubMedia/{fileName} {
       allow read: if true;
       allow write: if signedIn()

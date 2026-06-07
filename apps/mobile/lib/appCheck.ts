@@ -1,14 +1,23 @@
 // ─── Firebase App Check (Play Integrity on Android) ─────────────────────────────
-// Bridges the native @react-native-firebase/app-check attestation token into the
-// Firebase JS SDK (which this app uses for Auth/Firestore), so direct Firestore
-// requests (aiLogs, clubPosts, stories, chat) carry a verifiable App Check token.
-//
-// Everything is wrapped in try/catch and lazy-required: if the native module is
-// missing or init fails, the app keeps working normally (App Check is defense-in-
-// depth — Firestore rules already require auth). Do NOT enable Firestore
-// "Enforce" in Firebase Console until this is verified live on a real device.
+// BlueStacks/emulators cannot use Play Integrity. For local emulator QA, pass a
+// debug token through app.config.ts via FIREBASE_APP_CHECK_DEBUG_TOKEN. Do not
+// commit real debug tokens or enable the debug provider for production builds.
+import Constants from "expo-constants";
+
+type AppCheckExtra = {
+  firebaseAppCheckDebugProvider?: boolean;
+  firebaseAppCheckDebugToken?: string;
+};
 
 let initialized = false;
+
+function getAppCheckExtra(): AppCheckExtra {
+  return (Constants.expoConfig?.extra ?? {}) as AppCheckExtra;
+}
+
+function debugProviderConfig(debugToken?: string): Record<string, string> {
+  return debugToken ? { provider: "debug", debugToken } : { provider: "debug" };
+}
 
 export function initAppCheck(): void {
   if (initialized) return;
@@ -22,15 +31,16 @@ export function initAppCheck(): void {
     const rnAppCheckModule = require("@react-native-firebase/app-check").default;
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { firebaseApp } = require("./firebase");
+    const extra = getAppCheckExtra();
+    const debugToken = extra.firebaseAppCheckDebugToken?.trim();
+    const useDebugProvider = Boolean(extra.firebaseAppCheckDebugProvider || debugToken);
 
-    const isDev = typeof __DEV__ !== "undefined" && __DEV__;
-
-    // 1) Native RNFirebase App Check — obtains a Play Integrity (Android) /
-    //    App Attest (iOS) token. Debug provider in dev builds.
+    // 1) Native RNFirebase App Check. Release builds default to Play Integrity;
+    // BlueStacks/dev builds opt into the debug provider through local config.
     const rnProvider = rnAppCheckModule().newReactNativeFirebaseAppCheckProvider();
     rnProvider.configure({
-      android: { provider: isDev ? "debug" : "playIntegrity" },
-      apple: { provider: isDev ? "debug" : "appAttest" },
+      android: useDebugProvider ? debugProviderConfig(debugToken) : { provider: "playIntegrity" },
+      apple: useDebugProvider ? debugProviderConfig(debugToken) : { provider: "appAttestWithDeviceCheckFallback" },
     });
     rnAppCheckModule().initializeAppCheck({ provider: rnProvider, isTokenAutoRefreshEnabled: true });
 
@@ -44,8 +54,10 @@ export function initAppCheck(): void {
       }),
       isTokenAutoRefreshEnabled: true,
     });
+
+    console.log(`[AppCheck] Initialized with ${useDebugProvider ? "debug" : "production"} provider`);
   } catch (error) {
-    // Non-fatal — app continues without App Check; rules still protect data.
-    console.warn("App Check init skipped:", error instanceof Error ? error.message : String(error));
+    // Non-fatal — app continues without App Check; Firestore rules still protect data.
+    console.warn("[AppCheck] Init skipped:", error instanceof Error ? error.message : String(error));
   }
 }

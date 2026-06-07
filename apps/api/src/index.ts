@@ -1,4 +1,5 @@
 import cors from "cors";
+import { randomUUID } from "crypto";
 import express from "express";
 import { getApps, initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
@@ -390,13 +391,16 @@ app.post("/chat/notify", async (request, response) => {
   const userId = typeof body.userId === "string" ? body.userId : "";
   const userName = typeof body.userName === "string" && body.userName.trim() ? body.userName.trim() : "Учень";
   const text = typeof body.text === "string" ? body.text.trim() : "";
+  const mediaUrl = typeof body.mediaUrl === "string" && body.mediaUrl.trim() ? body.mediaUrl.trim() : undefined;
+  const mediaType = typeof body.mediaType === "string" ? body.mediaType : undefined;
   const conversationType = typeof body.conversationType === "string" ? body.conversationType : undefined;
   const userPhone = typeof body.userPhone === "string" ? body.userPhone.trim() : undefined;
   const userEmail = typeof body.userEmail === "string" ? body.userEmail.trim() : undefined;
   const userCity = typeof body.userCity === "string" ? body.userCity.trim() : undefined;
   const userCategory = typeof body.userCategory === "string" ? body.userCategory.trim() : undefined;
 
-  if (!conversationId || !userId || !text) {
+  // Allow media-only messages (photo with no text)
+  if (!conversationId || !userId || (!text && !mediaUrl)) {
     response.status(422).json({ error: "Invalid chat notify payload" });
     return;
   }
@@ -414,15 +418,43 @@ app.post("/chat/notify", async (request, response) => {
       userCity,
       userCategory
     });
-    await telegramCall("sendMessage", {
-      chat_id: process.env.TELEGRAM_LOG_CHAT_ID,
-      message_thread_id: topicId,
-      text: `💬 <b>${escapeHtml(userName)}</b>:\n${escapeHtml(text)}`,
-      parse_mode: "HTML",
-      disable_web_page_preview: true
-    });
+
+    if (mediaUrl && (mediaType === "image" || !mediaType)) {
+      // Send actual photo to Telegram instead of text "ФОТО"
+      try {
+        const caption = text
+          ? `📷 <b>${escapeHtml(userName)}</b>:\n${escapeHtml(text)}`
+          : `📷 <b>${escapeHtml(userName)}</b>`;
+        await telegramSendPhoto({
+          chat_id: process.env.TELEGRAM_LOG_CHAT_ID,
+          message_thread_id: topicId,
+          photoUrl: mediaUrl,
+          caption,
+        });
+      } catch (photoErr) {
+        // Fallback to text if photo upload fails (e.g. URL not accessible)
+        console.warn("chat/notify: photo send failed, falling back to text link", photoErr);
+        await telegramCall("sendMessage", {
+          chat_id: process.env.TELEGRAM_LOG_CHAT_ID,
+          message_thread_id: topicId,
+          text: `📷 <b>${escapeHtml(userName)}</b> надіслав фото:\n<a href="${mediaUrl}">Переглянути фото</a>${text ? `\n${escapeHtml(text)}` : ""}`,
+          parse_mode: "HTML",
+          disable_web_page_preview: false,
+        });
+      }
+    } else if (text) {
+      // Text-only message
+      await telegramCall("sendMessage", {
+        chat_id: process.env.TELEGRAM_LOG_CHAT_ID,
+        message_thread_id: topicId,
+        text: `💬 <b>${escapeHtml(userName)}</b>:\n${escapeHtml(text)}`,
+        parse_mode: "HTML",
+        disable_web_page_preview: true
+      });
+    }
+
     await db.collection("supportThreads").doc(conversationId).set(
-      { lastMessage: text, lastMessageAt: FieldValue.serverTimestamp(), status: "open" },
+      { lastMessage: mediaUrl ? "📷 Фото" : text, lastMessageAt: FieldValue.serverTimestamp(), status: "open" },
       { merge: true }
     );
     response.json({ ok: true });
@@ -847,10 +879,21 @@ function isValidTelegramWebhook(request: express.Request) {
 type TelegramUpdate = {
   message?: {
     text?: string;
+    caption?: string;
     message_thread_id?: number;
     from?: { is_bot?: boolean; first_name?: string; last_name?: string };
+    photo?: Array<{ file_id: string; file_unique_id: string; width: number; height: number; file_size?: number }>;
+    document?: { file_id: string; file_name?: string; mime_type?: string };
   };
 };
+
+function extFromContentType(contentType: string): string {
+  if (contentType.includes("png")) return "png";
+  if (contentType.includes("webp")) return "webp";
+  if (contentType.includes("mp4")) return "mp4";
+  if (contentType.includes("pdf")) return "pdf";
+  return "jpg";
+}
 
 async function telegramCall<T = Record<string, unknown>>(method: string, payload: Record<string, unknown>): Promise<T> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -864,6 +907,98 @@ async function telegramCall<T = Record<string, unknown>>(method: string, payload
     throw new Error(`Telegram ${method} failed: ${json.description ?? res.status}`);
   }
   return json.result as T;
+}
+
+// Send a photo to Telegram: tries direct URL first, then downloads and re-uploads as multipart.
+// Firebase Storage getDownloadURL() returns a public URL with an access token that Telegram can fetch.
+async function telegramSendPhoto(params: {
+  chat_id: string;
+  message_thread_id: number;
+  photoUrl: string;
+  caption?: string;
+}): Promise<void> {
+  const { chat_id, message_thread_id, photoUrl, caption } = params;
+  const botToken = process.env.TELEGRAM_BOT_TOKEN!;
+  const apiBase = `https://api.telegram.org/bot${botToken}`;
+
+  // Method 1: Try sending photo by URL (works if Telegram can reach Firebase Storage CDN)
+  try {
+    const res = await fetch(`${apiBase}/sendPhoto`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id,
+        message_thread_id,
+        photo: photoUrl,
+        caption,
+        parse_mode: "HTML",
+      }),
+    });
+    const json = (await res.json()) as { ok: boolean; description?: string };
+    if (json.ok) return;
+    console.warn("telegramSendPhoto URL method failed:", json.description, "— trying multipart upload");
+  } catch (err) {
+    console.warn("telegramSendPhoto URL fetch threw:", err, "— trying multipart upload");
+  }
+
+  // Method 2: Download the file ourselves and re-upload as multipart
+  const downloadRes = await fetch(photoUrl, { signal: AbortSignal.timeout(15_000) });
+  if (!downloadRes.ok) {
+    throw new Error(`Failed to download photo from Firebase: ${downloadRes.status}`);
+  }
+  const buffer = await downloadRes.arrayBuffer();
+  const contentType = downloadRes.headers.get("content-type") ?? "image/jpeg";
+  const ext = contentType.includes("png") ? "png" : "jpg";
+
+  const form = new FormData();
+  form.append("chat_id", chat_id);
+  form.append("message_thread_id", String(message_thread_id));
+  if (caption) { form.append("caption", caption); form.append("parse_mode", "HTML"); }
+  form.append("photo", new Blob([buffer], { type: contentType }), `photo.${ext}`);
+
+  const uploadRes = await fetch(`${apiBase}/sendPhoto`, { method: "POST", body: form });
+  const uploadJson = (await uploadRes.json()) as { ok: boolean; description?: string };
+  if (!uploadJson.ok) {
+    throw new Error(`Telegram sendPhoto multipart failed: ${uploadJson.description ?? uploadRes.status}`);
+  }
+}
+
+async function saveTelegramFileToStorage(params: {
+  conversationId: string;
+  filePath: string;
+  fallbackFileName: string;
+}): Promise<{ mediaUrl: string; mediaPath: string; fileName: string; fileSize: number }> {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  if (!botToken) throw new Error("TELEGRAM_BOT_TOKEN is missing");
+
+  const downloadRes = await fetch(`https://api.telegram.org/file/bot${botToken}/${params.filePath}`);
+  if (!downloadRes.ok) {
+    throw new Error(`Telegram file download failed: ${downloadRes.status}`);
+  }
+
+  const contentType = downloadRes.headers.get("content-type") ?? "image/jpeg";
+  const buffer = Buffer.from(await downloadRes.arrayBuffer());
+  const ext = extFromContentType(contentType);
+  const token = randomUUID();
+  const fileName = params.fallbackFileName.includes(".") ? params.fallbackFileName : `${params.fallbackFileName}.${ext}`;
+  const mediaPath = `conversations/${params.conversationId}/attachments/telegram-${Date.now()}-${fileName}`;
+  const bucket = getStorage(firebaseApp).bucket();
+  const file = bucket.file(mediaPath);
+
+  await file.save(buffer, {
+    contentType,
+    resumable: false,
+    metadata: {
+      metadata: {
+        firebaseStorageDownloadTokens: token
+      }
+    }
+  });
+
+  const mediaUrl =
+    `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(mediaPath)}?alt=media&token=${token}`;
+
+  return { mediaUrl, mediaPath, fileName, fileSize: buffer.length };
 }
 
 type SupportTopicOptions = {
@@ -997,7 +1132,9 @@ async function sendFCMPush(
 // Manager typed a reply inside the client's topic → write it back into the app chat.
 async function handleManagerReply(update: TelegramUpdate): Promise<void> {
   const msg = update.message;
-  if (!msg?.text || !msg.message_thread_id || msg.from?.is_bot) return;
+  if (!msg?.message_thread_id || msg.from?.is_bot) return;
+  // Must have either text or photo
+  if (!msg.text && !msg.photo && !msg.document) return;
 
   const lookup = await db
     .collection("supportThreads")
@@ -1012,28 +1149,71 @@ async function handleManagerReply(update: TelegramUpdate): Promise<void> {
 
   const conversationUserId = threadData.userId as string | undefined;
   const managerName = [msg.from?.first_name, msg.from?.last_name].filter(Boolean).join(" ") || "Менеджер";
-  const messageText = msg.text;
+  const messageText = msg.text ?? msg.caption ?? "";
 
-  await db.collection("conversations").doc(conversationId).collection("messages").add({
+  let mediaUrl: string | undefined;
+  let mediaPath: string | undefined;
+  let fileName: string | undefined;
+  let fileSize: number | undefined;
+  let mediaType: "image" | undefined;
+
+  // Handle incoming photo from Telegram manager
+  if (msg.photo && msg.photo.length > 0) {
+    try {
+      // Get the highest-resolution photo (last in array)
+      const photo = msg.photo[msg.photo.length - 1];
+      const fileInfo = await telegramCall<{ file_path: string }>("getFile", { file_id: photo.file_id });
+      if (fileInfo.file_path) {
+        const stored = await saveTelegramFileToStorage({
+          conversationId,
+          filePath: fileInfo.file_path,
+          fallbackFileName: `${photo.file_unique_id}.jpg`
+        });
+        mediaUrl = stored.mediaUrl;
+        mediaPath = stored.mediaPath;
+        fileName = stored.fileName;
+        fileSize = stored.fileSize;
+        mediaType = "image";
+      }
+    } catch (err) {
+      console.warn("handleManagerReply: failed to store Telegram photo", err);
+    }
+  }
+
+  const payload: Record<string, unknown> = {
     senderId: "support",
     senderName: managerName,
     text: messageText,
     createdAt: FieldValue.serverTimestamp(),
     readBy: ["support"],
-    source: "telegram"
-  });
+    source: "telegram",
+    lastSenderId: "support",
+  };
+  if (mediaUrl) {
+    payload.mediaUrl = mediaUrl;
+    payload.mediaPath = mediaPath;
+    payload.mediaType = mediaType ?? "image";
+    payload.fileName = fileName;
+    payload.fileSize = fileSize;
+  }
+
+  await db.collection("conversations").doc(conversationId).collection("messages").add(payload);
   await db.collection("conversations").doc(conversationId).set(
     {
-      lastMessage: messageText,
+      lastMessage: mediaUrl ? "📷 Фото" : messageText,
       lastMessageAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp()
+      updatedAt: FieldValue.serverTimestamp(),
+      lastSenderId: "support",
+      unreadBy: conversationUserId ? [conversationUserId] : [],
+      readBy: ["support"],
     },
     { merge: true }
   );
 
   // Send FCM push to the student's device
   if (conversationUserId) {
-    await sendFCMPush(conversationUserId, managerName, messageText, { conversationId, type: "chat" });
+    const pushBody = mediaUrl ? "📷 Нове фото від менеджера" : messageText;
+    await sendFCMPush(conversationUserId, managerName, pushBody, { conversationId, type: "chat" });
   }
 }
 

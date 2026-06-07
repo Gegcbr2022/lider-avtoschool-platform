@@ -9,12 +9,14 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
@@ -26,6 +28,7 @@ import {
   ensureConversation,
   ensureInstructorConversation,
   getMyBookings,
+  markConversationRead,
   sendMessage,
   subscribeToMessages,
   subscribeToConversations,
@@ -149,6 +152,9 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [fullscreenPhoto, setFullscreenPhoto] = useState<string | null>(null);
+  const [fullscreenPhotoState, setFullscreenPhotoState] = useState<"loading" | "ready" | "error">("loading");
+  const [photoErrors, setPhotoErrors] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!user) return;
@@ -181,8 +187,10 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
         }
         if (!active) return;
         setConversationId(convId);
+        void markConversationRead(convId, user.id);
         unsub = subscribeToMessages(convId, (msgs) => {
           setMessages(msgs);
+          void markConversationRead(convId, user.id);
           setLoading(false);
           setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
         });
@@ -206,7 +214,7 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
     setInput("");
     setSending(true);
     try {
-      await sendMessage(conversationId, { senderId: user.id, senderName: user.name, text });
+      await sendMessage(conversationId, { senderId: user.id, senderName: user.name, senderRole: user.role, text });
       void notifyChat({
         conversationId, userId: user.id, userName: user.name, text,
         conversationType: chat.type, userPhone: user.phone, userEmail: user.email,
@@ -233,16 +241,23 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
       allowsEditing: false,
     });
     if (result.canceled || !result.assets?.[0]) return;
-    const uri = result.assets[0].uri;
+    const asset = result.assets[0];
+    const uri = asset.uri;
     setUploadingImage(true);
     try {
-      const { downloadURL } = await uploadChatImage(conversationId, uri);
+      const { downloadURL, storagePath, fileSize } = await uploadChatImage(conversationId, uri);
       await sendMessage(conversationId, {
         senderId: user.id, senderName: user.name,
-        text: "", mediaUrl: downloadURL, mediaType: "image",
+        senderRole: user.role,
+        text: "", mediaUrl: downloadURL, mediaPath: storagePath, mediaType: "image",
+        fileName: asset.fileName ?? `photo-${Date.now()}.jpg`,
+        fileSize: asset.fileSize ?? fileSize,
+        width: asset.width,
+        height: asset.height,
       });
       void notifyChat({
-        conversationId, userId: user.id, userName: user.name, text: "📷 Фото",
+        conversationId, userId: user.id, userName: user.name, text: "",
+        mediaUrl: downloadURL, mediaType: "image",
         conversationType: chat.type, userPhone: user.phone, userEmail: user.email,
         userCity: user.city, userCategory: user.category,
       });
@@ -257,6 +272,51 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
 
   return (
     <SafeAreaView style={s.safe} edges={["top"]}>
+      {/* Fullscreen photo modal */}
+      <Modal
+        visible={fullscreenPhoto !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setFullscreenPhoto(null)}
+        statusBarTranslucent
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.95)", alignItems: "center", justifyContent: "center" }}
+          onPress={() => setFullscreenPhoto(null)}
+        >
+          {fullscreenPhoto ? (
+              <>
+                {fullscreenPhotoState === "loading" ? (
+                  <ActivityIndicator color="#fff" size="large" style={{ position: "absolute" }} />
+                ) : null}
+                {fullscreenPhotoState === "error" ? (
+                  <View style={{ padding: 18, borderRadius: radii.md, backgroundColor: "rgba(255,255,255,0.12)", marginHorizontal: 24 }}>
+                    <Text style={{ color: "#fff", fontSize: 15, fontWeight: "800", textAlign: "center" }}>Фото не завантажилось</Text>
+                    <Text style={{ color: "rgba(255,255,255,0.72)", fontSize: 12, textAlign: "center", marginTop: 6 }}>
+                      Перевір інтернет або спробуй відкрити ще раз.
+                    </Text>
+                  </View>
+                ) : (
+                  <Image
+                    source={{ uri: fullscreenPhoto }}
+                    style={{ width: "100%", height: "80%", borderRadius: 0 }}
+                    resizeMode="contain"
+                    onLoadStart={() => setFullscreenPhotoState("loading")}
+                    onLoad={() => setFullscreenPhotoState("ready")}
+                    onError={() => setFullscreenPhotoState("error")}
+                  />
+                )}
+              </>
+          ) : null}
+          <TouchableOpacity
+            onPress={() => setFullscreenPhoto(null)}
+            style={{ position: "absolute", top: 48, right: 20, width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" }}
+          >
+            <Text style={{ color: "#fff", fontSize: 22, fontWeight: "700" }}>✕</Text>
+          </TouchableOpacity>
+        </Pressable>
+      </Modal>
+
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -314,11 +374,37 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
                 <View style={[s.bubble, mine ? s.bubbleMine : s.bubbleTheirs]}>
                   {!mine ? <Text style={s.senderName}>{chat.title}</Text> : null}
                   {m.mediaUrl && m.mediaType === "image" ? (
-                    <Image
-                      source={{ uri: m.mediaUrl }}
-                      style={{ width: 200, height: 150, borderRadius: radii.sm, marginBottom: m.text ? 6 : 0 }}
-                      resizeMode="cover"
-                    />
+                    <Pressable
+                      onPress={() => {
+                        setFullscreenPhotoState("loading");
+                        setFullscreenPhoto(m.mediaUrl ?? null);
+                      }}
+                      style={{ marginBottom: m.text ? 6 : 0 }}
+                    >
+                      {photoErrors[m.id] ? (
+                        <View style={{ width: 200, minHeight: 92, borderRadius: radii.sm, backgroundColor: mine ? "rgba(255,255,255,0.18)" : colors.bgElevated, alignItems: "center", justifyContent: "center", padding: 12 }}>
+                          <Text style={{ color: mine ? "#fff" : colors.textPrimary, fontSize: 13, fontWeight: "800", textAlign: "center" }}>Фото недоступне</Text>
+                          <Text style={{ color: mine ? "rgba(255,255,255,0.72)" : colors.textTertiary, fontSize: 11, textAlign: "center", marginTop: 4 }}>
+                            Натисни, щоб спробувати відкрити.
+                          </Text>
+                        </View>
+                      ) : (
+                        <>
+                          <Image
+                            source={{ uri: m.mediaUrl }}
+                            style={{ width: 200, height: 150, borderRadius: radii.sm }}
+                            resizeMode="cover"
+                            onError={() => {
+                              console.warn("[Chat] Image failed to load:", m.mediaUrl);
+                              setPhotoErrors(prev => ({ ...prev, [m.id]: true }));
+                            }}
+                          />
+                          <View style={{ position: "absolute", bottom: 6, right: 6, backgroundColor: "rgba(0,0,0,0.45)", borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
+                            <Text style={{ color: "#fff", fontSize: 10, fontWeight: "700" }}>⛶ Відкрити</Text>
+                          </View>
+                        </>
+                      )}
+                    </Pressable>
                   ) : null}
                   {m.text ? <Text style={[s.bubbleText, mine && s.bubbleTextMine]}>{m.text}</Text> : null}
                   <Text style={[s.time, mine && s.timeMine]}>{formatTime(m.createdAt)}</Text>

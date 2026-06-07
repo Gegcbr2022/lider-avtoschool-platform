@@ -7,6 +7,10 @@ const config = getDefaultConfig(projectRoot);
 const defaultWatchFolders = config.watchFolders ?? [];
 
 config.watchFolders = Array.from(new Set([...defaultWatchFolders, workspaceRoot]));
+config.server = {
+  ...config.server,
+  unstable_serverRoot: projectRoot
+};
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, "node_modules"),
   path.resolve(workspaceRoot, "node_modules")

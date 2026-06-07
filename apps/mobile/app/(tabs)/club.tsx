@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Share, Text,
   TextInput, TouchableOpacity, View,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import {
@@ -13,11 +14,13 @@ import { askLidyk } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import {
   type ClubPostDoc, type ClubCommentDoc, type StoryDoc, type Award, type UserStats,
+  createFirestoreId,
   subscribeToClubPosts, createClubPost, togglePostLike, deletePost,
   subscribeToComments, createComment, toggleCommentLike,
   subscribeToStories, createStory, viewStory, reactToStory, deleteStory,
   getUserStats, computeAwards, EMPTY_STATS,
 } from "../../lib/firestore";
+import { uploadClubImage, uploadStoryMedia } from "../../lib/storage";
 import {
   getMascotState,
   mascotQuickPrompts, mascotStates,
@@ -31,7 +34,7 @@ type ClubView = "main" | "lidyk" | "feed" | "awards";
 
 const AWARD_FILTER_LABELS: Record<string, string> = {
   all: "Всі", streak: "Серія", tests: "Тести", learning: "Навчання",
-  practice: "Практика", community: "Спільнота", graduation: "Після прав",
+  practice: "Практика", community: "Спільнота", games: "Ігри", graduation: "Випуск",
 };
 
 // Story tone colors (fallback if not in storyToneBg)
@@ -161,6 +164,13 @@ function StoryViewer({
           </View>
           {/* Content */}
           <View style={{ paddingHorizontal: 20, paddingBottom: 36 }}>
+            {story.mediaUrl && story.mediaType === "image" ? (
+              <Image
+                source={{ uri: story.mediaUrl }}
+                style={{ width: "100%", height: 260, borderRadius: radii.md, marginBottom: 18, backgroundColor: "rgba(255,255,255,0.16)" }}
+                resizeMode="cover"
+              />
+            ) : null}
             <Text style={{ fontSize: 24, fontWeight: "900", lineHeight: 34, letterSpacing: -0.5, color: "#fff" }}>
               {story.text}
             </Text>
@@ -196,6 +206,8 @@ function CreateStorySheet({
   const [text, setText] = useState("");
   const [tone, setTone] = useState<"red" | "green" | "yellow" | "dark">("red");
   const [loading, setLoading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [pickingImage, setPickingImage] = useState(false);
 
   const tones: { value: "red" | "green" | "yellow" | "dark"; label: string; color: string }[] = [
     { value: "red", label: "Новини", color: "#ff1e1e" },
@@ -204,14 +216,49 @@ function CreateStorySheet({
     { value: "dark", label: "Цікаве", color: "#374151" },
   ];
 
+  async function handlePickImage() {
+    if (pickingImage || loading) return;
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("Доступ потрібен", "Дозвольте доступ до фото в налаштуваннях.");
+      return;
+    }
+    setPickingImage(true);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.82,
+        allowsEditing: false,
+      });
+      if (!result.canceled && result.assets?.[0]) setSelectedImage(result.assets[0]);
+    } finally {
+      setPickingImage(false);
+    }
+  }
+
   async function handlePublish() {
     if (!text.trim()) return;
     setLoading(true);
     try {
+      const storyId = createFirestoreId("stories");
+      let uploaded: Awaited<ReturnType<typeof uploadStoryMedia>> | null = null;
+      if (selectedImage) {
+        uploaded = await uploadStoryMedia(storyId, selectedImage.uri);
+      }
       await createStory({
+        id: storyId,
         authorId, authorName, authorEmoji,
         text: text.trim(), tone,
         tags: [tones.find(t => t.value === tone)?.label ?? ""],
+        mediaUrl: uploaded?.downloadURL,
+        mediaPath: uploaded?.storagePath,
+        mediaType: uploaded ? "image" : undefined,
+        fileName: selectedImage?.fileName ?? (uploaded ? `story-${Date.now()}.jpg` : undefined),
+        fileSize: selectedImage?.fileSize ?? uploaded?.fileSize,
+        width: selectedImage?.width,
+        height: selectedImage?.height,
+        status: "published",
+        visibility: "school",
       });
       onClose();
     } catch (err) {
@@ -254,6 +301,28 @@ function CreateStorySheet({
             />
             <Text style={{ fontSize: 11, color: colors.textTertiary, textAlign: "right", marginTop: 4 }}>{text.length}/300</Text>
           </View>
+
+          {selectedImage ? (
+            <View style={{ marginBottom: 14, borderRadius: radii.sm, overflow: "hidden", borderWidth: 1, borderColor: colors.border }}>
+              <Image source={{ uri: selectedImage.uri }} style={{ width: "100%", height: 150 }} resizeMode="cover" />
+              <TouchableOpacity
+                onPress={() => setSelectedImage(null)}
+                style={{ position: "absolute", top: 8, right: 8, width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center" }}
+              >
+                <Text style={{ color: "#fff", fontSize: 16, fontWeight: "900" }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              onPress={handlePickImage}
+              disabled={pickingImage || loading}
+              style={{ marginBottom: 14, borderRadius: radii.sm, borderWidth: 1.5, borderColor: colors.border, paddingVertical: 12, alignItems: "center", backgroundColor: colors.bgCard }}
+            >
+              <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "800" }}>
+                {pickingImage ? "Відкриваємо галерею..." : "📷 Додати фото"}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             onPress={handlePublish} disabled={!text.trim() || loading}
@@ -528,6 +597,8 @@ function FeedView({ onBack }: { onBack: () => void }) {
   const [showCompose, setShowCompose] = useState(false);
   const [newPostText, setNewPostText] = useState("");
   const [publishing, setPublishing] = useState(false);
+  const [selectedPostImage, setSelectedPostImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [pickingPostImage, setPickingPostImage] = useState(false);
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
   const likedRef = useRef<Set<string>>(new Set());
   const [, forceUpdate] = useState(0);
@@ -543,15 +614,52 @@ function FeedView({ onBack }: { onBack: () => void }) {
   const authorName = user?.name ?? "Учень";
   const authorId = user?.id ?? "guest";
 
+  async function handlePickPostImage() {
+    if (pickingPostImage || publishing) return;
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("Доступ потрібен", "Дозвольте доступ до фото в налаштуваннях.");
+      return;
+    }
+    setPickingPostImage(true);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.82,
+        allowsEditing: false,
+      });
+      if (!result.canceled && result.assets?.[0]) setSelectedPostImage(result.assets[0]);
+    } finally {
+      setPickingPostImage(false);
+    }
+  }
+
   async function handlePublish() {
     if (!newPostText.trim() || publishing || !isAuth) return;
     setPublishing(true);
     try {
+      const postId = createFirestoreId("clubPosts");
+      let uploaded: Awaited<ReturnType<typeof uploadClubImage>> | null = null;
+      if (selectedPostImage) {
+        uploaded = await uploadClubImage(postId, selectedPostImage.uri);
+      }
       await createClubPost({
+        id: postId,
         authorId, authorName, authorEmoji: user?.avatarEmoji,
+        authorRole: user?.role ?? "student",
         text: newPostText.trim(),
+        mediaUrl: uploaded?.downloadURL,
+        mediaPath: uploaded?.storagePath,
+        mediaType: uploaded ? "image" : undefined,
+        fileName: selectedPostImage?.fileName ?? (uploaded ? `club-${Date.now()}.jpg` : undefined),
+        fileSize: selectedPostImage?.fileSize ?? uploaded?.fileSize,
+        width: selectedPostImage?.width,
+        height: selectedPostImage?.height,
+        status: "published",
+        visibility: "school",
       });
       setNewPostText("");
+      setSelectedPostImage(null);
       setShowCompose(false);
     } catch (err) {
       console.error("[ClubPost] publish failed:", err);
@@ -636,10 +744,30 @@ function FeedView({ onBack }: { onBack: () => void }) {
               value={newPostText} onChangeText={setNewPostText}
               placeholder="Поділись досвідом або порадою..." placeholderTextColor={colors.textTertiary}
             />
+            {selectedPostImage ? (
+              <View style={{ borderRadius: radii.sm, overflow: "hidden", borderWidth: 1, borderColor: colors.border }}>
+                <Image source={{ uri: selectedPostImage.uri }} style={{ width: "100%", height: 150 }} resizeMode="cover" />
+                <TouchableOpacity
+                  onPress={() => setSelectedPostImage(null)}
+                  style={{ position: "absolute", top: 8, right: 8, width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center" }}
+                >
+                  <Text style={{ color: "#fff", fontSize: 16, fontWeight: "900" }}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <Text style={{ fontSize: 11, color: colors.textTertiary }}>{newPostText.length}/500</Text>
               <View style={{ flexDirection: "row", gap: 8 }}>
-                <TouchableOpacity onPress={() => { setShowCompose(false); setNewPostText(""); }} style={{ paddingHorizontal: 14, paddingVertical: 10 }}>
+                <TouchableOpacity
+                  onPress={handlePickPostImage}
+                  disabled={pickingPostImage || publishing}
+                  style={{ paddingHorizontal: 12, paddingVertical: 10, borderRadius: radii.sm, backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border }}
+                >
+                  <Text style={{ color: colors.textSecondary, fontWeight: "800" }}>
+                    {pickingPostImage ? "..." : "📷"}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => { setShowCompose(false); setNewPostText(""); setSelectedPostImage(null); }} style={{ paddingHorizontal: 14, paddingVertical: 10 }}>
                   <Text style={{ color: colors.textTertiary, fontWeight: "700" }}>Скасувати</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -703,6 +831,14 @@ function FeedView({ onBack }: { onBack: () => void }) {
 
               <Text style={{ fontSize: 14, fontWeight: "600", color: colors.textPrimary, lineHeight: 22 }}>{post.text}</Text>
 
+              {post.mediaUrl && post.mediaType === "image" ? (
+                <Image
+                  source={{ uri: post.mediaUrl }}
+                  style={{ width: "100%", height: 190, borderRadius: radii.sm, marginTop: 12, backgroundColor: colors.bgElevated }}
+                  resizeMode="cover"
+                />
+              ) : null}
+
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
                 <TouchableOpacity
                   style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: liked ? colors.redSoft : colors.bgElevated }}
@@ -736,32 +872,61 @@ function AwardsView({ awards, onBack }: { awards: Award[]; onBack: () => void })
   const filtered = awardFilter === "all" ? awards : awards.filter(a => a.group === awardFilter);
   const earned = filtered.filter(a => a.earned);
   const locked = filtered.filter(a => !a.earned);
+  const earnedAll = awards.filter(a => a.earned).length;
 
   return (
     <View style={{ flex: 1 }}>
-      <SubHeader title="Нагороди" subtitle={`${earned.length} отримано · ${locked.length} в процесі`} onBack={onBack} />
-      <ScrollView contentContainerStyle={{ padding: spacing.md, paddingBottom: 110, gap: spacing.md }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={{ flexDirection: "row", gap: 8, paddingRight: 8 }}>
-            {Object.keys(AWARD_FILTER_LABELS).map(key => (
-              <TouchableOpacity key={key} onPress={() => setAwardFilter(key)}
-                style={{ borderRadius: 999, borderWidth: 1.5, paddingHorizontal: 16, paddingVertical: 9, borderColor: awardFilter === key ? colors.red : colors.border, backgroundColor: awardFilter === key ? colors.redSoft : colors.bgCard }}>
-                <Text style={{ fontSize: 13, fontWeight: "700", color: awardFilter === key ? colors.red : colors.textSecondary }}>{AWARD_FILTER_LABELS[key]}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </ScrollView>
+      <SubHeader title="Нагороди" subtitle={`${earnedAll} з ${awards.length} отримано`} onBack={onBack} />
 
+      {/* Filter chips — outside ScrollView to avoid nested scroll issues */}
+      <View style={{ borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.bgCard }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ flexDirection: "row", gap: 8, paddingHorizontal: spacing.md, paddingVertical: 10 }}
+        >
+          {Object.keys(AWARD_FILTER_LABELS).map(key => (
+            <TouchableOpacity
+              key={key}
+              onPress={() => setAwardFilter(key)}
+              style={{
+                borderRadius: 999, borderWidth: 1.5, paddingHorizontal: 14, paddingVertical: 8,
+                borderColor: awardFilter === key ? colors.red : colors.border,
+                backgroundColor: awardFilter === key ? colors.redSoft : colors.bg,
+              }}
+            >
+              <Text style={{ fontSize: 13, fontWeight: "700", color: awardFilter === key ? colors.red : colors.textSecondary }}>
+                {AWARD_FILTER_LABELS[key]}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Scrollable awards list with proper bottom padding for tab bar */}
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: spacing.md, paddingBottom: 120, gap: spacing.md }}
+        showsVerticalScrollIndicator={false}
+      >
         {earned.length > 0 ? (
-          <View>
-            <Text style={{ fontSize: 11, fontWeight: "800", color: colors.textTertiary, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 10 }}>Отримані ({earned.length})</Text>
+          <View style={{ gap: 10 }}>
+            <Text style={{ fontSize: 11, fontWeight: "800", color: colors.success, letterSpacing: 0.8, textTransform: "uppercase" }}>
+              ✓ Отримано ({earned.length})
+            </Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
               {earned.map(award => (
-                <View key={award.id} style={{ width: "47%", borderRadius: radii.md, padding: 14, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.success + "44" }}>
+                <View key={award.id} style={{ width: "47%", borderRadius: radii.md, padding: 14, backgroundColor: colors.bgCard, borderWidth: 1.5, borderColor: colors.success + "55" }}>
                   <Text style={{ fontSize: 28 }}>{award.icon}</Text>
                   <Text style={{ marginTop: 8, fontSize: 13, fontWeight: "900", color: colors.textPrimary }}>{award.title}</Text>
                   <Text style={{ marginTop: 4, fontSize: 11, fontWeight: "600", color: colors.textSecondary, lineHeight: 16 }}>{award.description}</Text>
-                  {award.earnedAt ? <Text style={{ marginTop: 6, fontSize: 10, fontWeight: "700", color: colors.success }}>✓ {award.earnedAt}</Text> : null}
+                  {award.earnedAt ? (
+                    <Text style={{ marginTop: 6, fontSize: 10, fontWeight: "700", color: colors.success }}>✓ {award.earnedAt}</Text>
+                  ) : (
+                    <View style={{ marginTop: 8, borderRadius: 6, backgroundColor: colors.success + "18", paddingHorizontal: 8, paddingVertical: 3, alignSelf: "flex-start" }}>
+                      <Text style={{ fontSize: 10, fontWeight: "800", color: colors.success }}>Отримано</Text>
+                    </View>
+                  )}
                 </View>
               ))}
             </View>
@@ -769,12 +934,14 @@ function AwardsView({ awards, onBack }: { awards: Award[]; onBack: () => void })
         ) : null}
 
         {locked.length > 0 ? (
-          <View>
-            <Text style={{ fontSize: 11, fontWeight: "800", color: colors.textTertiary, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 10, marginTop: earned.length > 0 ? 6 : 0 }}>В процесі ({locked.length})</Text>
+          <View style={{ gap: 10, marginTop: earned.length > 0 ? 6 : 0 }}>
+            <Text style={{ fontSize: 11, fontWeight: "800", color: colors.textTertiary, letterSpacing: 0.8, textTransform: "uppercase" }}>
+              В процесі ({locked.length})
+            </Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
               {locked.map(award => (
                 <View key={award.id} style={{ width: "47%", borderRadius: radii.md, padding: 14, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border }}>
-                  <Text style={{ fontSize: 28, opacity: 0.35 }}>{award.icon}</Text>
+                  <Text style={{ fontSize: 28, opacity: 0.3 }}>{award.icon}</Text>
                   <Text style={{ marginTop: 8, fontSize: 13, fontWeight: "900", color: colors.textSecondary }}>{award.title}</Text>
                   <Text style={{ marginTop: 4, fontSize: 11, fontWeight: "600", color: colors.textTertiary, lineHeight: 16 }}>{award.description}</Text>
                   {award.progress !== undefined && award.maxProgress !== undefined ? (
@@ -790,10 +957,12 @@ function AwardsView({ awards, onBack }: { awards: Award[]; onBack: () => void })
         ) : null}
 
         {filtered.length === 0 ? (
-          <View style={{ alignItems: "center", paddingVertical: 32, gap: 12 }}>
+          <View style={{ alignItems: "center", paddingVertical: 40, gap: 12 }}>
             <Image source={MASCOT} style={{ width: 80, height: 80, opacity: 0.4 }} resizeMode="contain" />
-            <Text style={{ fontSize: 16, fontWeight: "800", color: colors.textSecondary }}>Тут ще пусто</Text>
-            <Text style={{ fontSize: 13, color: colors.textTertiary, textAlign: "center", lineHeight: 20 }}>Пройди перший тест — і нагороди почнуть з'являтися</Text>
+            <Text style={{ fontSize: 16, fontWeight: "800", color: colors.textSecondary }}>Нічого в цій категорії</Text>
+            <Text style={{ fontSize: 13, color: colors.textTertiary, textAlign: "center", lineHeight: 20 }}>
+              Продовжуй навчання — нагороди з'являться
+            </Text>
           </View>
         ) : null}
       </ScrollView>

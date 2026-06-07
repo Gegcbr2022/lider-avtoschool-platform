@@ -137,6 +137,8 @@ export async function notifyChat(params: {
   userId: string;
   userName: string;
   text: string;
+  mediaUrl?: string;
+  mediaType?: "image" | "video";
   conversationType?: string;
   userPhone?: string;
   userEmail?: string;
