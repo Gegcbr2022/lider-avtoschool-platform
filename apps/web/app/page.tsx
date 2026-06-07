@@ -355,17 +355,20 @@ export default async function HomePage({
               </div>
               <div className="space-y-4">
                 <h1 className="max-w-3xl text-5xl font-black leading-[1.0] tracking-[-0.03em] text-lider-graphite sm:text-6xl lg:text-7xl">
-                  {copy.heroTitle.split(" ").map((word, i) =>
-                    i === 0 ? (
-                      <span key={i} className="relative inline-block">
-                        {word}
-                        <span className="absolute -bottom-1 left-0 right-0 h-[3px] rounded-full bg-lider-red" style={{ opacity: 0.7 }} />
-                        {" "}
-                      </span>
-                    ) : (
-                      <span key={i}>{word} </span>
-                    )
-                  )}
+                  {(() => {
+                    const words = copy.heroTitle.split(" ");
+                    const first = words[0];
+                    const rest = words.slice(1).join(" ");
+                    return (
+                      <>
+                        <span className="relative inline-block">
+                          {first}
+                          <span className="absolute -bottom-1 left-0 right-0 h-[3px] rounded-full bg-lider-red" style={{ opacity: 0.7 }} />
+                        </span>
+                        {rest ? ` ${rest}` : ""}
+                      </>
+                    );
+                  })()}
                 </h1>
                 <p className="max-w-2xl text-[0.98rem] font-semibold leading-7 text-lider-muted sm:text-lg">
                   {copy.heroText}

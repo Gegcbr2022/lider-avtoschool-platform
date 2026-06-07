@@ -13,13 +13,29 @@ export async function uploadChatImage(
   conversationId: string,
   uri: string
 ): Promise<UploadResult> {
-  const response = await fetch(uri);
-  const blob = await response.blob();
+  // On Android, content:// URIs need special handling.
+  // fetch() on a content:// URI works in Expo/React Native.
+  let blob: Blob;
+  try {
+    const response = await fetch(uri);
+    blob = await response.blob();
+  } catch (fetchErr) {
+    console.error("[uploadChatImage] fetch/blob failed:", fetchErr, "uri:", uri);
+    throw new Error(`Не вдалося прочитати файл: ${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}`);
+  }
+
   const contentType = blob.type && blob.type.length > 0 ? blob.type : "image/jpeg";
   const ext = contentType.includes("png") ? "png" : "jpg";
   const storagePath = `conversations/${conversationId}/attachments/${Date.now()}.${ext}`;
   const fileRef = ref(storage, storagePath);
-  await uploadBytes(fileRef, blob, { contentType });
+
+  try {
+    await uploadBytes(fileRef, blob, { contentType });
+  } catch (uploadErr) {
+    console.error("[uploadChatImage] uploadBytes failed:", uploadErr, "path:", storagePath, "size:", blob.size, "type:", contentType);
+    throw new Error(`Не вдалося завантажити фото: ${uploadErr instanceof Error ? uploadErr.message : String(uploadErr)}`);
+  }
+
   const downloadURL = await getDownloadURL(fileRef);
   return { storagePath, downloadURL };
 }

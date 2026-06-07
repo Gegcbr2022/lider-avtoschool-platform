@@ -291,6 +291,25 @@ function SecuritySheet({ visible, userEmail, onForgotPassword, onSignOut, onClos
   onForgotPassword: () => void; onSignOut: () => void; onClose: () => void;
 }) {
   const { colors } = useTheme();
+  const [twoFaEnabled] = useState(false);
+
+  function handle2FAPress() {
+    Alert.alert(
+      "Двофакторна автентифікація",
+      "Для підключення 2FA вам буде надіслано SMS-код на прив'язаний номер телефону.\n\nЦя функція знаходиться в розробці. Очікуйте оновлення.",
+      [
+        { text: "Зрозуміло", style: "default" },
+        {
+          text: "Написати підтримці",
+          onPress: () => {
+            Linking.openURL("mailto:support@lider-avtoschool.ua?subject=Запит%202FA").catch(() => {});
+            onClose();
+          }
+        },
+      ]
+    );
+  }
+
   return (
     <BottomSheet visible={visible} title="Безпека та вхід" onClose={onClose}>
       <View style={{ gap: 12 }}>
@@ -307,6 +326,33 @@ function SecuritySheet({ visible, userEmail, onForgotPassword, onSignOut, onClos
             <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
           </Pressable>
         ) : null}
+
+        {/* 2FA block */}
+        <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, overflow: "hidden" }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 16 }}>
+            <Text style={{ fontSize: 24 }}>🛡️</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: "800", color: colors.textPrimary }}>Двофакторна автентифікація</Text>
+              <Text style={{ fontSize: 13, color: twoFaEnabled ? colors.success : colors.textSecondary, marginTop: 2, fontWeight: "700" }}>
+                {twoFaEnabled ? "✓ Увімкнено" : "Вимкнено"}
+              </Text>
+            </View>
+          </View>
+          <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingHorizontal: 16, paddingVertical: 12, backgroundColor: colors.bgElevated }}>
+            <Text style={{ fontSize: 12, color: colors.textSecondary, lineHeight: 18, marginBottom: 12 }}>
+              Захистіть акаунт додатковим кодом при вході. SMS-підтвердження на ваш номер телефону.
+            </Text>
+            <Pressable
+              onPress={handle2FAPress}
+              style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: colors.red, borderRadius: radii.sm, paddingVertical: 12 }}
+            >
+              <Text style={{ color: "#fff", fontWeight: "800", fontSize: 14 }}>
+                {twoFaEnabled ? "Вимкнути 2FA" : "Підключити 2FA"}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+
         <Pressable
           onPress={() => { onSignOut(); onClose(); }}
           style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.redSoft, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.red + "44" }}

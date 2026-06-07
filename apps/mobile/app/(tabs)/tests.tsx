@@ -26,11 +26,25 @@ const MASCOT = require("../../assets/mascot.png") as number;
 
 type QuizState = "idle" | "running" | "done";
 
+// ─── PDR categories for the menu ─────────────────────────────────────────────
+const PDR_CATEGORIES = [
+  { icon: "🎯", name: "Знаки", label: "Дорожні знаки", desc: "Попереджувальні, заборонні, інформаційні", color: "#e63946" },
+  { icon: "🛣️", name: "Швидкість", label: "Швидкість", desc: "Обмеження та контроль швидкості", color: "#2a9d8f" },
+  { icon: "🚦", name: "Перехрестя", label: "Перехрестя", desc: "Регульовані та нерегульовані", color: "#f4a261" },
+  { icon: "🛑", name: "Зупинка", label: "Стоянка і зупинка", desc: "Де можна і де заборонено", color: "#e76f51" },
+  { icon: "📏", name: "Розмітка", label: "Розмітка", desc: "Горизонтальна та вертикальна", color: "#457b9d" },
+  { icon: "🛡️", name: "Безпека", label: "Безпека руху", desc: "Дистанція, обгін, маневри", color: "#6a4c93" },
+  { icon: "🏙️", name: "Місто", label: "Міський рух", desc: "Особливості руху у місті", color: "#1d3557" },
+];
+
+// ─── Mini-games definition ────────────────────────────────────────────────────
 const MINI_GAMES = [
-  { icon: "🚦", name: "Перехрестя", desc: "Сигнали та пріоритет" },
-  { icon: "🅿️", name: "Зупинка",    desc: "Правила стоянки" },
-  { icon: "⚠️", name: "Знаки",       desc: "Впізнавання знаків" },
-  { icon: "📍", name: "Розмітка",    desc: "Значення розмітки" },
+  { icon: "🚦", name: "Перехрестя", label: "Хто їде першим?", desc: "Відпрацюй пріоритет на перехрестях", difficulty: "Середній", duration: "3–5 хв", benefit: "Найчастіша помилка на іспиті" },
+  { icon: "⚠️", name: "Знаки", label: "Впізнай знак", desc: "Миттєве розпізнавання знаків", difficulty: "Легкий", duration: "2–4 хв", benefit: "Тренує реакцію та пам'ять" },
+  { icon: "🅿️", name: "Зупинка", label: "Можна зупинитись?", desc: "Правила стоянки та зупинки", difficulty: "Середній", duration: "3–5 хв", benefit: "Уникни штрафів у місті" },
+  { icon: "📏", name: "Розмітка", label: "Читай дорогу", desc: "Значення ліній та позначень", difficulty: "Легкий", duration: "2–3 хв", benefit: "База для безпечної їзди" },
+  { icon: "🛡️", name: "Безпека", label: "Правило правої руки", desc: "Перешкода справа та поступки", difficulty: "Важкий", duration: "4–6 хв", benefit: "Топ-3 питань іспиту" },
+  { icon: "🏎️", name: "Швидкість", label: "Вибери ліміт", desc: "Яка швидкість дозволена?", difficulty: "Легкий", duration: "2–4 хв", benefit: "Завжди на іспиті" },
 ];
 
 // ─── Lidyk Explanation Modal ──────────────────────────────────────────────────
@@ -340,6 +354,8 @@ function ResultScreen({ correct, total, onRestart, onBack }: {
 
 // ─── Main Tab ─────────────────────────────────────────────────────────────────
 
+type SubView = "menu" | "categories" | "minigames";
+
 export default function TestsTab() {
   const { colors } = useTheme();
   const { user, mode } = useAuth();
@@ -347,6 +363,7 @@ export default function TestsTab() {
   const [questions, setQuestions] = useState<PDRQuestion[]>([]);
   const [result, setResult] = useState<{ correct: number; total: number } | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [subView, setSubView] = useState<SubView>("menu");
 
   const startExam = useCallback(() => {
     const qs = getRandomQuestions(20);
@@ -362,7 +379,6 @@ export default function TestsTab() {
 
   const handleFinish = useCallback((correct: number, total: number) => {
     setResult({ correct, total }); setQuizState("done");
-    // Persist gamification stats for signed-in (non-guest) users. Fire-and-forget.
     if (mode === "authenticated" && user && !user.isGuest) {
       void recordTestCompletion(user.id, { correct, total }).catch(() => {});
     }
@@ -376,78 +392,196 @@ export default function TestsTab() {
     return <QuizScreen questions={questions} onFinish={handleFinish} onExit={() => setQuizState("idle")} />;
   }
   if (quizState === "done" && result) {
-    return <ResultScreen correct={result.correct} total={result.total} onRestart={handleRestart} onBack={() => setQuizState("idle")} />;
+    return <ResultScreen correct={result.correct} total={result.total} onRestart={handleRestart} onBack={() => { setQuizState("idle"); setSubView("menu"); }} />;
   }
 
+  // ─── Category browser ───────────────────────────────────────────────────────
+  if (subView === "categories") {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.bgCard }}>
+          <Pressable onPress={() => setSubView("menu")} hitSlop={12} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ fontSize: 20, color: colors.textPrimary, fontWeight: "700" }}>‹</Text>
+          </Pressable>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 20, fontWeight: "900", color: colors.textPrimary }}>Тренування по темах</Text>
+            <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 1 }}>10 питань на тему</Text>
+          </View>
+        </View>
+        <ScrollView contentContainerStyle={{ padding: spacing.md, gap: 10, paddingBottom: 100 }}>
+          {PDR_CATEGORIES.map((cat) => (
+            <Pressable
+              key={cat.name} onPress={() => startCategoryTest(cat.name)}
+              style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.border }}
+            >
+              <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: cat.color + "18", alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ fontSize: 24 }}>{cat.icon}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 16, fontWeight: "800", color: colors.textPrimary }}>{cat.label}</Text>
+                <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>{cat.desc}</Text>
+              </View>
+              <View style={{ alignItems: "flex-end", gap: 4 }}>
+                <Text style={{ fontSize: 10, fontWeight: "800", color: cat.color, textTransform: "uppercase", letterSpacing: 0.5 }}>10 питань</Text>
+                <Text style={{ fontSize: 18, color: colors.textTertiary }}>›</Text>
+              </View>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // ─── Mini-games browser ─────────────────────────────────────────────────────
+  if (subView === "minigames") {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.bgCard }}>
+          <Pressable onPress={() => setSubView("menu")} hitSlop={12} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ fontSize: 20, color: colors.textPrimary, fontWeight: "700" }}>‹</Text>
+          </Pressable>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 20, fontWeight: "900", color: colors.textPrimary }}>Міні-ігри</Text>
+            <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 1 }}>Цільові тренування по слабких темах</Text>
+          </View>
+        </View>
+        <ScrollView contentContainerStyle={{ padding: spacing.md, gap: 12, paddingBottom: 100 }}>
+          <View style={{ backgroundColor: colors.bgElevated, borderRadius: radii.md, padding: 14, borderWidth: 1, borderColor: colors.border, flexDirection: "row", gap: 10, alignItems: "center" }}>
+            <Text style={{ fontSize: 22 }}>💡</Text>
+            <Text style={{ flex: 1, fontSize: 13, fontWeight: "600", color: colors.textSecondary, lineHeight: 19 }}>
+              Міні-ігри — короткі тренування на конкретну тему. Ідеально щоб підтягнути слабкі місця.
+            </Text>
+          </View>
+          {MINI_GAMES.map((g) => {
+            const diffColor = g.difficulty === "Легкий" ? colors.success : g.difficulty === "Важкий" ? colors.red : colors.warning;
+            return (
+              <Pressable
+                key={g.name} onPress={() => startCategoryTest(g.name)}
+                style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, overflow: "hidden" }}
+              >
+                <View style={{ padding: 16 }}>
+                  <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+                    <View style={{ width: 52, height: 52, borderRadius: 14, backgroundColor: colors.bgElevated, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border }}>
+                      <Text style={{ fontSize: 26 }}>{g.icon}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 16, fontWeight: "900", color: colors.textPrimary }}>{g.label}</Text>
+                      <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 3, lineHeight: 18 }}>{g.desc}</Text>
+                      <View style={{ flexDirection: "row", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+                        <View style={{ borderRadius: 999, backgroundColor: diffColor + "18", paddingHorizontal: 10, paddingVertical: 4 }}>
+                          <Text style={{ fontSize: 11, fontWeight: "800", color: diffColor }}>{g.difficulty}</Text>
+                        </View>
+                        <View style={{ borderRadius: 999, backgroundColor: colors.bgElevated, paddingHorizontal: 10, paddingVertical: 4 }}>
+                          <Text style={{ fontSize: 11, fontWeight: "700", color: colors.textSecondary }}>⏱ {g.duration}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.bgElevated }}>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: colors.red }}>✨ {g.benefit}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: "800", color: colors.red }}>Почати →</Text>
+                </View>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // ─── Main menu ──────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
       <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: 100 }}>
-        <View>
+        <View style={{ paddingTop: 4 }}>
           <Text style={{ color: colors.textPrimary, fontSize: 28, fontWeight: "900", letterSpacing: -0.5 }}>ПДР Тренажер</Text>
           <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 4, lineHeight: 20 }}>
-            Екзаменаційний режим: 20 питань з поясненнями.
+            Готуйся до іспиту з поясненнями від Лідика
           </Text>
         </View>
 
+        {/* Exam mode — hero button */}
         <Pressable
           onPress={startExam}
-          style={{ backgroundColor: colors.red, borderRadius: radii.md, padding: spacing.lg, shadowColor: colors.red, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 10 }}
+          style={{ backgroundColor: colors.red, borderRadius: radii.lg, padding: spacing.lg, shadowColor: colors.red, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 10 }}
         >
-          <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, fontWeight: "800", textTransform: "uppercase", letterSpacing: 1 }}>РЕЖИМ</Text>
-          <Text style={{ color: "#fff", fontSize: 26, fontWeight: "900", marginTop: 6, letterSpacing: -0.5 }}>Екзамен: 20 питань</Text>
-          <Text style={{ color: "rgba(255,255,255,0.78)", fontSize: 14, marginTop: 6, lineHeight: 20 }}>
-            {PDR_QUESTIONS.length} питань у банку · на кожному питанні є Лідик
+          <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 11, fontWeight: "900", textTransform: "uppercase", letterSpacing: 1.2 }}>🏁 ІСПИТ ЯК У МВС</Text>
+          <Text style={{ color: "#fff", fontSize: 24, fontWeight: "900", marginTop: 6, letterSpacing: -0.5 }}>Екзаменаційний тест</Text>
+          <Text style={{ color: "rgba(255,255,255,0.75)", fontSize: 13, marginTop: 4, lineHeight: 19 }}>
+            20 питань · 75%+ для складання · пояснення Лідика
           </Text>
-          <View style={{ marginTop: 16, backgroundColor: "rgba(255,255,255,0.25)", borderRadius: radii.md, paddingVertical: 12, alignItems: "center" }}>
-            <Text style={{ color: "#fff", fontWeight: "800", fontSize: 16 }}>🚀 Почати іспит</Text>
+          <View style={{ marginTop: 16, backgroundColor: "rgba(255,255,255,0.22)", borderRadius: radii.md, paddingVertical: 13, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}>
+            <Text style={{ color: "#fff", fontWeight: "900", fontSize: 16 }}>🚀 Почати іспит</Text>
           </View>
         </Pressable>
 
-        <View>
-          <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "800", marginBottom: 12 }}>За категоріями</Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {["Знаки", "Перехрестя", "Безпека", "Швидкість", "Зупинка", "Розмітка", "Стоянка"].map((cat) => (
-              <Pressable
-                key={cat} onPress={() => startCategoryTest(cat)}
-                style={{ borderRadius: radii.full, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: colors.bgElevated, borderWidth: 1.5, borderColor: colors.border }}
-              >
-                <Text style={{ color: colors.textPrimary, fontWeight: "700", fontSize: 14 }}>{cat}</Text>
-              </Pressable>
-            ))}
+        {/* Швидкий старт */}
+        <Pressable
+          onPress={() => startCategoryTest("Знаки")}
+          style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.border, ...shadows.card }}
+        >
+          <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ fontSize: 24 }}>⚡</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 15, fontWeight: "800", color: colors.textPrimary }}>Швидкий старт</Text>
+            <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>10 питань · знаки пріоритету</Text>
+          </View>
+          <Text style={{ fontSize: 18, color: colors.textTertiary }}>›</Text>
+        </Pressable>
+
+        {/* Category browser */}
+        <Pressable
+          onPress={() => setSubView("categories")}
+          style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.border, ...shadows.card }}
+        >
+          <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: "#457b9d" + "18", alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ fontSize: 24 }}>📚</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 15, fontWeight: "800", color: colors.textPrimary }}>Тренування по темах</Text>
+            <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
+              {PDR_CATEGORIES.length} тем · знаки, перехрестя, швидкість...
+            </Text>
+          </View>
+          <Text style={{ fontSize: 18, color: colors.textTertiary }}>›</Text>
+        </Pressable>
+
+        {/* Mini-games */}
+        <Pressable
+          onPress={() => setSubView("minigames")}
+          style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.border, ...shadows.card }}
+        >
+          <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: "#f4a261" + "18", alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ fontSize: 24 }}>🎮</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 15, fontWeight: "800", color: colors.textPrimary }}>Міні-ігри</Text>
+            <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
+              {MINI_GAMES.length} ігор · 2–6 хв кожна · цільові теми
+            </Text>
+          </View>
+          <Text style={{ fontSize: 18, color: colors.textTertiary }}>›</Text>
+        </Pressable>
+
+        {/* Stats */}
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <View style={{ flex: 1, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.border, alignItems: "center", gap: 4 }}>
+            <Text style={{ color: colors.red, fontSize: 26, fontWeight: "900" }}>{PDR_QUESTIONS.length}</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: "700", textAlign: "center" }}>Питань у банку</Text>
+          </View>
+          <View style={{ flex: 1, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.border, alignItems: "center", gap: 4 }}>
+            <Text style={{ color: result ? (result.correct / result.total >= 0.75 ? colors.success : colors.warning) : colors.textTertiary, fontSize: 26, fontWeight: "900" }}>
+              {result ? `${Math.round((result.correct / result.total) * 100)}%` : "—"}
+            </Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: "700", textAlign: "center" }}>Останній тест</Text>
+          </View>
+          <View style={{ flex: 1, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.border, alignItems: "center", gap: 4 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 26, fontWeight: "900" }}>75%</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: "700", textAlign: "center" }}>Мінімум МВС</Text>
           </View>
         </View>
-
-        <Card>
-          <Label>Міні-ігри</Label>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
-            {MINI_GAMES.map((g) => (
-              <Pressable
-                key={g.name} onPress={() => startCategoryTest(g.name)}
-                style={{ width: "47%", backgroundColor: colors.bgElevated, borderRadius: radii.md, padding: 14, borderWidth: 1, borderColor: colors.border }}
-              >
-                <Text style={{ fontSize: 24 }}>{g.icon}</Text>
-                <Text style={{ color: colors.textPrimary, fontWeight: "800", fontSize: 14, marginTop: 6 }}>{g.name}</Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>{g.desc}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </Card>
-
-        <Card tone="dark">
-          <Label>Статистика сесії</Label>
-          <View style={{ flexDirection: "row", gap: 12, marginTop: 10 }}>
-            <View style={{ flex: 1, alignItems: "center", padding: 14, backgroundColor: colors.bgCard, borderRadius: radii.sm }}>
-              <Text style={{ color: colors.red, fontSize: 24, fontWeight: "900" }}>{PDR_QUESTIONS.length}</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2, textAlign: "center" }}>Питань у банку</Text>
-            </View>
-            <View style={{ flex: 1, alignItems: "center", padding: 14, backgroundColor: colors.bgCard, borderRadius: radii.sm }}>
-              <Text style={{ color: result ? (result.correct / result.total >= 0.75 ? colors.success : colors.warning) : colors.textTertiary, fontSize: 24, fontWeight: "900" }}>
-                {result ? `${Math.round((result.correct / result.total) * 100)}%` : "—"}
-              </Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2, textAlign: "center" }}>Останній результат</Text>
-            </View>
-          </View>
-        </Card>
       </ScrollView>
     </SafeAreaView>
   );

@@ -20,7 +20,7 @@ import {
 } from "../../lib/firestore";
 import {
   getMascotState,
-  mascotQuickPrompts, mascotStates, roadTips,
+  mascotQuickPrompts, mascotStates,
   storyToneBg, todayChallenge,
 } from "../../lib/mobile-data";
 import { radii, shadows, spacing, useTheme } from "../../lib/theme";
@@ -214,8 +214,10 @@ function CreateStorySheet({
         tags: [tones.find(t => t.value === tone)?.label ?? ""],
       });
       onClose();
-    } catch {
-      Alert.alert("Помилка", "Не вдалось опублікувати. Спробуй ще раз.");
+    } catch (err) {
+      console.error("[CreateStory] failed:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      Alert.alert("Помилка", `Не вдалось опублікувати сторі.\n${__DEV__ ? msg : "Перевір з'єднання і спробуй ще раз."}`);
     } finally {
       setLoading(false);
     }
@@ -551,8 +553,10 @@ function FeedView({ onBack }: { onBack: () => void }) {
       });
       setNewPostText("");
       setShowCompose(false);
-    } catch {
-      Alert.alert("Помилка", "Не вдалось опублікувати пост. Спробуй ще раз.");
+    } catch (err) {
+      console.error("[ClubPost] publish failed:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      Alert.alert("Помилка", `Не вдалось опублікувати пост.\n${__DEV__ ? msg : "Перевір з'єднання і спробуй ще раз."}`);
     } finally {
       setPublishing(false);
     }
@@ -807,7 +811,6 @@ export default function ClubTab() {
   const [activeStoryIdx, setActiveStoryIdx] = useState<number | null>(null);
   const [showCreateStory, setShowCreateStory] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
-  const [tipIndex] = useState(Math.floor(Date.now() / 86_400_000) % roadTips.length);
   const [stats, setStats] = useState<UserStats>(EMPTY_STATS);
 
   // Only fully authenticated (non-anonymous) users can post stories / see awards
@@ -1039,15 +1042,6 @@ export default function ClubTab() {
               </View>
             </Pressable>
           ) : null}
-
-          {/* Tip of the day */}
-          <View style={{ backgroundColor: colors.bgElevated, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, padding: 16, gap: 10 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Text style={{ fontSize: 18 }}>💡</Text>
-              <Label>Підказка дня</Label>
-            </View>
-            <Text style={{ fontSize: 14, fontWeight: "700", color: colors.textPrimary, lineHeight: 22 }}>{roadTips[tipIndex]}</Text>
-          </View>
 
           {/* Referral */}
           <Pressable onPress={handleReferral}>

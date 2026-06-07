@@ -60,22 +60,35 @@ function ScalePressable({
   );
 }
 
-// ─── Daily tip (static, changes once/day) ─────────────────────────────────────
+// ─── Daily tip (manually refreshable, changes once/day by default) ─────────────
 const TIPS = [
   "Повтори знаки пріоритету та правило перешкоди справа.",
   "Відрегулюй дзеркала перед кожним заняттям.",
   "Знаки — база іспиту ПДР. Починай з неї.",
   "3 короткі сесії тестів кращі за одну довгу.",
   "Стоп-лінія: зупиняйся ПЕРЕД нею.",
+  "Перед поворотом — сигнал, дзеркала, сліпа зона.",
+  "Швидкість у місті: 50 км/год, якщо не вказано інше.",
+  "На пішохідному переході — поступись пішоходу завжди.",
+  "Дистанція — мінімум 2 секунди до авто попереду.",
+  "Паркуйся лише там, де не заважаєш іншим і знакам.",
 ];
 
 function DailyTip({ onPress }: { onPress: () => void }) {
   const { colors } = useTheme();
-  const tip = TIPS[Math.floor(Date.now() / 86_400_000) % TIPS.length];
+  const defaultIdx = Math.floor(Date.now() / 86_400_000) % TIPS.length;
+  const [tipIdx, setTipIdx] = useState(defaultIdx);
+  const [refreshing, setRefreshing] = useState(false);
+
+  function handleRefresh() {
+    setRefreshing(true);
+    const next = (tipIdx + 1) % TIPS.length;
+    setTipIdx(next);
+    setTimeout(() => setRefreshing(false), 300);
+  }
 
   return (
-    <ScalePressable
-      onPress={onPress}
+    <View
       style={{
         backgroundColor: colors.bgCard,
         borderRadius: radii.lg,
@@ -85,41 +98,55 @@ function DailyTip({ onPress }: { onPress: () => void }) {
         ...shadows.card,
       }}
     >
-      <View
+      <ScalePressable onPress={onPress}>
+        <View style={{ padding: 20, paddingBottom: 14, flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+          <Text style={{ fontSize: 24, marginTop: 2 }}>💡</Text>
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                fontSize: 10,
+                fontWeight: "900",
+                color: colors.red,
+                letterSpacing: 1.2,
+                textTransform: "uppercase",
+                marginBottom: 6,
+              }}
+            >
+              Порада дня
+            </Text>
+            <Text
+              style={{
+                fontSize: 15,
+                color: colors.textPrimary,
+                lineHeight: 23,
+                fontWeight: "700",
+              }}
+            >
+              {TIPS[tipIdx]}
+            </Text>
+          </View>
+        </View>
+      </ScalePressable>
+      {/* Refresh strip */}
+      <Pressable
+        onPress={handleRefresh}
         style={{
-          padding: 20,
           flexDirection: "row",
           alignItems: "center",
-          gap: 16,
+          justifyContent: "center",
+          gap: 6,
+          paddingVertical: 10,
+          borderTopWidth: 1,
+          borderTopColor: colors.border,
+          backgroundColor: colors.bgElevated,
+          opacity: refreshing ? 0.5 : 1,
         }}
       >
-        <View style={{ flex: 1 }}>
-          <Text
-            style={{
-              fontSize: 10,
-              fontWeight: "900",
-              color: colors.textSecondary,
-              letterSpacing: 1.5,
-              textTransform: "uppercase",
-              marginBottom: 6,
-            }}
-          >
-            Інсайт дня
-          </Text>
-          <Text
-            style={{
-              fontSize: 14,
-              color: colors.textPrimary,
-              lineHeight: 22,
-              fontWeight: "600",
-            }}
-          >
-            {tip}
-          </Text>
-        </View>
-        <Text style={{ fontSize: 18, color: colors.textTertiary }}>›</Text>
-      </View>
-    </ScalePressable>
+        <Text style={{ fontSize: 13, color: colors.red, fontWeight: "800" }}>
+          {refreshing ? "⏳" : "🔄"} Інша порада
+        </Text>
+      </Pressable>
+    </View>
   );
 }
 

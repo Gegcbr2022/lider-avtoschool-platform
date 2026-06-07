@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
 import { askLidyk } from "../../lib/api";
 import { useTheme, radii, spacing } from "../../lib/theme";
 import { useNetworkStatus } from "../../lib/useNetwork";
@@ -132,8 +133,18 @@ export default function AssistantTab() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
       >
-        {/* Header with mascot state */}
+        {/* Header with back arrow + mascot state */}
         <View style={s.header}>
+          <Pressable
+            hitSlop={14}
+            onPress={() => {
+              if (router.canGoBack()) router.back();
+              else router.replace("/(tabs)" as import("expo-router").Href);
+            }}
+            style={s.backBtn}
+          >
+            <Text style={s.backBtnText}>‹</Text>
+          </Pressable>
           <View style={s.mascotBadge}>
             <Text style={s.mascotEmoji}>{MASCOT_EMOJI[mascotState]}</Text>
           </View>
@@ -209,12 +220,12 @@ export default function AssistantTab() {
           ) : null}
         </ScrollView>
 
-        {/* Quick prompts */}
+        {/* Quick prompts — ближче до поля вводу */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={s.prompts}
-          style={{ borderTopWidth: 1, borderTopColor: colors.border }}
+          style={s.promptsStrip}
         >
           {QUICK_PROMPTS.map((p) => (
             <Pressable key={p} style={s.prompt} onPress={() => send(p)} disabled={loading}>
@@ -257,12 +268,28 @@ function makeStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     header: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 12,
+      gap: 10,
       paddingHorizontal: spacing.md,
       paddingVertical: 12,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
       backgroundColor: colors.bgCard,
+    },
+    backBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.bgElevated,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    backBtnText: {
+      fontSize: 22,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      lineHeight: 26,
     },
     mascotBadge: {
       width: 40,
@@ -326,6 +353,12 @@ function makeStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     fallbackNote: { color: colors.warning, fontSize: 11, fontWeight: "700" },
     typingText: { color: colors.textSecondary, fontSize: 13, fontWeight: "600" },
 
+    promptsStrip: {
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      backgroundColor: colors.bgCard,
+      maxHeight: 56,
+    },
     prompts: { paddingHorizontal: spacing.md, paddingVertical: 8, gap: 8, alignItems: "center" },
     prompt: {
       borderRadius: radii.full,

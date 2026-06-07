@@ -246,8 +246,10 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
         conversationType: chat.type, userPhone: user.phone, userEmail: user.email,
         userCity: user.city, userCategory: user.category,
       });
-    } catch {
-      Alert.alert("Помилка", "Не вдалось надіслати фото. Спробуй ще раз.");
+    } catch (err) {
+      console.error("[Chat] photo upload failed:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      Alert.alert("Помилка", `Не вдалось надіслати фото.\n${__DEV__ ? msg : "Перевір з'єднання і спробуй ще раз."}`);
     } finally {
       setUploadingImage(false);
     }

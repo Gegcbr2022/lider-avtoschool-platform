@@ -39,6 +39,31 @@ service firebase.storage {
       allow write: if staff();
     }
 
+    // Фото и медиа в чатах — участники чата + стафф
+    // uploadChatImage() пишет сюда: conversations/{convId}/attachments/{name}
+    match /conversations/{conversationId}/attachments/{fileName} {
+      allow read: if signedIn();
+      allow write: if signedIn()
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches("image/.*");
+    }
+
+    // Stories media (для будущих image-stories)
+    match /stories/{storyId}/{fileName} {
+      allow read: if true;
+      allow write: if signedIn()
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches("image/.*|video/mp4");
+    }
+
+    // Club post media
+    match /clubMedia/{fileName} {
+      allow read: if true;
+      allow write: if signedIn()
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches("image/.*");
+    }
+
     // Запрещаем всё остальное
     match /{allPaths=**} {
       allow read, write: if false;
