@@ -52,6 +52,16 @@ async function run() {
   const manager = testEnv.authenticatedContext("manager-a", { role: "manager" }).firestore();
   const anon = testEnv.unauthenticatedContext().firestore();
 
+  // userProfiles.pushToken: the app may write only the current user's device token.
+  await assertSucceeds(owner.doc("userProfiles/user-a").set({
+    name: "Student A",
+    pushToken: "fcm-token-user-a",
+    updatedAt: "2026-06-09T00:00:00.000Z",
+  }));
+  await assertFails(other.doc("userProfiles/user-a").update({ pushToken: "stolen-token" }));
+  await assertFails(anon.doc("userProfiles/user-a").set({ pushToken: "anon-token" }));
+  await assertSucceeds(manager.doc("userProfiles/user-a").update({ pushToken: "staff-corrected-token" }));
+
   // payments: user can read only own payment docs; staff can write; clients cannot write.
   await assertSucceeds(owner.doc("payments/pay-user-a").get());
   await assertFails(owner.doc("payments/pay-user-b").get());
@@ -115,7 +125,7 @@ async function run() {
 
 try {
   await run();
-  console.log("Firestore rules tests passed: payments/userBonuses");
+  console.log("Firestore rules tests passed: userProfiles.pushToken/payments/userBonuses");
 } finally {
   await testEnv.cleanup();
 }
