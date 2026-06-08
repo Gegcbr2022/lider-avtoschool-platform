@@ -8,8 +8,8 @@ import {
   Text,
   View,
 } from "react-native";
-import { router, type Href } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { router, useFocusEffect, type Href } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card, Label, Row, Screen } from "../../components/mobile-ui";
 import { useAuth } from "../../lib/auth";
@@ -282,6 +282,8 @@ function StudentHome() {
 
   useEffect(() => { void load(); }, [user?.id]);
 
+  useFocusEffect(useCallback(() => { void load(); }, [user?.id]));
+
   async function onRefresh() {
     setRefreshing(true);
     await load();
@@ -393,6 +395,32 @@ function StudentHome() {
                 <Text style={{ color: colors.textTertiary, fontSize: 10, fontWeight: "700" }}>{s.label}</Text>
               </View>
             ))}
+          </View>
+        ) : null}
+
+        {/* ── Стрічка активності (last bonus transactions) ──────────────── */}
+        {bonus.history.length > 0 ? (
+          <View style={{ gap: 8 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "900" }}>Стрічка активності</Text>
+            {bonus.history.slice(-4).reverse().map((tx, i) => {
+              const isEarn = tx.type === "earn";
+              return (
+                <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.bgCard, borderRadius: radii.sm, padding: 12, borderWidth: 1, borderColor: colors.border }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isEarn ? colors.successSoft ?? "#dcfce7" : colors.warningSoft, alignItems: "center", justifyContent: "center" }}>
+                    <Text style={{ fontSize: 18 }}>{isEarn ? "⭐" : "💸"}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: "800" }}>{tx.reason}</Text>
+                    <Text style={{ color: colors.textTertiary, fontSize: 11, marginTop: 1 }}>
+                      {new Date(tx.createdAt).toLocaleDateString("uk-UA", { day: "2-digit", month: "short" })}
+                    </Text>
+                  </View>
+                  <Text style={{ color: isEarn ? colors.success : colors.warning, fontWeight: "900", fontSize: 15 }}>
+                    {isEarn ? "+" : ""}{tx.amount} б.
+                  </Text>
+                </View>
+              );
+            })}
           </View>
         ) : null}
 
