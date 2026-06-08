@@ -56,7 +56,7 @@ npm run dev:web
 npm run dev:admin
 ```
 
-API/Firebase emulators (требует firebase-tools и Java 11+):
+API/Firebase emulators (требует firebase-tools и JDK 21):
 
 ```bash
 firebase emulators:start
@@ -155,7 +155,7 @@ firebase deploy --only functions,firestore:rules,firestore:indexes,storage
 
 **Typecheck не видит `@lider/*` пакеты** → убедись, что `npm install` запущен из корня, а не из подпапки.
 
-**Firebase emulators не стартуют** → нужна Java 11+. Установи через `firebase setup:emulators:firestore`.
+**Firebase emulators не стартуют** → нужен JDK 21. Для `npm run test:rules` в CI используется Temurin 21; локально проверь `JAVA_HOME` и установи Firestore emulator через `firebase setup:emulators:firestore`.
 
 **Expo не запускается на устройстве** → убедись, что телефон и компьютер в одной Wi-Fi сети; или запусти через тоннель: `npx expo start --tunnel`.
 
