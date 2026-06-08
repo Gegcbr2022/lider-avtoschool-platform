@@ -1476,10 +1476,7 @@ function createMailTransport() {
 }
 
 async function sendLeadEmail(lead: Record<string, unknown>, leadId: string): Promise<EmailNotificationResult> {
-  console.log(`[email] sendLeadEmail called for ${leadId}. LEAD_EMAIL_ENABLED=${process.env.LEAD_EMAIL_ENABLED}`);
-
   if (process.env.LEAD_EMAIL_ENABLED !== "true") {
-    console.log(`[email] skipped: LEAD_EMAIL_ENABLED="${process.env.LEAD_EMAIL_ENABLED}" (must be exactly "true")`);
     return { status: "skipped", reason: "disabled" };
   }
 
@@ -1569,8 +1566,6 @@ async function sendLeadEmail(lead: Record<string, unknown>, leadId: string): Pro
   <p style="margin-top:24px;font-size:12px;color:#aaa">Автошкола «Лідер» · lider.bdslab.net</p>
 </div>`.trim();
 
-  console.log(`[email] sending provider=${provider ?? "unknown"} to=${to} cc=${cc ?? "none"} from=${from}`);
-
   try {
     const info = await transport.sendMail({
       from,
@@ -1581,7 +1576,6 @@ async function sendLeadEmail(lead: Record<string, unknown>, leadId: string): Pro
       html
     });
     const messageId = (info as { messageId?: string }).messageId;
-    console.log(`[email] sent leadId=${leadId} provider=${provider ?? "unknown"} messageId=${messageId ?? "(none)"}`);
     return { status: "sent", provider, messageId };
   } catch (error) {
     const message = formatError(error);

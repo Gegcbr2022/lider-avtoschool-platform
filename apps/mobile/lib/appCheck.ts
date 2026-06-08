@@ -55,7 +55,9 @@ export function initAppCheck(): void {
       isTokenAutoRefreshEnabled: true,
     });
 
-    console.log(`[AppCheck] Initialized with ${useDebugProvider ? "debug" : "production"} provider`);
+    if (__DEV__) {
+      console.log(`[AppCheck] Initialized with ${useDebugProvider ? "debug" : "production"} provider`);
+    }
   } catch (error) {
     // Non-fatal — app continues without App Check; Firestore rules still protect data.
     console.warn("[AppCheck] Init skipped:", error instanceof Error ? error.message : String(error));
