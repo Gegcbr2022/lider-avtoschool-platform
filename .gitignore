@@ -1,6 +1,7 @@
 .env
 .env.*
 !.env.example
+.env_vercel
 .snapshots
 .playwright-cli
 output
