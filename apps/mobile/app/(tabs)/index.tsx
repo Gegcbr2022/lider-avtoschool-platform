@@ -300,7 +300,7 @@ function StudentHome() {
     new:      { label: "Щойно записався", color: colors.textSecondary, hint: "Пройди перший тест — Лідик складе твій маршрут" },
     learning: { label: "Навчаюсь", color: colors.warning, hint: "Потрібно ≥75% на екзамені МВС. Попрацюй зі слабкими темами" },
     ready:    { label: "Готовий до іспиту", color: colors.success, hint: "Відмінно! Переходь до повного екзамену і практики" },
-    advanced: { label: "Прокачуюсь", color: "#1d4ed8", hint: "Спробуй марафон — всі питання підряд без втрати місця" },
+    advanced: { label: "Прокачуюсь", color: colors.info, hint: "Спробуй марафон — всі питання підряд без втрати місця" },
   };
 
   const stageInfo = STAGE_LABELS[stage];
@@ -395,32 +395,6 @@ function StudentHome() {
                 <Text style={{ color: colors.textTertiary, fontSize: 10, fontWeight: "700" }}>{s.label}</Text>
               </View>
             ))}
-          </View>
-        ) : null}
-
-        {/* ── Стрічка активності (last bonus transactions) ──────────────── */}
-        {bonus.history.length > 0 ? (
-          <View style={{ gap: 8 }}>
-            <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "900" }}>Стрічка активності</Text>
-            {bonus.history.slice(-4).reverse().map((tx, i) => {
-              const isEarn = tx.type === "earn";
-              return (
-                <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.bgCard, borderRadius: radii.sm, padding: 12, borderWidth: 1, borderColor: colors.border }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: isEarn ? colors.successSoft ?? "#dcfce7" : colors.warningSoft, alignItems: "center", justifyContent: "center" }}>
-                    <Text style={{ fontSize: 18 }}>{isEarn ? "⭐" : "💸"}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: "800" }}>{tx.reason}</Text>
-                    <Text style={{ color: colors.textTertiary, fontSize: 11, marginTop: 1 }}>
-                      {new Date(tx.createdAt).toLocaleDateString("uk-UA", { day: "2-digit", month: "short" })}
-                    </Text>
-                  </View>
-                  <Text style={{ color: isEarn ? colors.success : colors.warning, fontWeight: "900", fontSize: 15 }}>
-                    {isEarn ? "+" : ""}{tx.amount} б.
-                  </Text>
-                </View>
-              );
-            })}
           </View>
         ) : null}
 

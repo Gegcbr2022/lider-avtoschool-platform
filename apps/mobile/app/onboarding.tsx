@@ -27,7 +27,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../lib/auth";
-import { darkColors as colors, radii, spacing } from "../lib/theme";
+import { useTheme, radii, spacing } from "../lib/theme";
 
 const MASCOT = require("../assets/mascot.png") as number;
 
@@ -45,21 +45,21 @@ const SLIDES: Slide[] = [
     emoji: "🚗",
     title: "Навчайся онлайн",
     subtitle: "Теорія, ПДР-тести та практика — все в одному додатку. Вчись де зручно.",
-    accent: colors.red,
+    accent: "#E51D1D",
   },
   {
     id: "2",
     emoji: "📝",
     title: "Проходь тести ПДР",
     subtitle: "Понад 800 питань із поясненнями. Відстежуй слабкі теми і вчись на помилках.",
-    accent: "#e53e3e",
+    accent: "#E51D1D",
   },
   {
     id: "3",
     emoji: "🏆",
     title: "Нагороди та прогрес",
     subtitle: "Серії занять, бейджі, досягнення. Навчання стає цікавим коли бачиш результат.",
-    accent: colors.red,
+    accent: "#E51D1D",
   },
   {
     id: "4",
@@ -72,6 +72,7 @@ const SLIDES: Slide[] = [
 
 export default function OnboardingScreen() {
   const { signInAsGuest } = useAuth();
+  const { colors } = useTheme();
   const { width: W } = useWindowDimensions();
   const [current, setCurrent] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
@@ -105,18 +106,18 @@ export default function OnboardingScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={["top", "bottom"]}>
       {/* Header: brand + skip */}
       <View style={styles.header}>
         <View style={styles.brand}>
-          <View style={styles.logoWrap}>
+          <View style={[styles.logoWrap, { backgroundColor: colors.redSoft }]}>
             <Image source={MASCOT} style={styles.logo} resizeMode="contain" />
           </View>
-          <Text style={styles.brandName}>Лідер</Text>
+          <Text style={[styles.brandName, { color: colors.textPrimary }]}>Лідер</Text>
         </View>
         {!isLast && (
           <Pressable hitSlop={12} onPress={() => router.push("/auth")}>
-            <Text style={styles.skip}>Пропустити</Text>
+            <Text style={[styles.skip, { color: colors.textSecondary }]}>Пропустити</Text>
           </Pressable>
         )}
       </View>
@@ -137,11 +138,11 @@ export default function OnboardingScreen() {
       >
         {SLIDES.map((item) => (
           <View key={item.id} style={[styles.slide, { width: W }]}>
-            <View style={[styles.emojiWrap, { backgroundColor: item.accent + "22" }]}>
+            <View style={[styles.emojiWrap, { backgroundColor: colors.redSoft }]}>
               <Text style={styles.emoji}>{item.emoji}</Text>
             </View>
-            <Text style={styles.slideTitle}>{item.title}</Text>
-            <Text style={styles.slideSubtitle}>{item.subtitle}</Text>
+            <Text style={[styles.slideTitle, { color: colors.textPrimary }]}>{item.title}</Text>
+            <Text style={[styles.slideSubtitle, { color: colors.textSecondary }]}>{item.subtitle}</Text>
           </View>
         ))}
       </ScrollView>
@@ -163,7 +164,7 @@ export default function OnboardingScreen() {
           return (
             <Animated.View
               key={i}
-              style={[styles.dot, { width: dotWidth, opacity }]}
+              style={[styles.dot, { width: dotWidth, opacity, backgroundColor: colors.red }]}
             />
           );
         })}
@@ -173,19 +174,19 @@ export default function OnboardingScreen() {
       <View style={styles.actions}>
         {isLast ? (
           <Pressable
-            style={styles.btnPrimary}
+            style={[styles.btnPrimary, { backgroundColor: colors.red }]}
             onPress={() => router.push("/auth")}
           >
             <Text style={styles.btnPrimaryText}>🚗 Навчатися онлайн</Text>
           </Pressable>
         ) : (
-          <Pressable style={styles.btnPrimary} onPress={next}>
+          <Pressable style={[styles.btnPrimary, { backgroundColor: colors.red }]} onPress={next}>
             <Text style={styles.btnPrimaryText}>Далі</Text>
           </Pressable>
         )}
 
         <Pressable style={styles.btnGhost} onPress={signInAsGuest}>
-          <Text style={styles.btnGhostText}>Продовжити як гість</Text>
+          <Text style={[styles.btnGhostText, { color: colors.textSecondary }]}>Продовжити як гість</Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -193,7 +194,7 @@ export default function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+  safe: { flex: 1 },
 
   header: {
     flexDirection: "row",
@@ -212,20 +213,17 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: colors.redSoft,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
   },
   logo: { width: 32, height: 32 },
   brandName: {
-    color: colors.textPrimary,
     fontSize: 22,
     fontWeight: "900",
     letterSpacing: -0.5,
   },
   skip: {
-    color: colors.textSecondary,
     fontSize: 15,
     fontWeight: "600",
   },
@@ -248,14 +246,12 @@ const styles = StyleSheet.create({
   },
   emoji: { fontSize: 64 },
   slideTitle: {
-    color: colors.textPrimary,
     fontSize: 28,
     fontWeight: "700",
     textAlign: "center",
     marginTop: spacing.md,
   },
   slideSubtitle: {
-    color: colors.textSecondary,
     fontSize: 14,
     textAlign: "center",
     lineHeight: 20,
@@ -272,7 +268,6 @@ const styles = StyleSheet.create({
   dot: {
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.red,
   },
 
   actions: {
@@ -281,22 +276,20 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
   },
   btnPrimary: {
-    backgroundColor: colors.red,
     paddingVertical: 16,
     borderRadius: radii.md,
     alignItems: "center",
   },
   btnPrimaryText: {
-    color: colors.white,
+    color: "#fff",
     fontSize: 16,
     fontWeight: "700",
   },
-btnGhost: {
+  btnGhost: {
     paddingVertical: 12,
     alignItems: "center",
   },
   btnGhostText: {
-    color: colors.textSecondary,
     fontSize: 14,
     fontWeight: "500",
   },

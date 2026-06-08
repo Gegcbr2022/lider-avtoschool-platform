@@ -978,9 +978,9 @@ function LeaderboardView({ currentUid, onBack }: { currentUid?: string; onBack: 
             <TouchableOpacity
               key={opt.key}
               onPress={() => setSortBy(opt.key)}
-              style={{ borderRadius: 999, borderWidth: 1.5, paddingHorizontal: 14, paddingVertical: 8, borderColor: sortBy === opt.key ? "#f59e0b" : colors.border, backgroundColor: sortBy === opt.key ? "#f59e0b18" : colors.bg }}
+              style={{ borderRadius: 999, borderWidth: 1.5, paddingHorizontal: 14, paddingVertical: 8, borderColor: sortBy === opt.key ? colors.warning : colors.border, backgroundColor: sortBy === opt.key ? colors.warningSoft : colors.bg }}
             >
-              <Text style={{ fontSize: 13, fontWeight: "700", color: sortBy === opt.key ? "#f59e0b" : colors.textSecondary }}>{opt.label}</Text>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: sortBy === opt.key ? colors.warning : colors.textSecondary }}>{opt.label}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -1003,23 +1003,23 @@ function LeaderboardView({ currentUid, onBack }: { currentUid?: string; onBack: 
             return (
               <View
                 key={entry.uid}
-                style={{ backgroundColor: isMe ? "#f59e0b18" : colors.bgCard, borderRadius: radii.md, borderWidth: isMe ? 2 : 1, borderColor: isMe ? "#f59e0b" : colors.border, padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }}
+                style={{ backgroundColor: isMe ? colors.warningSoft : colors.bgCard, borderRadius: radii.md, borderWidth: isMe ? 2 : 1, borderColor: isMe ? colors.warning : colors.border, padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }}
               >
-                <Text style={{ fontSize: index < 3 ? 26 : 16, fontWeight: "900", width: 34, textAlign: "center", color: index < 3 ? "#f59e0b" : colors.textTertiary }}>{medal}</Text>
-                <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: isMe ? "#f59e0b22" : colors.bgElevated, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ fontSize: index < 3 ? 26 : 16, fontWeight: "900", width: 34, textAlign: "center", color: index < 3 ? colors.warning : colors.textTertiary }}>{medal}</Text>
+                <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: isMe ? colors.warningSoft : colors.bgElevated, alignItems: "center", justifyContent: "center" }}>
                   <Text style={{ fontSize: 22 }}>{entry.avatarEmoji ?? "🚗"}</Text>
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                     <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "900" }} numberOfLines={1}>{entry.displayName}</Text>
-                    {isMe ? <Text style={{ color: "#f59e0b", fontSize: 11, fontWeight: "900" }}>ВИ</Text> : null}
+                    {isMe ? <Text style={{ color: colors.warning, fontSize: 11, fontWeight: "900" }}>ВИ</Text> : null}
                   </View>
                   <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
                     {[entry.city, entry.licenseCategory ? `кат. ${entry.licenseCategory}` : null].filter(Boolean).join(" · ")}
                   </Text>
                 </View>
                 <View style={{ alignItems: "flex-end" }}>
-                  <Text style={{ color: index < 3 ? "#f59e0b" : colors.textPrimary, fontSize: 20, fontWeight: "900" }}>{mainValue}</Text>
+                  <Text style={{ color: index < 3 ? colors.warning : colors.textPrimary, fontSize: 20, fontWeight: "900" }}>{mainValue}</Text>
                   <Text style={{ color: colors.textTertiary, fontSize: 11 }}>{mainLabel}</Text>
                 </View>
               </View>
@@ -1285,7 +1285,7 @@ export default function ClubTab() {
                         </View>
                       ) : null}
                       {latest.kind === "pdrResult" ? (
-                        <View style={{ position: "absolute", left: -7, top: -5, borderRadius: 8, backgroundColor: "#111827", borderWidth: 2, borderColor: colors.bg, paddingHorizontal: 5, paddingVertical: 2 }}>
+                        <View style={{ position: "absolute", left: -7, top: -5, borderRadius: 8, backgroundColor: colors.red, borderWidth: 2, borderColor: colors.bg, paddingHorizontal: 5, paddingVertical: 2 }}>
                           <Text style={{ color: "#fff", fontSize: 8, fontWeight: "900" }}>ПДР</Text>
                         </View>
                       ) : null}

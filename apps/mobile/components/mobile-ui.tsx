@@ -117,13 +117,14 @@ export function Heading({
   size?: "sm" | "md" | "lg" | "xl";
   color?: string;
 }) {
+  const { colors: tc } = useTheme();
   const sizeStyle =
     size === "xl" ? styles.headingXl :
     size === "lg" ? styles.headingLg :
     size === "sm" ? styles.headingSm :
     styles.headingMd;
   return (
-    <Text style={[sizeStyle, color ? { color } : undefined]}>{children}</Text>
+    <Text style={[sizeStyle, { color: color ?? tc.textPrimary }]}>{children}</Text>
   );
 }
 
@@ -172,12 +173,17 @@ export function SecondaryButton({
   onPress?: () => void;
   style?: object;
 }) {
+  const { colors: tc } = useTheme();
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.btn, styles.btnOutline, styles.btnMd, style, pressed && styles.btnPressed]}
+      style={({ pressed }) => [
+        styles.btn, styles.btnMd,
+        { borderWidth: 1.5, borderColor: tc.border, backgroundColor: "transparent" },
+        style, pressed && styles.btnPressed,
+      ]}
     >
-      <Text style={styles.btnOutlineText}>{children}</Text>
+      <Text style={{ color: tc.textSecondary, fontSize: 15, fontWeight: "700" }}>{children}</Text>
     </Pressable>
   );
 }
@@ -191,9 +197,10 @@ export function GhostButton({
   onPress?: () => void;
   style?: object;
 }) {
+  const { colors: tc } = useTheme();
   return (
     <Pressable onPress={onPress} style={[styles.ghostBtn, style]}>
-      <Text style={styles.ghostBtnText}>{children}</Text>
+      <Text style={{ color: tc.textSecondary, fontSize: 14, fontWeight: "600" }}>{children}</Text>
     </Pressable>
   );
 }
@@ -202,21 +209,22 @@ export function GhostButton({
 
 export function ProgressBar({
   value,
-  color = colors.red,
+  color,
   height = 8,
 }: {
   value: number;
   color?: string;
   height?: number;
 }) {
+  const { colors: tc } = useTheme();
   return (
-    <View style={[styles.progressTrack, { height }]}>
+    <View style={[styles.progressTrack, { height, backgroundColor: tc.border }]}>
       <View
         style={[
           styles.progressFill,
           {
             width: `${Math.max(0, Math.min(100, value))}%`,
-            backgroundColor: color,
+            backgroundColor: color ?? tc.red,
             height,
           },
         ]}
@@ -323,11 +331,18 @@ export function StatCard({
   icon?: string;
   accent?: boolean;
 }) {
+  const { colors: tc } = useTheme();
   return (
-    <View style={[styles.statCard, accent && styles.statCardAccent, shadows.card]}>
+    <View style={[
+      styles.statCard,
+      accent
+        ? { backgroundColor: tc.redSoft, borderColor: tc.red + "40" }
+        : { backgroundColor: tc.bgCard, borderColor: tc.border },
+      shadows.card,
+    ]}>
       {icon ? <Text style={styles.statIcon}>{icon}</Text> : null}
-      <Text style={[styles.statValue, accent && styles.statValueAccent]}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={[styles.statValue, { color: accent ? tc.red : tc.textPrimary }]}>{value}</Text>
+      <Text style={[styles.statLabel, { color: tc.textSecondary }]}>{label}</Text>
     </View>
   );
 }
@@ -450,8 +465,8 @@ export function LidykBanner({
           {message || info.sub}
         </Text>
         {action && onAction ? (
-          <Pressable onPress={onAction} style={{ marginTop: 10, backgroundColor: colors.red, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14, alignSelf: "flex-start" }}>
-            <Text style={{ color: colors.white, fontSize: 13, fontWeight: "800" }}>{action}</Text>
+          <Pressable onPress={onAction} style={{ marginTop: 10, backgroundColor: tc.red, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14, alignSelf: "flex-start" }}>
+            <Text style={{ color: "#fff", fontSize: 13, fontWeight: "800" }}>{action}</Text>
           </Pressable>
         ) : null}
       </View>
@@ -470,18 +485,19 @@ export function MascotMessage({
   message: string;
   tone?: "neutral" | "success" | "warning" | "error";
 }) {
+  const { colors: tc } = useTheme();
   const bg =
-    tone === "success" ? colors.successSoft :
-    tone === "warning" ? colors.warningSoft :
-    tone === "error"   ? colors.redSoft :
-    colors.bgCard;
+    tone === "success" ? tc.successSoft :
+    tone === "warning" ? tc.warningSoft :
+    tone === "error"   ? tc.redSoft :
+    tc.bgCard;
 
   return (
-    <View style={[styles.mascotMsg, { backgroundColor: bg }, shadows.card]}>
+    <View style={[styles.mascotMsg, { backgroundColor: bg, borderColor: tc.border }, shadows.card]}>
       <Text style={styles.mascotMsgEmoji}>{emoji}</Text>
       <View style={styles.mascotMsgText}>
-        <Text style={styles.mascotMsgTitle}>{title}</Text>
-        <Text style={styles.mascotMsgBody}>{message}</Text>
+        <Text style={[styles.mascotMsgTitle, { color: tc.textPrimary }]}>{title}</Text>
+        <Text style={[styles.mascotMsgBody, { color: tc.textSecondary }]}>{message}</Text>
       </View>
     </View>
   );
@@ -502,11 +518,12 @@ export function EmptyState({
   action?: string;
   onAction?: () => void;
 }) {
+  const { colors: tc } = useTheme();
   return (
     <View style={styles.empty}>
       <Text style={styles.emptyEmoji}>{emoji}</Text>
-      <Text style={styles.emptyTitle}>{title}</Text>
-      <Text style={styles.emptyDetail}>{detail}</Text>
+      <Text style={[styles.emptyTitle, { color: tc.textPrimary }]}>{title}</Text>
+      <Text style={[styles.emptyDetail, { color: tc.textSecondary }]}>{detail}</Text>
       {action && onAction ? (
         <PrimaryButton onPress={onAction} style={{ marginTop: 16 }}>
           {action}
@@ -517,11 +534,12 @@ export function EmptyState({
 }
 
 export function SkeletonBlock() {
+  const { colors: tc } = useTheme();
   return (
-    <View style={[styles.card, styles.cardDefault, { gap: 10 }]}>
-      <View style={[styles.skeletonLine, { width: "80%" }]} />
-      <View style={[styles.skeletonLine, { width: "60%" }]} />
-      <View style={[styles.skeletonLine, { width: "40%" }]} />
+    <View style={[styles.card, { backgroundColor: tc.bgCard, borderWidth: 1, borderColor: tc.border, gap: 10 }]}>
+      <View style={[styles.skeletonLine, { backgroundColor: tc.bgElevated, width: "80%" }]} />
+      <View style={[styles.skeletonLine, { backgroundColor: tc.bgElevated, width: "60%" }]} />
+      <View style={[styles.skeletonLine, { backgroundColor: tc.bgElevated, width: "40%" }]} />
     </View>
   );
 }
@@ -553,7 +571,8 @@ export function SectionHeader({
 // ─── Divider ─────────────────────────────────────────────────────────────────
 
 export function Divider() {
-  return <View style={styles.divider} />;
+  const { colors: tc } = useTheme();
+  return <View style={[styles.divider, { backgroundColor: tc.divider }]} />;
 }
 
 // ─── Insight / mini-stat ─────────────────────────────────────────────────────
@@ -567,15 +586,16 @@ export function InsightCard({
   detail: string;
   accent?: "default" | "red" | "success" | "warning";
 }) {
+  const { colors: tc } = useTheme();
   const bg =
-    accent === "red"     ? colors.redSoft :
-    accent === "success" ? colors.successSoft :
-    accent === "warning" ? colors.warningSoft :
-    colors.bgCard;
+    accent === "red"     ? tc.redSoft :
+    accent === "success" ? tc.successSoft :
+    accent === "warning" ? tc.warningSoft :
+    tc.bgCard;
   return (
-    <View style={[styles.insight, { backgroundColor: bg }, shadows.card]}>
-      <Text style={[styles.insightTitle, accent === "red" && { color: colors.red }]}>{title}</Text>
-      <Text style={styles.insightDetail}>{detail}</Text>
+    <View style={[styles.insight, { backgroundColor: bg, borderColor: tc.border }, shadows.card]}>
+      <Text style={[styles.insightTitle, { color: accent === "red" ? tc.red : tc.textPrimary }]}>{title}</Text>
+      <Text style={[styles.insightDetail, { color: tc.textSecondary }]}>{detail}</Text>
     </View>
   );
 }
