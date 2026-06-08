@@ -1251,3 +1251,96 @@ export async function loadPdrProgressFromFirestore(uid: string): Promise<{
     return null;
   }
 }
+
+// ─── Leaderboard (reads from userProfiles — already world-readable by signed-in) ──
+
+export type LeaderboardEntry = {
+  uid: string;
+  displayName: string;
+  avatarEmoji?: string;
+  city?: string;
+  licenseCategory?: string;
+  totalAnswered: number;
+  accuracyPct: number;
+  bestScorePct: number;
+  streakDays: number;
+};
+
+export async function getLeaderboard(limitCount = 20): Promise<LeaderboardEntry[]> {
+  try {
+    const snap = await getDocs(
+      query(collection(db, "userProfiles"), orderBy("totalAnswered", "desc"), limit(limitCount))
+    );
+    return snap.docs
+      .map((d) => {
+        const data = d.data();
+        const answered = (data.totalAnswered as number) ?? 0;
+        const correct = (data.totalCorrect as number) ?? 0;
+        return {
+          uid: d.id,
+          displayName: ((data.name as string | undefined)?.split(" ")[0]) ?? "Учень",
+          avatarEmoji: data.avatarEmoji as string | undefined,
+          city: data.city as string | undefined,
+          licenseCategory: data.category as string | undefined,
+          totalAnswered: answered,
+          accuracyPct: answered > 0 ? Math.round((correct / answered) * 100) : 0,
+          bestScorePct: (data.bestScorePct as number) ?? 0,
+          streakDays: (data.streakDays as number) ?? 0,
+        };
+      })
+      .filter((e) => e.totalAnswered >= 5);
+  } catch {
+    return [];
+  }
+}
+
+// ─── Лідер-бали (bonus system) ────────────────────────────────────────────────
+
+export type BonusTx = {
+  type: "earn" | "spend";
+  amount: number;
+  reason: string;
+  createdAt: string;
+};
+
+export type UserBonusDoc = {
+  balance: number;
+  totalEarned: number;
+  history: BonusTx[];
+  updatedAt: Date | null;
+};
+
+export const EMPTY_BONUS: UserBonusDoc = { balance: 0, totalEarned: 0, history: [], updatedAt: null };
+
+export async function getUserBonusBalance(uid: string): Promise<UserBonusDoc> {
+  try {
+    const snap = await getDoc(doc(db, "userBonuses", uid));
+    if (!snap.exists()) return { ...EMPTY_BONUS };
+    const d = snap.data();
+    return {
+      balance: (d.balance as number) ?? 0,
+      totalEarned: (d.totalEarned as number) ?? 0,
+      history: (d.history as BonusTx[]) ?? [],
+      updatedAt: toDate(d.updatedAt),
+    };
+  } catch {
+    return { ...EMPTY_BONUS };
+  }
+}
+
+export async function addUserBonus(uid: string, amount: number, reason: string): Promise<void> {
+  const ref = doc(db, "userBonuses", uid);
+  const snap = await getDoc(ref);
+  const prev = snap.exists() ? snap.data() : { balance: 0, totalEarned: 0, history: [] };
+  const prevBalance = (prev.balance as number) ?? 0;
+  const prevEarned = (prev.totalEarned as number) ?? 0;
+  const prevHistory = (prev.history as BonusTx[]) ?? [];
+
+  const tx: BonusTx = { type: amount >= 0 ? "earn" : "spend", amount, reason, createdAt: new Date().toISOString() };
+  await setDoc(ref, {
+    balance: Math.max(0, prevBalance + amount),
+    totalEarned: amount > 0 ? prevEarned + amount : prevEarned,
+    history: [...prevHistory.slice(-19), tx],
+    updatedAt: serverTimestamp(),
+  });
+}

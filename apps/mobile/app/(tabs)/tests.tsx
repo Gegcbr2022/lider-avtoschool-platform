@@ -20,7 +20,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Card, Label, ProgressBar } from "../../components/mobile-ui";
 import { askLidyk, recognizeSign } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
-import { createFirestoreId, createStory, loadPdrProgressFromFirestore, recordTestCompletion, savePdrProgressToFirestore } from "../../lib/firestore";
+import { addUserBonus, createFirestoreId, createStory, getUserStats, loadPdrProgressFromFirestore, recordTestCompletion, savePdrProgressToFirestore, type UserStats, EMPTY_STATS } from "../../lib/firestore";
 import { loadAppSettings } from "../../lib/app-settings";
 import {
   getCategoryQuestions,
@@ -1537,6 +1537,7 @@ export default function TestsTab() {
   const [marathonState, setMarathonState] = useState<PdrMarathonState | null>(null);
   const [showCoachPlan, setShowCoachPlan] = useState(false);
   const [showSignScanner, setShowSignScanner] = useState(false);
+  const [userStats, setUserStats] = useState<UserStats>(EMPTY_STATS);
   const selectedLicense = RIGHTS_CATEGORIES.find((cat) => cat.value === licenseCategory) ?? RIGHTS_CATEGORIES[1];
   const scopeId = user?.id ?? "guest";
   const mistakeCount = Object.values(progressState.mistakes).filter((mistake) => mistake.licenseCategory === licenseCategory).length;
@@ -1552,8 +1553,11 @@ export default function TestsTab() {
     void loadMarathonState(scopeId).then((state) => {
       if (alive) setMarathonState(state);
     }).catch(() => {});
+    if (user?.id) {
+      void getUserStats(user.id).then((s) => { if (alive) setUserStats(s); }).catch(() => {});
+    }
     return () => { alive = false; };
-  }, [scopeId]);
+  }, [scopeId, user?.id]);
 
   // Merge remote Firestore progress if it is more recent (cross-device sync on login)
   useEffect(() => {
@@ -1699,7 +1703,16 @@ export default function TestsTab() {
       void clearMarathonState(scopeId).catch(() => {});
     }
     if (mode === "authenticated" && user && !user.isGuest) {
-      void recordTestCompletion(user.id, { correct: payload.correct, total: payload.total }).catch(() => {});
+      void recordTestCompletion(user.id, { correct: payload.correct, total: payload.total })
+        .then((s) => setUserStats(s))
+        .catch(() => {});
+      // Award Лідер-бали: +1 for ≥75%, +2 for exam pass (≥90% МВС)
+      const scorePct = payload.total > 0 ? Math.round((payload.correct / payload.total) * 100) : 0;
+      if (scorePct >= 75) {
+        const bonusAmount = (payload.mode === "exam" && scorePct >= 90) ? 2 : 1;
+        const reason = payload.mode === "exam" ? `Іспит ${scorePct}%` : `Тест ${scorePct}%`;
+        void addUserBonus(user.id, bonusAmount, reason).catch(() => {});
+      }
     }
   }, [user, mode, scopeId]);
 
@@ -1847,12 +1860,66 @@ export default function TestsTab() {
         onStartExam={startExam}
       />
       <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: 100 }}>
-        <View style={{ paddingTop: 4 }}>
-          <Text style={{ color: colors.textPrimary, fontSize: 28, fontWeight: "900" }}>ПДР Тренажер</Text>
-          <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 4, lineHeight: 20 }}>
-            Готуйся до іспиту з поясненнями від Лідика
-          </Text>
+        {/* Header with stats bar */}
+        <View style={{ paddingTop: 4, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
+          <View>
+            <Text style={{ color: colors.textPrimary, fontSize: 28, fontWeight: "900" }}>ПДР Тренажер</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 4, lineHeight: 20 }}>
+              Готуйся до іспиту з поясненнями від Лідика
+            </Text>
+          </View>
+          {userStats.streakDays > 0 ? (
+            <View style={{ alignItems: "center", backgroundColor: colors.redSoft, borderRadius: radii.md, paddingHorizontal: 10, paddingVertical: 8, borderWidth: 1, borderColor: colors.red + "44" }}>
+              <Text style={{ fontSize: 18 }}>🔥</Text>
+              <Text style={{ color: colors.red, fontWeight: "900", fontSize: 15 }}>{userStats.streakDays}</Text>
+              <Text style={{ color: colors.red, fontSize: 9, fontWeight: "700" }}>СЕРІЯ</Text>
+            </View>
+          ) : null}
         </View>
+
+        {/* Stats mini-row */}
+        {userStats.totalAnswered > 0 ? (
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            {[
+              { label: "Відповідей", value: String(userStats.totalAnswered), icon: "📚" },
+              { label: "Найкращий", value: `${userStats.bestScorePct}%`, icon: "🏆" },
+              { label: "Тестів", value: String(userStats.testsCompleted), icon: "✅" },
+            ].map((stat) => (
+              <View key={stat.label} style={{ flex: 1, backgroundColor: colors.bgCard, borderRadius: radii.sm, padding: 10, borderWidth: 1, borderColor: colors.border, alignItems: "center", gap: 2 }}>
+                <Text style={{ fontSize: 16 }}>{stat.icon}</Text>
+                <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "900" }}>{stat.value}</Text>
+                <Text style={{ color: colors.textTertiary, fontSize: 10, fontWeight: "700" }}>{stat.label}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {/* Last protocol result card */}
+        {progressState.lastProtocol ? (() => {
+          const p = progressState.lastProtocol;
+          const modeLabel = p.mode === "exam" ? "Іспит МВС" : p.mode === "marathon" ? "Марафон" : "Тренування";
+          const accent = p.passedByMvs ? colors.success : p.percent >= 60 ? colors.warning : colors.red;
+          return (
+            <Pressable
+              onPress={p.mode === "exam" ? startExam : () => startCategoryTest("Знаки")}
+              style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 14, borderWidth: 1, borderColor: accent + "66", flexDirection: "row", alignItems: "center", gap: 12 }}
+            >
+              <View style={{ width: 50, height: 50, borderRadius: 14, backgroundColor: accent + "18", alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ color: accent, fontSize: 22, fontWeight: "900" }}>{p.percent}%</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 10, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.8 }}>Останній результат</Text>
+                <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "800", marginTop: 2 }}>
+                  {modeLabel} · {p.correct}/{p.total} · {p.licenseCategory}
+                </Text>
+                <Text style={{ color: accent, fontSize: 12, fontWeight: "700", marginTop: 1 }}>
+                  {p.passedByMvs ? "✓ Складено" : p.percent >= 60 ? "Майже готовий" : "Треба повторити"}
+                </Text>
+              </View>
+              <Text style={{ color: colors.textTertiary, fontSize: 18 }}>↺</Text>
+            </Pressable>
+          );
+        })() : null}
 
         {/* Exam mode — hero button */}
         <Pressable
@@ -1897,6 +1964,41 @@ export default function TestsTab() {
             );})}
           </View>
         </View>
+
+        {/* Category accuracy progress bars */}
+        {Object.keys(progressState.topicProgress).length > 0 ? (() => {
+          const topics = Object.values(progressState.topicProgress)
+            .filter((t) => t.seen >= 3)
+            .sort((a, b) => b.seen - a.seen)
+            .slice(0, 6);
+          if (!topics.length) return null;
+          return (
+            <View style={{ gap: 8 }}>
+              <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "900" }}>Прогрес по темах</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                {topics.map((t) => {
+                  const pct = t.seen > 0 ? Math.round((t.correct / t.seen) * 100) : 0;
+                  const accent = pct >= 75 ? colors.success : pct >= 50 ? colors.warning : colors.red;
+                  const catDef = PDR_CATEGORIES.find((c) => c.name === t.category);
+                  return (
+                    <Pressable
+                      key={t.category}
+                      onPress={() => startCategoryTest(t.category)}
+                      style={{ width: 112, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 12, borderWidth: 1, borderColor: colors.border, gap: 6 }}
+                    >
+                      <Text style={{ fontSize: 20 }}>{catDef?.icon ?? "📘"}</Text>
+                      <Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "800" }} numberOfLines={2}>{t.category}</Text>
+                      <View style={{ height: 4, borderRadius: 2, backgroundColor: colors.border, overflow: "hidden" }}>
+                        <View style={{ width: `${pct}%`, height: 4, backgroundColor: accent, borderRadius: 2 }} />
+                      </View>
+                      <Text style={{ color: accent, fontSize: 13, fontWeight: "900" }}>{pct}%</Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          );
+        })() : null}
 
         {/* Personal coach route */}
         <Pressable

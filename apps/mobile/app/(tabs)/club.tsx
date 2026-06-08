@@ -14,11 +14,12 @@ import { askLidyk } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import {
   type ClubPostDoc, type ClubCommentDoc, type StoryDoc, type Award, type UserStats,
+  type LeaderboardEntry,
   createFirestoreId,
   subscribeToClubPosts, createClubPost, togglePostLike, deletePost,
   subscribeToComments, createComment, toggleCommentLike,
   subscribeToStories, createStory, viewStory, reactToStory, deleteStory,
-  getUserStats, computeAwards, EMPTY_STATS,
+  getUserStats, computeAwards, EMPTY_STATS, getLeaderboard,
 } from "../../lib/firestore";
 import { uploadClubImage, uploadStoryMedia } from "../../lib/storage";
 import {
@@ -30,7 +31,7 @@ import { radii, shadows, spacing, useTheme } from "../../lib/theme";
 
 const MASCOT = require("../../assets/mascot.png") as number;
 
-type ClubView = "main" | "lidyk" | "feed" | "awards";
+type ClubView = "main" | "lidyk" | "feed" | "awards" | "leaderboard";
 
 const AWARD_FILTER_LABELS: Record<string, string> = {
   all: "Всі", streak: "Серія", tests: "Тести", learning: "Навчання",
@@ -938,6 +939,98 @@ function FeedView({ onBack }: { onBack: () => void }) {
   );
 }
 
+// ─── LEADERBOARD VIEW ────────────────────────────────────────────────────────
+
+function LeaderboardView({ currentUid, onBack }: { currentUid?: string; onBack: () => void }) {
+  const { colors } = useTheme();
+  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy] = useState<"accuracy" | "answered" | "streak">("accuracy");
+
+  useEffect(() => {
+    setLoading(true);
+    void getLeaderboard(30).then((data) => {
+      setEntries(data);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
+  const sorted = [...entries].sort((a, b) => {
+    if (sortBy === "accuracy") return b.accuracyPct - a.accuracyPct;
+    if (sortBy === "answered") return b.totalAnswered - a.totalAnswered;
+    return b.streakDays - a.streakDays;
+  });
+
+  const MEDAL = ["🥇", "🥈", "🥉"];
+
+  return (
+    <View style={{ flex: 1 }}>
+      <SubHeader title="Рейтинг ПДР" subtitle="Топ учнів школи" onBack={onBack} />
+
+      {/* Sort chips */}
+      <View style={{ borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.bgCard }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: "row", gap: 8, paddingHorizontal: spacing.md, paddingVertical: 10 }}>
+          {([
+            { key: "accuracy", label: "Точність" },
+            { key: "answered", label: "Відповідей" },
+            { key: "streak", label: "Серія" },
+          ] as const).map((opt) => (
+            <TouchableOpacity
+              key={opt.key}
+              onPress={() => setSortBy(opt.key)}
+              style={{ borderRadius: 999, borderWidth: 1.5, paddingHorizontal: 14, paddingVertical: 8, borderColor: sortBy === opt.key ? "#f59e0b" : colors.border, backgroundColor: sortBy === opt.key ? "#f59e0b18" : colors.bg }}
+            >
+              <Text style={{ fontSize: 13, fontWeight: "700", color: sortBy === opt.key ? "#f59e0b" : colors.textSecondary }}>{opt.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      <ScrollView contentContainerStyle={{ padding: spacing.md, paddingBottom: 120, gap: 10 }}>
+        {loading ? (
+          <ActivityIndicator color={colors.red} style={{ marginTop: 40 }} />
+        ) : sorted.length === 0 ? (
+          <View style={{ alignItems: "center", marginTop: 60, gap: 12 }}>
+            <Text style={{ fontSize: 44 }}>🏆</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 15, textAlign: "center" }}>Рейтинг порожній. Пройди 5+ питань щоб потрапити до таблиці!</Text>
+          </View>
+        ) : (
+          sorted.map((entry, index) => {
+            const isMe = entry.uid === currentUid;
+            const medal = MEDAL[index] ?? `${index + 1}`;
+            const mainValue = sortBy === "accuracy" ? `${entry.accuracyPct}%` : sortBy === "answered" ? String(entry.totalAnswered) : `${entry.streakDays}д`;
+            const mainLabel = sortBy === "accuracy" ? "точність" : sortBy === "answered" ? "відповідей" : "серія";
+            return (
+              <View
+                key={entry.uid}
+                style={{ backgroundColor: isMe ? "#f59e0b18" : colors.bgCard, borderRadius: radii.md, borderWidth: isMe ? 2 : 1, borderColor: isMe ? "#f59e0b" : colors.border, padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }}
+              >
+                <Text style={{ fontSize: index < 3 ? 26 : 16, fontWeight: "900", width: 34, textAlign: "center", color: index < 3 ? "#f59e0b" : colors.textTertiary }}>{medal}</Text>
+                <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: isMe ? "#f59e0b22" : colors.bgElevated, alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ fontSize: 22 }}>{entry.avatarEmoji ?? "🚗"}</Text>
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "900" }} numberOfLines={1}>{entry.displayName}</Text>
+                    {isMe ? <Text style={{ color: "#f59e0b", fontSize: 11, fontWeight: "900" }}>ВИ</Text> : null}
+                  </View>
+                  <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
+                    {[entry.city, entry.licenseCategory ? `кат. ${entry.licenseCategory}` : null].filter(Boolean).join(" · ")}
+                  </Text>
+                </View>
+                <View style={{ alignItems: "flex-end" }}>
+                  <Text style={{ color: index < 3 ? "#f59e0b" : colors.textPrimary, fontSize: 20, fontWeight: "900" }}>{mainValue}</Text>
+                  <Text style={{ color: colors.textTertiary, fontSize: 11 }}>{mainLabel}</Text>
+                </View>
+              </View>
+            );
+          })
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
 // ─── AWARDS VIEW ──────────────────────────────────────────────────────────────
 
 function AwardsView({ awards, onBack }: { awards: Award[]; onBack: () => void }) {
@@ -1122,6 +1215,11 @@ export default function ClubTab() {
       <AwardsView awards={awards} onBack={() => setView("main")} />
     </SafeAreaView>
   );
+  if (view === "leaderboard") return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
+      <LeaderboardView currentUid={user?.id} onBack={() => setView("main")} />
+    </SafeAreaView>
+  );
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -1289,6 +1387,20 @@ export default function ClubTab() {
                 <Text style={{ fontSize: 13, fontWeight: "700", color: colors.red }}>Відкрити →</Text>
               </View>
               <Text style={{ fontSize: 13, color: colors.textSecondary, lineHeight: 18 }}>Спілкування, поради та успіхи учнів школи</Text>
+            </View>
+          </Pressable>
+
+          {/* Leaderboard — visible to all */}
+          <Pressable onPress={() => setView("leaderboard")}>
+            <View style={{ backgroundColor: "#f59e0b18", borderRadius: radii.md, borderWidth: 1, borderColor: "#f59e0b44", padding: 16, ...shadows.card, flexDirection: "row", alignItems: "center", gap: 14 }}>
+              <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: "#f59e0b22", alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ fontSize: 26 }}>🏆</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 16, fontWeight: "900", color: colors.textPrimary }}>Рейтинг ПДР</Text>
+                <Text style={{ marginTop: 3, fontSize: 13, color: colors.textSecondary }}>Топ учнів за точністю відповідей</Text>
+              </View>
+              <Text style={{ fontSize: 20, color: "#f59e0b", fontWeight: "900" }}>›</Text>
             </View>
           </Pressable>
 

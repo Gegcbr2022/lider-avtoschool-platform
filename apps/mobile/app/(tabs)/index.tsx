@@ -16,9 +16,15 @@ import { useAuth } from "../../lib/auth";
 import { useTheme, radii, shadows, spacing } from "../../lib/theme";
 import {
   getInstructorBookings,
+  getUserBonusBalance,
+  getUserStats,
   subscribeToConversations,
   type BookingDoc,
   type ConversationDoc,
+  type UserBonusDoc,
+  type UserStats,
+  EMPTY_BONUS,
+  EMPTY_STATS,
 } from "../../lib/firestore";
 
 // ─── ScalePressable — spring micro-interaction ─────────────────────────────────
@@ -255,151 +261,153 @@ function GuestHome() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// STUDENT HOME
+// STUDENT HOME — E1 Monobank-UX hub
 // ─────────────────────────────────────────────────────────────────────────────
 function StudentHome() {
   const { colors } = useTheme();
+  const { user } = useAuth();
+  const [stats, setStats] = useState<UserStats>(EMPTY_STATS);
+  const [bonus, setBonus] = useState<UserBonusDoc>(EMPTY_BONUS);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = async () => {
+    if (!user?.id) return;
+    const [s, b] = await Promise.all([
+      getUserStats(user.id).catch(() => EMPTY_STATS),
+      getUserBonusBalance(user.id).catch(() => EMPTY_BONUS),
+    ]);
+    setStats(s);
+    setBonus(b);
+  };
+
+  useEffect(() => { void load(); }, [user?.id]);
+
+  async function onRefresh() {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  }
+
+  // Determine funnel stage for smart hints
+  const stage: "new" | "learning" | "ready" | "advanced" =
+    stats.testsCompleted === 0 ? "new" :
+    stats.bestScorePct >= 75 ? "ready" :
+    stats.testsCompleted >= 10 ? "advanced" : "learning";
+
+  const STAGE_LABELS: Record<typeof stage, { label: string; color: string; hint: string }> = {
+    new:      { label: "Щойно записався", color: colors.textSecondary, hint: "Пройди перший тест — Лідик складе твій маршрут" },
+    learning: { label: "Навчаюсь", color: colors.warning, hint: "Потрібно ≥75% на екзамені МВС. Попрацюй зі слабкими темами" },
+    ready:    { label: "Готовий до іспиту", color: colors.success, hint: "Відмінно! Переходь до повного екзамену і практики" },
+    advanced: { label: "Прокачуюсь", color: "#1d4ed8", hint: "Спробуй марафон — всі питання підряд без втрати місця" },
+  };
+
+  const stageInfo = STAGE_LABELS[stage];
+  const name = user?.name ?? "Учень";
+  const firstName = name.split(" ")[0];
+  const category = user?.category ?? "B";
+  const accuracyPct = stats.totalAnswered > 0 ? Math.round((stats.totalCorrect / stats.totalAnswered) * 100) : 0;
+
+  const QUICK_ACTIONS = [
+    { icon: "🎯", label: "Тренажер", route: "/(tabs)/tests" as Href },
+    { icon: "🤖", label: "Лідик", route: "/(tabs)/assistant" as Href },
+    { icon: "💬", label: "Чат", route: "/(tabs)/chat" as Href },
+    { icon: "🏆", label: "Клуб", route: "/(tabs)/club" as Href },
+  ];
 
   return (
-    <Screen title="Лідер · маршрут" subtitle="Твоя кабіна підготовки до прав.">
-      <View
-        style={{
-          backgroundColor: colors.red,
-          borderRadius: radii.xl,
-          borderWidth: 0,
-          padding: 24,
-          gap: 18,
-          overflow: "hidden",
-          ...shadows.red,
-        }}
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top"]}>
+      <ScrollView
+        contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: 110 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.red} />}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={{ position: "absolute", right: -34, top: -18, width: 140, height: 140, borderRadius: 70, backgroundColor: "rgba(255,255,255,0.12)" }} />
-        <View style={{ position: "absolute", right: 28, bottom: -44, width: 120, height: 120, borderRadius: 60, backgroundColor: "rgba(0,0,0,0.12)" }} />
-        <Text
-          style={{
-            color: "rgba(255,255,255,0.72)",
-            fontSize: 10,
-            fontWeight: "900",
-            letterSpacing: 1.5,
-            textTransform: "uppercase",
-          }}
-        >
-          Автошкола Лідер
-        </Text>
-        <Text
-          style={{
-            color: "#fff",
-            fontSize: 28,
-            fontWeight: "900",
-            letterSpacing: -0.6,
-            lineHeight: 34,
-          }}
-        >
-          Сьогодні веде Лідик
-        </Text>
-        <Text
-          style={{
-            color: "rgba(255,255,255,0.82)",
-            fontSize: 14,
-            lineHeight: 22,
-            maxWidth: "88%",
-          }}
-        >
-          15 хвилин ПДР, один слабкий знак і короткий чек перед практикою. Без хаосу, просто наступний крок.
-        </Text>
-        <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-          {["ПДР", "Практика", "Документи"].map((item) => (
-            <View key={item} style={{ borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: "rgba(255,255,255,0.14)", borderWidth: 1, borderColor: "rgba(255,255,255,0.18)" }}>
-              <Text style={{ color: "#fff", fontSize: 12, fontWeight: "800" }}>{item}</Text>
+        {/* ── Driver card (Monobank-style) ─────────────────────────────── */}
+        <View style={{ backgroundColor: colors.red, borderRadius: 24, padding: 22, overflow: "hidden", gap: 0, ...shadows.red }}>
+          <View style={{ position: "absolute", right: -30, top: -30, width: 160, height: 160, borderRadius: 80, backgroundColor: "rgba(255,255,255,0.1)" }} />
+          <View style={{ position: "absolute", right: 20, bottom: -50, width: 130, height: 130, borderRadius: 65, backgroundColor: "rgba(0,0,0,0.1)" }} />
+
+          <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
+            <View>
+              <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 10, fontWeight: "900", letterSpacing: 1.4, textTransform: "uppercase" }}>Картка учня</Text>
+              <Text style={{ color: "#fff", fontSize: 26, fontWeight: "900", marginTop: 4, letterSpacing: -0.5 }}>{firstName}</Text>
+              <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, marginTop: 2 }}>Категорія {category} · Автошкола Лідер</Text>
             </View>
+            <View style={{ alignItems: "flex-end" }}>
+              <View style={{ backgroundColor: "rgba(255,255,255,0.18)", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6 }}>
+                <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 9, fontWeight: "900", textTransform: "uppercase" }}>Балів</Text>
+                <Text style={{ color: "#fff", fontSize: 20, fontWeight: "900", textAlign: "right" }}>{bonus.balance}</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={{ marginTop: 18, gap: 6 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, fontWeight: "700" }}>{stageInfo.label}</Text>
+              <Text style={{ color: "#fff", fontSize: 12, fontWeight: "900" }}>{accuracyPct > 0 ? `${accuracyPct}% точність` : "починай тестувати"}</Text>
+            </View>
+            <View style={{ height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.25)", overflow: "hidden" }}>
+              <View style={{ width: `${Math.min(100, accuracyPct)}%`, height: 6, backgroundColor: "#fff", borderRadius: 3 }} />
+            </View>
+            {stats.streakDays > 0 ? (
+              <Text style={{ color: "rgba(255,255,255,0.65)", fontSize: 11, fontWeight: "700" }}>🔥 {stats.streakDays} {stats.streakDays === 1 ? "день" : "днів"} серія · Рекорд {stats.bestStreak}</Text>
+            ) : null}
+          </View>
+        </View>
+
+        {/* ── Quick actions row ─────────────────────────────────────────── */}
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          {QUICK_ACTIONS.map((action) => (
+            <ScalePressable key={action.label} onPress={() => router.push(action.route)} style={{ flex: 1, backgroundColor: colors.bgCard, borderRadius: radii.md, paddingVertical: 14, alignItems: "center", gap: 4, borderWidth: 1, borderColor: colors.border, ...shadows.card }}>
+              <Text style={{ fontSize: 24 }}>{action.icon}</Text>
+              <Text style={{ color: colors.textPrimary, fontSize: 11, fontWeight: "800" }}>{action.label}</Text>
+            </ScalePressable>
           ))}
         </View>
+
+        {/* ── Smart hints ───────────────────────────────────────────────── */}
         <ScalePressable
-          onPress={() => router.push("/(tabs)/learning")}
-          style={{
-            backgroundColor: "#fff",
-            borderRadius: radii.md,
-            paddingVertical: 16,
-            alignItems: "center",
-            marginTop: 4,
-          }}
-        >
-          <Text style={{ color: colors.red, fontWeight: "900", fontSize: 15 }}>
-            Відкрити маршрут
-          </Text>
-        </ScalePressable>
-      </View>
-
-      <ScalePressable
-        onPress={() => router.push("/(tabs)/assistant")}
-        style={{
-          backgroundColor: colors.bgCard,
-          borderRadius: radii.lg,
-          borderWidth: 1,
-          borderColor: colors.border,
-          padding: 16,
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 12,
-          ...shadows.card,
-        }}
-      >
-        <View style={{ width: 48, height: 48, borderRadius: 18, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center" }}>
-          <Text style={{ fontSize: 24 }}>🚗</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "900" }}>Лідик поруч</Text>
-          <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 2 }}>Запитай правило, попроси пояснити помилку або скласти план на день.</Text>
-        </View>
-        <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
-      </ScalePressable>
-
-      <DailyTip onPress={() => router.push("/(tabs)/tests")} />
-
-      <Card style={{ borderRadius: radii.lg }}>
-        <Label>Швидкий доступ</Label>
-        <Row
-          title="ПДР Тренажер"
-          detail="Почати тест"
-          icon="🎯"
           onPress={() => router.push("/(tabs)/tests")}
-        />
-        <Row
-          title="AI Лідик"
-          detail="Запитати правило"
-          icon="🤖"
-          onPress={() => router.push("/(tabs)/assistant")}
-        />
-        <Row
-          title="Підтримка"
-          detail="Чат з менеджером"
-          icon="💬"
-          onPress={() => router.push("/(tabs)/chat")}
-        />
-      </Card>
+          style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.border, padding: 18, flexDirection: "row", alignItems: "center", gap: 14, ...shadows.card }}
+        >
+          <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: stageInfo.color + "18", alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ fontSize: 26 }}>💡</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: stageInfo.color, fontSize: 10, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.8 }}>Що далі</Text>
+            <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "800", marginTop: 3, lineHeight: 20 }}>{stageInfo.hint}</Text>
+          </View>
+          <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
+        </ScalePressable>
 
-      <Card style={{ borderRadius: radii.lg }}>
-        <Label>Сервіси</Label>
-        <Row
-          title="Страховка"
-          detail="ОСЦПВ онлайн"
-          icon="🛡️"
-          onPress={() => router.push("/insurance" as Href)}
-        />
-        <Row
-          title="Автоюрист"
-          detail="Правова база"
-          icon="⚖️"
-          onPress={() => router.push("/lawyer" as Href)}
-        />
-        <Row
-          title="Сервісні центри"
-          detail="Маршрути МВС"
-          icon="🏛️"
-          onPress={() => router.push("/service-centers" as Href)}
-        />
-      </Card>
-    </Screen>
+        {/* ── Stats strip ───────────────────────────────────────────────── */}
+        {stats.testsCompleted > 0 ? (
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            {[
+              { label: "Тестів", value: String(stats.testsCompleted), icon: "✅" },
+              { label: "Відповідей", value: String(stats.totalAnswered), icon: "📚" },
+              { label: "Найкращий", value: `${stats.bestScorePct}%`, icon: "🏆" },
+            ].map((s) => (
+              <View key={s.label} style={{ flex: 1, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 12, alignItems: "center", borderWidth: 1, borderColor: colors.border, gap: 3 }}>
+                <Text style={{ fontSize: 18 }}>{s.icon}</Text>
+                <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "900" }}>{s.value}</Text>
+                <Text style={{ color: colors.textTertiary, fontSize: 10, fontWeight: "700" }}>{s.label}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {/* ── Daily tip ─────────────────────────────────────────────────── */}
+        <DailyTip onPress={() => router.push("/(tabs)/tests")} />
+
+        {/* ── Services ──────────────────────────────────────────────────── */}
+        <Card style={{ borderRadius: radii.lg }}>
+          <Label>Сервіси</Label>
+          <Row title="Страховка" detail="ОСЦПВ онлайн" icon="🛡️" onPress={() => router.push("/insurance" as Href)} />
+          <Row title="Автоюрист" detail="Правова база" icon="⚖️" onPress={() => router.push("/lawyer" as Href)} />
+          <Row title="Сервісні центри" detail="Маршрути МВС" icon="🏛️" onPress={() => router.push("/service-centers" as Href)} />
+        </Card>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 

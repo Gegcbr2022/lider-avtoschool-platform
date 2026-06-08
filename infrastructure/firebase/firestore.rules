@@ -248,6 +248,12 @@ service cloud.firestore {
       }
     }
 
+    // ─── Лідер-бали (per-user bonus balance + history) ───────────────────────────
+
+    match /userBonuses/{userId} {
+      allow read, write: if signedIn() && uid() == userId;
+    }
+
     // ─── PDR Progress (mistakes + topic stats, per-user, synced from device) ────
 
     match /userPdrProgress/{userId} {
