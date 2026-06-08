@@ -248,6 +248,13 @@ service cloud.firestore {
       }
     }
 
+    // ─── PDR Progress (mistakes + topic stats, per-user, synced from device) ────
+
+    match /userPdrProgress/{userId} {
+      allow read, write: if signedIn() && uid() == userId;
+      allow read: if staff();
+    }
+
     // ─── Catch-all (deny everything else) ────────────────────────────────────
 
     match /{document=**} {

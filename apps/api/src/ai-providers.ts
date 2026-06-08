@@ -226,6 +226,56 @@ export async function callChatWithFallback(
   return primary; // everything failed — surface the original OpenAI error
 }
 
+// Multimodal (vision) content block — used for sign recognition
+type VisionContent =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string; detail?: "low" | "high" | "auto" } };
+
+/**
+ * Calls GPT-4o with a single image (base64) + text prompt.
+ * Used exclusively for sign recognition — requires gpt-4o, not configurable.
+ */
+export async function callOpenAiVision(
+  imageBase64: string,
+  mimeType: string,
+  textPrompt: string,
+  maxTokens: number
+): Promise<OpenAiChatResult> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return { ok: false, status: 0, error: "OPENAI_API_KEY is not set", model: "gpt-4o" };
+
+  const visionModel = "gpt-4o";
+  const content: VisionContent[] = [
+    { type: "image_url", image_url: { url: `data:${mimeType};base64,${imageBase64}`, detail: "low" } },
+    { type: "text", text: textPrompt },
+  ];
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json; charset=utf-8" },
+      body: JSON.stringify({
+        model: visionModel,
+        messages: [{ role: "user", content }],
+        max_tokens: maxTokens,
+        temperature: 0.3,
+      }),
+    });
+
+    const payload = (await response.json()) as OpenAiResponse;
+    if (!response.ok) {
+      const error = payload.error?.message ?? `HTTP ${response.status}`;
+      return { ok: false, status: response.status, error, model: visionModel };
+    }
+
+    const text = payload.choices?.[0]?.message?.content?.trim() ?? "";
+    if (!text) return { ok: false, status: response.status, error: "empty_content", model: visionModel };
+    return { ok: true, content: text, model: visionModel };
+  } catch (error) {
+    return { ok: false, status: 0, error: error instanceof Error ? error.message : "fetch_failed", model: visionModel };
+  }
+}
+
 export async function answerStudentQuestion(input: AiConsultationRequest) {
   const result = await answerAiChat({
     messages: [{ role: "user", content: input.question }],

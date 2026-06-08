@@ -153,6 +153,47 @@ export async function askLidyk(
   return result;
 }
 
+// ─── Sign recognition ─────────────────────────────────────────────────────────
+
+export async function recognizeSign(imageBase64: string, mimeType = "image/jpeg"): Promise<LidykResponse> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30_000);
+
+  let errorType: LidykErrorType | undefined;
+  let result: LidykResponse;
+
+  try {
+    const response = await fetch(`${API_BASE}/ai/recognize-sign`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageBase64, mimeType }),
+      signal: controller.signal,
+    });
+
+    if (response.status === 422) {
+      errorType = "empty";
+      throw new Error("invalid_image");
+    }
+    if (response.status >= 500) {
+      errorType = "server_error";
+      throw new Error(`HTTP ${response.status}`);
+    }
+    if (!response.ok) {
+      errorType = "unknown";
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    result = (await response.json()) as LidykResponse;
+  } catch (err) {
+    if (!errorType) errorType = classifyError(err);
+    result = { answer: ERROR_MESSAGES[errorType], mode: "fallback", errorType };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  return result;
+}
+
 // ─── Chat → Telegram bridge notify ────────────────────────────────────────────
 // Fire-and-forget: tells the backend to mirror this message into the manager's
 // Telegram topic. Never throws — chat works even if the bridge is down.

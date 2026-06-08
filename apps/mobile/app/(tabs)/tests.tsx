@@ -18,9 +18,9 @@ import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card, Label, ProgressBar } from "../../components/mobile-ui";
-import { askLidyk } from "../../lib/api";
+import { askLidyk, recognizeSign } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
-import { createFirestoreId, createStory, recordTestCompletion } from "../../lib/firestore";
+import { createFirestoreId, createStory, loadPdrProgressFromFirestore, recordTestCompletion, savePdrProgressToFirestore } from "../../lib/firestore";
 import { loadAppSettings } from "../../lib/app-settings";
 import {
   getCategoryQuestions,
@@ -38,15 +38,21 @@ import {
 import {
   buildPdrCoachPlan,
   clearMarathonState,
+  clearPendingSync,
   getTopicPercent,
+  hasPendingSync,
   loadMarathonState,
   loadPdrProgress,
+  overwritePdrProgress,
   recordPdrSession,
   saveMarathonState,
+  type PdrMistakeRecord,
   type PdrMarathonState,
   type PdrProgressState,
   type PdrQuizMode,
+  type PdrTopicProgress,
 } from "../../lib/pdr-progress";
+import { useNetworkStatus } from "../../lib/useNetwork";
 import { uploadStoryMedia } from "../../lib/storage";
 import { radii, shadows, spacing, useTheme } from "../../lib/theme";
 
@@ -1198,6 +1204,120 @@ function ResultScreen({ result, onRestart, onBack, onMistakes }: {
   );
 }
 
+// ─── Sign Scanner ─────────────────────────────────────────────────────────────
+
+function SignScannerSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { colors } = useTheme();
+  const [selectedUri, setSelectedUri] = useState<string | null>(null);
+  const [answer, setAnswer] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function analyzeImage(base64: string, mimeType: string) {
+    if (!base64) return;
+    setLoading(true);
+    setAnswer(null);
+    try {
+      const res = await recognizeSign(base64, mimeType);
+      setAnswer(res.answer);
+    } catch {
+      setAnswer("Не вдалося розпізнати знак. Перевір з'єднання і спробуй ще раз.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCamera() {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) { Alert.alert("Доступ потрібен", "Дозволь доступ до камери."); return; }
+    const result = await ImagePicker.launchCameraAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.6, base64: true });
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      setSelectedUri(asset.uri);
+      void analyzeImage(asset.base64 ?? "", asset.mimeType ?? "image/jpeg");
+    }
+  }
+
+  async function handleGallery() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) { Alert.alert("Доступ потрібен", "Дозволь доступ до фото."); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.6, base64: true });
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      setSelectedUri(asset.uri);
+      void analyzeImage(asset.base64 ?? "", asset.mimeType ?? "image/jpeg");
+    }
+  }
+
+  function handleClose() {
+    setSelectedUri(null);
+    setAnswer(null);
+    setLoading(false);
+    onClose();
+  }
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
+      <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "flex-end" }} onPress={handleClose}>
+        <View
+          onStartShouldSetResponder={() => true}
+          style={{ backgroundColor: colors.bgSheet, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 22, paddingBottom: 42, borderTopWidth: 1, borderTopColor: colors.border, maxHeight: "88%" }}
+        >
+          <View style={{ width: 44, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginBottom: 18 }} />
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 18 }}>
+            <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: "#1d4ed818", alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ fontSize: 26 }}>📷</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.textPrimary, fontSize: 20, fontWeight: "900" }}>Сканер знаків</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>Лідик пояснить знак за фото</Text>
+            </View>
+            <TouchableOpacity onPress={handleClose} hitSlop={12}>
+              <Text style={{ color: colors.textTertiary, fontSize: 22, fontWeight: "800" }}>×</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16 }}>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Pressable onPress={handleCamera} style={{ flex: 1, borderRadius: radii.md, padding: 14, backgroundColor: colors.red, alignItems: "center", gap: 6 }}>
+                <Text style={{ fontSize: 24 }}>📸</Text>
+                <Text style={{ color: "#fff", fontSize: 13, fontWeight: "900" }}>Зробити фото</Text>
+              </Pressable>
+              <Pressable onPress={handleGallery} style={{ flex: 1, borderRadius: radii.md, padding: 14, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, alignItems: "center", gap: 6 }}>
+                <Text style={{ fontSize: 24 }}>🖼️</Text>
+                <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: "900" }}>З галереї</Text>
+              </Pressable>
+            </View>
+
+            {selectedUri ? (
+              <Image source={{ uri: selectedUri }} style={{ width: "100%", height: 200, borderRadius: radii.md, backgroundColor: colors.bgElevated }} resizeMode="cover" />
+            ) : (
+              <View style={{ width: "100%", height: 160, borderRadius: radii.md, backgroundColor: colors.bgElevated, alignItems: "center", justifyContent: "center", gap: 8 }}>
+                <Text style={{ fontSize: 40 }}>🔍</Text>
+                <Text style={{ color: colors.textTertiary, fontSize: 14, fontWeight: "700", textAlign: "center", paddingHorizontal: 24 }}>Сфотографуй знак або дорожню ситуацію</Text>
+              </View>
+            )}
+
+            {loading ? (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.border }}>
+                <ActivityIndicator color={colors.red} />
+                <Text style={{ color: colors.textSecondary, fontSize: 14 }}>Лідик аналізує знак…</Text>
+              </View>
+            ) : answer ? (
+              <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.border, gap: 10 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <Image source={MASCOT} style={{ width: 38, height: 38 }} resizeMode="contain" />
+                  <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "900" }}>Лідик пояснює</Text>
+                </View>
+                <Text style={{ color: colors.textPrimary, fontSize: 15, lineHeight: 22 }}>{answer}</Text>
+              </View>
+            ) : null}
+          </ScrollView>
+        </View>
+      </Pressable>
+    </Modal>
+  );
+}
+
 // ─── Lidyk Coach Plan ─────────────────────────────────────────────────────────
 
 function LidykPlanSheet({
@@ -1416,10 +1536,13 @@ export default function TestsTab() {
   const [progressState, setProgressState] = useState<PdrProgressState>({ mistakes: {}, topicProgress: {} });
   const [marathonState, setMarathonState] = useState<PdrMarathonState | null>(null);
   const [showCoachPlan, setShowCoachPlan] = useState(false);
+  const [showSignScanner, setShowSignScanner] = useState(false);
   const selectedLicense = RIGHTS_CATEGORIES.find((cat) => cat.value === licenseCategory) ?? RIGHTS_CATEGORIES[1];
   const scopeId = user?.id ?? "guest";
   const mistakeCount = Object.values(progressState.mistakes).filter((mistake) => mistake.licenseCategory === licenseCategory).length;
   const coachPlan = useMemo(() => buildPdrCoachPlan(progressState, licenseCategory), [progressState, licenseCategory]);
+  const networkStatus = useNetworkStatus();
+  const prevNetworkRef = useRef<"online" | "offline" | "unknown">("online");
 
   useEffect(() => {
     let alive = true;
@@ -1431,6 +1554,43 @@ export default function TestsTab() {
     }).catch(() => {});
     return () => { alive = false; };
   }, [scopeId]);
+
+  // Merge remote Firestore progress if it is more recent (cross-device sync on login)
+  useEffect(() => {
+    if (!user?.id) return;
+    let alive = true;
+    const uid = user.id;
+    void loadPdrProgressFromFirestore(uid).then(async (remote) => {
+      if (!alive || !remote) return;
+      const local = await loadPdrProgress(scopeId);
+      const localAt = local.updatedAt ?? "";
+      const remoteAt = remote.updatedAt ?? "";
+      if (remoteAt > localAt) {
+        const merged: PdrProgressState = {
+          mistakes: remote.mistakes as Record<string, PdrMistakeRecord>,
+          topicProgress: remote.topicProgress as Record<string, PdrTopicProgress>,
+          updatedAt: remoteAt,
+        };
+        await overwritePdrProgress(scopeId, merged);
+        if (alive) setProgressState(merged);
+      }
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [user?.id, scopeId]);
+
+  // Flush pending sync when network comes back online
+  useEffect(() => {
+    if (networkStatus === "online" && prevNetworkRef.current !== "online" && user?.id) {
+      const uid = user.id;
+      void hasPendingSync(scopeId).then(async (pending) => {
+        if (!pending) return;
+        const state = await loadPdrProgress(scopeId);
+        await savePdrProgressToFirestore(uid, state.mistakes, state.topicProgress, state.updatedAt);
+        await clearPendingSync(scopeId);
+      }).catch(() => {});
+    }
+    prevNetworkRef.current = networkStatus;
+  }, [networkStatus, user?.id, scopeId]);
 
   const launchQuiz = useCallback((qs: PDRQuestion[], meta: QuizMeta) => {
     if (!qs.length) return;
@@ -1525,7 +1685,14 @@ export default function TestsTab() {
       answerIndex: payload.answers[index] ?? null,
     }));
     void recordPdrSession(scopeId, payload.licenseCategory, attempts, protocol)
-      .then(setProgressState)
+      .then((state) => {
+        setProgressState(state);
+        if (user?.id && !user.isGuest) {
+          void savePdrProgressToFirestore(user.id, state.mistakes, state.topicProgress, state.updatedAt)
+            .then(() => clearPendingSync(scopeId))
+            .catch(() => {});
+        }
+      })
       .catch(() => {});
     if (payload.mode === "marathon") {
       setMarathonState(null);
@@ -1670,6 +1837,7 @@ export default function TestsTab() {
   // ─── Main menu ──────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
+      <SignScannerSheet visible={showSignScanner} onClose={() => setShowSignScanner(false)} />
       <LidykPlanSheet
         visible={showCoachPlan}
         progressState={progressState}
@@ -1771,6 +1939,23 @@ export default function TestsTab() {
               </Text>
             </View>
           )}
+        </Pressable>
+
+        {/* Sign scanner — killer feature E3 */}
+        <Pressable
+          onPress={() => setShowSignScanner(true)}
+          style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: "#1d4ed808", borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: "#1d4ed830", ...shadows.card }}
+        >
+          <View style={{ width: 54, height: 54, borderRadius: 16, backgroundColor: "#1d4ed818", alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ fontSize: 26 }}>📷</Text>
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "900" }}>Сканер знаків</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 3 }} numberOfLines={2}>
+              Сфотографуй знак — Лідик поясне за ПДР
+            </Text>
+          </View>
+          <Text style={{ color: "#1d4ed8", fontSize: 20, fontWeight: "900" }}>›</Text>
         </Pressable>
 
         {/* Швидкий старт */}

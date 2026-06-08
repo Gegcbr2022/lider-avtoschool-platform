@@ -3,6 +3,7 @@ import type { DrivingLicenseCategory, PDRQuestion } from "./pdr-questions";
 
 const PROGRESS_PREFIX = "lider:pdr-progress:v1";
 const MARATHON_PREFIX = "lider:pdr-marathon:v1";
+const PENDING_SYNC_KEY = "lider:pdr-pending-sync:v1";
 
 export type PdrQuizMode = "exam" | "topic" | "mini" | "mistakes" | "marathon";
 
@@ -78,8 +79,40 @@ export type PdrCoachPlan = {
   nextSteps: string[];
 };
 
+async function markPendingSync(scopeId: string): Promise<void> {
+  try {
+    const raw = await AsyncStorage.getItem(PENDING_SYNC_KEY);
+    const pending: string[] = raw ? (JSON.parse(raw) as string[]) : [];
+    if (!pending.includes(scopeId)) {
+      await AsyncStorage.setItem(PENDING_SYNC_KEY, JSON.stringify([...pending, scopeId]));
+    }
+  } catch {}
+}
+
+export async function clearPendingSync(scopeId: string): Promise<void> {
+  try {
+    const raw = await AsyncStorage.getItem(PENDING_SYNC_KEY);
+    const pending: string[] = raw ? (JSON.parse(raw) as string[]) : [];
+    await AsyncStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(pending.filter((s) => s !== scopeId)));
+  } catch {}
+}
+
+export async function hasPendingSync(scopeId: string): Promise<boolean> {
+  try {
+    const raw = await AsyncStorage.getItem(PENDING_SYNC_KEY);
+    if (!raw) return false;
+    return (JSON.parse(raw) as string[]).includes(scopeId);
+  } catch {
+    return false;
+  }
+}
+
 function progressKey(scopeId: string): string {
   return `${PROGRESS_PREFIX}:${scopeId || "guest"}`;
+}
+
+export async function overwritePdrProgress(scopeId: string, state: PdrProgressState): Promise<void> {
+  await AsyncStorage.setItem(progressKey(scopeId), JSON.stringify({ ...state, updatedAt: state.updatedAt ?? new Date().toISOString() }));
 }
 
 function marathonKey(scopeId: string): string {
@@ -168,6 +201,7 @@ export async function recordPdrSession(
 
   state.lastProtocol = protocol;
   await savePdrProgress(scopeId, state);
+  void markPendingSync(scopeId);
   return state;
 }
 

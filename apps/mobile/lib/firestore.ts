@@ -1212,3 +1212,42 @@ export async function ensureInstructorConversation(params: {
   });
   return ref.id;
 }
+
+// ─── PDR Progress (cross-device sync via userPdrProgress/{uid}) ───────────────
+
+export async function savePdrProgressToFirestore(
+  uid: string,
+  mistakes: Record<string, object>,
+  topicProgress: Record<string, object>,
+  updatedAt?: string
+): Promise<void> {
+  await setDoc(
+    doc(db, "userPdrProgress", uid),
+    {
+      mistakes,
+      topicProgress,
+      updatedAt: updatedAt ?? new Date().toISOString(),
+      syncedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
+}
+
+export async function loadPdrProgressFromFirestore(uid: string): Promise<{
+  mistakes: Record<string, object>;
+  topicProgress: Record<string, object>;
+  updatedAt?: string;
+} | null> {
+  try {
+    const snap = await getDoc(doc(db, "userPdrProgress", uid));
+    if (!snap.exists()) return null;
+    const data = snap.data();
+    return {
+      mistakes: (data.mistakes as Record<string, object>) ?? {},
+      topicProgress: (data.topicProgress as Record<string, object>) ?? {},
+      updatedAt: data.updatedAt as string | undefined,
+    };
+  } catch {
+    return null;
+  }
+}

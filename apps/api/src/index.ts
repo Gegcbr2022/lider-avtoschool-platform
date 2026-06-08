@@ -24,6 +24,7 @@ import {
   answerAiChat,
   answerStudentQuestion,
   callChatWithFallback,
+  callOpenAiVision,
   resolveOpenAiModel
 } from "./ai-providers";
 import { paymentProviders } from "./payment-providers";
@@ -564,6 +565,42 @@ app.post("/ai/lidyk", async (request, response) => {
     mode: "openai-fallback",
     model,
     error: result.error
+  });
+});
+
+app.post("/ai/recognize-sign", async (request, response) => {
+  const body = request.body ?? {};
+  const imageBase64 = typeof body.imageBase64 === "string" ? body.imageBase64.trim() : "";
+  const mimeType = typeof body.mimeType === "string" && body.mimeType.startsWith("image/") ? body.mimeType : "image/jpeg";
+
+  if (!imageBase64 || imageBase64.length < 100 || imageBase64.length > 3_000_000) {
+    response.status(422).json({ error: "imageBase64 is required (max ~2 MB)" });
+    return;
+  }
+
+  if (!process.env.OPENAI_API_KEY) {
+    response.json({ answer: "Лідик зараз відпочиває — розпізнавання знаків не налаштовано. Спробуй пізніше!", mode: "local-fallback" });
+    return;
+  }
+
+  const prompt =
+    "Ти Лідик — AI-помічник автошколи «Лідер» (Україна). На фото — дорожній знак або дорожня ситуація. " +
+    "Визнач знак або ситуацію та поясни українською у 2–4 реченнях: " +
+    "1) назву/тип знака; 2) що він означає за ПДР України; 3) як має поводитися водій. " +
+    "Якщо на фото немає знака — м'яко поясни це.";
+
+  const result = await callOpenAiVision(imageBase64, mimeType, prompt, 350);
+
+  if (result.ok) {
+    response.json({ answer: result.content, mode: "openai", model: result.model });
+    return;
+  }
+
+  console.error("Sign recognition failed", { error: result.error });
+  response.json({
+    answer: "Лідик не зміг розпізнати знак 🚧 Спробуй ще раз або сфотографуй чіткіше.",
+    mode: "openai-fallback",
+    error: result.error,
   });
 });
 
