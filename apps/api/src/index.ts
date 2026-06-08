@@ -1189,11 +1189,34 @@ async function sendFCMPush(
     }
 
     const fcmUrl = `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`;
+    const safeData = Object.fromEntries(
+      Object.entries(data).map(([key, value]) => [key, String(value)])
+    );
+    const channelId = safeData.type === "chat"
+      ? "chat"
+      : safeData.type === "booking" || safeData.type === "booking-reminder"
+        ? "booking"
+        : "training";
+
     const fcmPayload = {
       message: {
         token: pushToken,
         notification: { title, body },
-        data
+        data: { ...safeData, title, body },
+        android: {
+          priority: "HIGH",
+          notification: {
+            channel_id: channelId,
+            sound: "default"
+          }
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: "default"
+            }
+          }
+        }
       }
     };
 
