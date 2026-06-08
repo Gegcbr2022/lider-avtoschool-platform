@@ -14,7 +14,8 @@ service cloud.firestore {
     }
 
     function hasRole(role) {
-      return signedIn() && request.auth.token.role == role;
+      return signedIn()
+        && request.auth.token.get("role", "") == role;
     }
 
     function staff() {
@@ -35,6 +36,39 @@ service cloud.firestore {
 
     function keepsOwnResource() {
       return ownsResource() && request.resource.data.studentId == uid();
+    }
+
+    function validBonusShape() {
+      return request.resource.data.keys().hasAll(["balance", "totalEarned", "history", "updatedAt"])
+        && request.resource.data.keys().hasOnly(["balance", "totalEarned", "history", "updatedAt"])
+        && request.resource.data.get("balance", -1) is number
+        && request.resource.data.get("balance", -1) >= 0
+        && request.resource.data.get("balance", -1) <= 100000
+        && request.resource.data.get("totalEarned", -1) is number
+        && request.resource.data.get("totalEarned", -1) >= 0
+        && request.resource.data.get("totalEarned", -1) <= 100000
+        && request.resource.data.get("history", []) is list
+        && request.resource.data.get("history", []).size() <= 20;
+    }
+
+    function createsSmallOwnBonus(userId) {
+      return signedIn()
+        && uid() == userId
+        && validBonusShape()
+        && request.resource.data.get("balance", -1) <= 2
+        && request.resource.data.get("totalEarned", -1) == request.resource.data.get("balance", -1);
+    }
+
+    function incrementsSmallOwnBonus(userId) {
+      return signedIn()
+        && uid() == userId
+        && validBonusShape()
+        && resource.data.get("balance", -1) is number
+        && resource.data.get("totalEarned", -1) is number
+        && request.resource.data.get("balance", -1) - resource.data.get("balance", -1) >= 0
+        && request.resource.data.get("balance", -1) - resource.data.get("balance", -1) <= 2
+        && request.resource.data.get("totalEarned", -1) - resource.data.get("totalEarned", -1) >= 0
+        && request.resource.data.get("totalEarned", -1) - resource.data.get("totalEarned", -1) <= 2;
     }
 
     function linkedInstructorOwnsBooking() {
@@ -251,7 +285,11 @@ service cloud.firestore {
     // ─── Лідер-бали (per-user bonus balance + history) ───────────────────────────
 
     match /userBonuses/{userId} {
-      allow read, write: if signedIn() && uid() == userId;
+      allow read: if staff() || (signedIn() && uid() == userId);
+      allow create: if staff() || createsSmallOwnBonus(userId);
+      allow update: if staff();
+      allow update: if incrementsSmallOwnBonus(userId);
+      allow delete: if staff();
     }
 
     // ─── PDR Progress (mistakes + topic stats, per-user, synced from device) ────
