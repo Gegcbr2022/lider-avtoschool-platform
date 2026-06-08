@@ -39,6 +39,10 @@ screens/v10-testing/
 /screen_*.png
 /[0-9][0-9]_*.png
 /AUDIT_*.png
+/sprint*.png
+/sprint*.xml
+/logcat-*.txt
+/*.ps1
 /app_logo_test.png
 /home*.png
 /screen*.png

@@ -124,9 +124,13 @@ firebase deploy --only functions,firestore:rules,firestore:indexes,storage
 - имя, телефон, город/филиал, категорию;
 - удобный способ связи;
 - комментарий;
-- имена приложенных файлов документов.
+- файлы документов и metadata по ним.
 
-Важно: загрузка файлов документов пока подготовлена на уровне UI/payload, но не подключена к Firebase Storage. Это отмечено в `MISSING_FOR_PRODUCTION.md`.
+Загрузка документов уже подключена к Firebase Storage: `apps/web/lib/storage-upload.ts` кладет image/pdf до 10 MB в
+`lead-documents/{leadId}/{fileName}`, Storage rules разрешают этот public create для формы заявки, а
+`apps/web/app/api/leads/documents/route.ts` best-effort передает metadata в API (`/leads/:leadId/documents`).
+Оставшийся production-риск — защита public upload от abuse через App Check или backend signed upload; он описан в
+`MISSING_FOR_PRODUCTION.md`.
 
 ## Что Проверять Вручную
 
