@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { askLidyk } from "../../lib/api";
+import { useAuth } from "../../lib/auth";
 import { useTheme, radii, spacing } from "../../lib/theme";
 import { useNetworkStatus } from "../../lib/useNetwork";
 
@@ -48,6 +49,7 @@ const QUICK_PROMPTS = [
 
 export default function AssistantTab() {
   const { colors } = useTheme();
+  const { user } = useAuth();
   const scrollRef = useRef<ScrollView>(null);
   const networkStatus = useNetworkStatus();
   const isOffline = networkStatus === "offline";
@@ -84,7 +86,7 @@ export default function AssistantTab() {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
 
     try {
-      const res = await askLidyk(q);
+      const res = await askLidyk(q, user);
 
       if (res.mode === "openai") {
         // Full success — OpenAI answered

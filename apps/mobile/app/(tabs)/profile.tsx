@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  Alert, Image, Linking, Modal, Pressable, ScrollView, Text, TextInput, View,
+  Alert, Image, Linking, Modal, Pressable, ScrollView, Switch, Text, TextInput, View,
 } from "react-native";
 import { router, useFocusEffect, type Href } from "expo-router";
 import Constants from "expo-constants";
@@ -10,6 +10,7 @@ import { useTheme, radii, type ThemePreference, spacing, shadows } from "../../l
 import { useNetworkStatus } from "../../lib/useNetwork";
 import { getUserProfile, upsertUserProfile, getUserStats, type UserStats } from "../../lib/firestore";
 import { requestNotificationPermission, scheduleLocalNotification } from "../../lib/notifications";
+import { DEFAULT_APP_SETTINGS, loadAppSettings, saveAppSettings, type AppSettings } from "../../lib/app-settings";
 
 const APP_VERSION = (Constants.expoConfig?.version as string | undefined) ?? "1.0.0";
 
@@ -26,6 +27,7 @@ const AVATAR_EMOJIS = [
 
 const CATEGORIES = ["A", "A1", "B", "C", "CE"];
 const CITIES = ["Київ", "Харків", "Одеса", "Дніпро", "Запоріжжя", "Львів", "Кривий Ріг", "Миколаїв", "Маріуполь", "Вінниця"];
+
 
 // ─── Bottom sheet wrapper ─────────────────────────────────────────────────────
 
@@ -236,6 +238,36 @@ function PersonalInfoSheet({ visible, data, onSave, onClose }: {
 
 function SettingsSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { colors, preference, setPreference } = useTheme();
+  const [appSettings, setAppSettings] = useState<AppSettings>(DEFAULT_APP_SETTINGS);
+
+  useEffect(() => {
+    if (!visible) return;
+    loadAppSettings().then(setAppSettings).catch(() => {});
+  }, [visible]);
+
+  function updateSetting(key: keyof AppSettings, value: boolean) {
+    const next = { ...appSettings, [key]: value };
+    setAppSettings(next);
+    saveAppSettings(next).catch(() => {});
+  }
+
+  function SettingRow({ title, subtitle, value, onChange }: { title: string; subtitle: string; value: boolean; onChange: (value: boolean) => void }) {
+    return (
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 14, borderWidth: 1, borderColor: colors.border }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "900" }}>{title}</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 3, lineHeight: 17 }}>{subtitle}</Text>
+        </View>
+        <Switch
+          value={value}
+          onValueChange={onChange}
+          trackColor={{ false: colors.bgElevated, true: colors.redSoft }}
+          thumbColor={value ? colors.red : colors.textTertiary}
+        />
+      </View>
+    );
+  }
+
   return (
     <BottomSheet visible={visible} title="Налаштування" onClose={onClose}>
       <Text style={{ fontSize: 13, fontWeight: "700", color: colors.textSecondary, marginBottom: 12 }}>Тема оформлення</Text>
@@ -250,6 +282,27 @@ function SettingsSheet({ visible, onClose }: { visible: boolean; onClose: () => 
             <Text style={{ color: preference === opt.value ? colors.red : colors.textSecondary, fontSize: 11, fontWeight: "800" }}>{opt.label}</Text>
           </Pressable>
         ))}
+      </View>
+      <View style={{ marginTop: 20, gap: 10 }}>
+        <Text style={{ fontSize: 13, fontWeight: "700", color: colors.textSecondary }}>Навчання і Лідик</Text>
+        <SettingRow
+          title="Підказки Лідика"
+          subtitle="Маскот частіше підкаже, що робити далі."
+          value={appSettings.mascotGuide}
+          onChange={(value) => updateSetting("mascotGuide", value)}
+        />
+        <SettingRow
+          title="Візуальні підказки в тестах"
+          subtitle="Показувати схеми та зображення у ПДР-тренажері."
+          value={appSettings.visualHints}
+          onChange={(value) => updateSetting("visualHints", value)}
+        />
+        <SettingRow
+          title="Ділитися результатами"
+          subtitle="Після тесту показувати швидку дію для шерингу."
+          value={appSettings.shareResults}
+          onChange={(value) => updateSetting("shareResults", value)}
+        />
       </View>
     </BottomSheet>
   );
@@ -465,6 +518,7 @@ export default function ProfileTab() {
 
   const displayName = localName || user?.name || "Учень";
   const displayEmoji = localAvatar || user?.avatarEmoji || "🚗";
+  const displayPhotoURL = localAvatar || user?.avatarEmoji ? undefined : user?.photoURL;
   const isEmailVerified = user?.emailVerified ?? false;
 
   // Load profile from Firestore on mount
@@ -573,12 +627,12 @@ export default function ProfileTab() {
           onPress={() => !isGuest && setActiveSheet("avatar")}
           style={{ width: 72, height: 72, borderRadius: 24, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: colors.red + "44", overflow: "hidden" }}
         >
-          {user?.photoURL ? (
-            <Image source={{ uri: user.photoURL }} style={{ width: 72, height: 72 }} />
+          {displayPhotoURL ? (
+            <Image source={{ uri: displayPhotoURL }} style={{ width: 72, height: 72 }} />
           ) : (
             <Text style={{ fontSize: 36 }}>{displayEmoji}</Text>
           )}
-          {!isGuest && !user?.photoURL ? (
+          {!isGuest && !displayPhotoURL ? (
             <View style={{ position: "absolute", bottom: 0, right: 0, width: 22, height: 22, borderRadius: 11, backgroundColor: colors.bgCard, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: colors.border }}>
               <Text style={{ fontSize: 10 }}>✏️</Text>
             </View>

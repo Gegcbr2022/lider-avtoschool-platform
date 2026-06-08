@@ -1,5 +1,6 @@
-import { Pressable, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { router, type Href } from "expo-router";
+import { useState } from "react";
 import {
   Card,
   Label,
@@ -33,8 +34,83 @@ export default function LearningTab() {
   const { colors } = useTheme();
   const { mode } = useAuth();
   const isAuth = mode === "authenticated";
+  const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
+  const selectedProgram = mobileServices.find((service) => service.id === selectedProgramId);
 
   return (
+    <>
+    <Modal visible={Boolean(selectedProgram)} animationType="slide" transparent onRequestClose={() => setSelectedProgramId(null)}>
+      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.58)", justifyContent: "flex-end" }}>
+        <Pressable style={{ flex: 1 }} onPress={() => setSelectedProgramId(null)} />
+        {selectedProgram ? (
+          <View style={{ maxHeight: "82%", backgroundColor: colors.bgSheet, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 22, borderTopWidth: 1, borderTopColor: colors.border }}>
+            <View style={{ width: 42, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginBottom: 18 }} />
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingBottom: 18 }}>
+              <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+                <View style={{ width: 54, height: 54, borderRadius: 18, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ fontSize: 26 }}>{selectedProgram.retraining ? "🔁" : "🎓"}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.textPrimary, fontSize: 22, fontWeight: "900", lineHeight: 28 }}>{selectedProgram.title}</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 19, marginTop: 4 }}>{selectedProgram.summary}</Text>
+                </View>
+              </View>
+
+              <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+                <Pill tone="red">від {selectedProgram.priceFrom.toLocaleString("uk-UA")} грн</Pill>
+                <Pill>{selectedProgram.duration}</Pill>
+                {"minimumAge" in selectedProgram && selectedProgram.minimumAge ? <Pill>{selectedProgram.minimumAge}</Pill> : null}
+              </View>
+
+              {"condition" in selectedProgram && selectedProgram.condition ? (
+                <View style={{ backgroundColor: colors.warningSoft, borderRadius: radii.md, padding: 12, borderWidth: 1, borderColor: colors.warning + "44" }}>
+                  <Text style={{ color: colors.warning, fontSize: 12, fontWeight: "800", lineHeight: 18 }}>{selectedProgram.condition}</Text>
+                </View>
+              ) : null}
+
+              <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 14, borderWidth: 1, borderColor: colors.border, gap: 10 }}>
+                <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "900" }}>Що входить</Text>
+                {selectedProgram.outcomes.map((outcome) => (
+                  <View key={outcome} style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
+                    <Text style={{ color: colors.red, fontSize: 14, fontWeight: "900" }}>✓</Text>
+                    <Text style={{ flex: 1, color: colors.textSecondary, fontSize: 13, lineHeight: 19 }}>{outcome}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <View style={{ backgroundColor: colors.bgElevated, borderRadius: radii.md, padding: 14, borderWidth: 1, borderColor: colors.border, flexDirection: "row", gap: 10 }}>
+                <Text style={{ fontSize: 24 }}>🚗</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "900" }}>Лідик підкаже маршрут</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 18, marginTop: 2 }}>Можеш попросити пояснити різницю між категоріями або підібрати програму під твій досвід.</Text>
+                </View>
+              </View>
+
+              <View style={{ gap: 10 }}>
+                <Pressable
+                  onPress={() => {
+                    setSelectedProgramId(null);
+                    router.push((isAuth ? "/(tabs)/chat" : "/auth?mode=register") as Href);
+                  }}
+                  style={{ backgroundColor: colors.red, borderRadius: radii.md, paddingVertical: 15, alignItems: "center" }}
+                >
+                  <Text style={{ color: "#fff", fontSize: 15, fontWeight: "900" }}>{isAuth ? "Написати менеджеру" : "Записатися на програму"}</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    setSelectedProgramId(null);
+                    router.push("/(tabs)/assistant");
+                  }}
+                  style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, paddingVertical: 14, alignItems: "center", borderWidth: 1, borderColor: colors.border }}
+                >
+                  <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "800" }}>Спитати Лідика про програму</Text>
+                </Pressable>
+              </View>
+            </ScrollView>
+          </View>
+        ) : null}
+      </View>
+    </Modal>
     <Screen title="Навчання" subtitle="Курс, уроки, тести ПДР та тренажери — все в одному місці.">
 
       {/* ─── Мій курс ────────────────────────────────────────────────────── */}
@@ -179,10 +255,11 @@ export default function LearningTab() {
             title={service.title}
             detail={`${service.duration} · від ${service.priceFrom.toLocaleString("uk-UA")} грн`}
             right={<Pill tone="red">Записатись</Pill>}
-            onPress={() => router.push("/auth?mode=register")}
+            onPress={() => setSelectedProgramId(service.id)}
           />
         ))}
       </Card>
     </Screen>
+    </>
   );
 }

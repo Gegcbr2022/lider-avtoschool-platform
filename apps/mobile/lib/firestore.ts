@@ -20,6 +20,7 @@ import {
   serverTimestamp,
   arrayUnion,
   arrayRemove,
+  deleteField,
   increment,
   type Unsubscribe,
   type DocumentData,
@@ -78,6 +79,7 @@ export type StoryDoc = {
   reactions: number;
   views: number;
   viewedBy?: string[];
+  reactedBy?: string[];
   tags: string[];
   mediaUrl?: string;
   mediaPath?: string;
@@ -101,6 +103,7 @@ export type UserProfileDoc = {
   category?: string;
   avatarEmoji?: string;
   photoURL?: string;
+  role?: string;
   pushToken?: string;
   updatedAt: Date | null;
 };
@@ -180,6 +183,7 @@ function mapStory(id: string, data: DocumentData): StoryDoc {
     reactions: data.reactions ?? 0,
     views: data.views ?? 0,
     viewedBy: data.viewedBy ?? [],
+    reactedBy: data.reactedBy ?? [],
     tags: data.tags ?? [],
     mediaUrl: data.mediaUrl,
     mediaPath: data.mediaPath,
@@ -372,6 +376,7 @@ export async function createStory(params: {
     reactions: 0,
     views: 0,
     viewedBy: [],
+    reactedBy: [],
     createdAt: serverTimestamp(),
     expiresAt,
   });
@@ -380,15 +385,27 @@ export async function createStory(params: {
 
 export async function viewStory(storyId: string, userId: string): Promise<void> {
   const ref = doc(db, "stories", storyId);
-  await updateDoc(ref, {
-    viewedBy: arrayUnion(userId),
-    views: increment(1),
-  }).catch(() => {}); // non-critical
+  try {
+    const snap = await getDoc(ref);
+    const viewedBy = snap.exists() ? ((snap.data().viewedBy ?? []) as string[]) : [];
+    if (viewedBy.includes(userId)) return;
+    await updateDoc(ref, {
+      viewedBy: arrayUnion(userId),
+      views: increment(1),
+    });
+  } catch {
+    // non-critical
+  }
 }
 
-export async function reactToStory(storyId: string): Promise<void> {
+export async function reactToStory(
+  storyId: string,
+  userId: string,
+  currentlyReacted: boolean
+): Promise<void> {
   await updateDoc(doc(db, "stories", storyId), {
-    reactions: increment(1),
+    reactedBy: currentlyReacted ? arrayRemove(userId) : arrayUnion(userId),
+    reactions: increment(currentlyReacted ? -1 : 1),
   }).catch(() => {});
 }
 
@@ -411,6 +428,7 @@ export async function getUserProfile(userId: string): Promise<UserProfileDoc | n
     category: d.category,
     avatarEmoji: d.avatarEmoji,
     photoURL: d.photoURL,
+    role: d.role,
     updatedAt: toDate(d.updatedAt),
   };
 }
@@ -662,13 +680,20 @@ export async function getNaisData(uid: string): Promise<NaisData | null> {
 }
 
 export async function saveNaisData(uid: string, patch: Partial<NaisData>): Promise<void> {
-  await setDoc(doc(db, "naisData", uid), { ...patch, updatedAt: serverTimestamp() }, { merge: true });
+  const { documents: _documents, ...safePatch } = patch;
+  await setDoc(doc(db, "naisData", uid), { ...safePatch, updatedAt: serverTimestamp() }, { merge: true });
 }
 
 export async function addNaisDocument(uid: string, document: NaisDocument): Promise<void> {
+  const ref = doc(db, "naisData", uid);
+  const snap = await getDoc(ref);
+  const existing = snap.exists() && Array.isArray(snap.data().documents)
+    ? (snap.data().documents as NaisDocument[])
+    : [];
+  const documents = [...existing.filter((d) => d.kind !== document.kind), document];
   await setDoc(
-    doc(db, "naisData", uid),
-    { documents: arrayUnion(document), updatedAt: serverTimestamp() },
+    ref,
+    { documents, updatedAt: serverTimestamp() },
     { merge: true }
   );
 }
@@ -678,6 +703,7 @@ export async function addNaisDocument(uid: string, document: NaisDocument): Prom
 export type Instructor = {
   id: string;
   name: string;
+  accountUserId?: string;
   photoEmoji?: string;
   description?: string;
   categories?: string[];
@@ -702,6 +728,8 @@ export type BookingDoc = {
   studentName: string;
   instructorId: string;
   instructorName: string;
+  instructorUserId?: string;
+  studentPhone?: string;
   startsAt: string; // ISO datetime
   status: string;
   createdAt: Date | null;
@@ -712,6 +740,8 @@ export async function createBooking(params: {
   studentName: string;
   instructorId: string;
   instructorName: string;
+  instructorUserId?: string;
+  studentPhone?: string;
   startsAt: string;
 }): Promise<string> {
   const ref = await addDoc(collection(db, "bookings"), {
@@ -735,6 +765,8 @@ export async function getMyBookings(studentId: string): Promise<BookingDoc[]> {
         studentName: data.studentName ?? "",
         instructorId: data.instructorId ?? "",
         instructorName: data.instructorName ?? "",
+        instructorUserId: data.instructorUserId,
+        studentPhone: data.studentPhone,
         startsAt: data.startsAt ?? "",
         status: data.status ?? "pending",
         createdAt: toDate(data.createdAt),
@@ -746,25 +778,46 @@ export async function getMyBookings(studentId: string): Promise<BookingDoc[]> {
   }
 }
 
-// Fetch bookings where the caller is the instructor.
-export async function getInstructorBookings(instructorId: string): Promise<BookingDoc[]> {
+// Fetch bookings where the caller is the instructor. Supports both the new
+// accountUserId link and older bookings that only stored instructors/{id}.
+export async function getInstructorBookings(instructorUserId: string): Promise<BookingDoc[]> {
   try {
-    const snap = await getDocs(
-      query(collection(db, "bookings"), where("instructorId", "==", instructorId), limit(50))
+    const instructorSnap = await getDocs(
+      query(collection(db, "instructors"), where("accountUserId", "==", instructorUserId), limit(1))
     );
-    const rows = snap.docs.map((d) => {
-      const data = d.data();
-      return {
-        id: d.id,
-        studentId: data.studentId ?? "",
-        studentName: data.studentName ?? "",
-        instructorId: data.instructorId ?? "",
-        instructorName: data.instructorName ?? "",
-        startsAt: data.startsAt ?? "",
-        status: data.status ?? "pending",
-        createdAt: toDate(data.createdAt),
-      };
-    });
+    const linkedInstructorId = instructorSnap.docs[0]?.id;
+    const queries = [
+      getDocs(query(collection(db, "bookings"), where("instructorUserId", "==", instructorUserId), limit(50))),
+      getDocs(query(collection(db, "bookings"), where("instructorId", "==", instructorUserId), limit(50))),
+    ];
+    if (linkedInstructorId && linkedInstructorId !== instructorUserId) {
+      queries.push(getDocs(query(collection(db, "bookings"), where("instructorId", "==", linkedInstructorId), limit(50))));
+    }
+
+    const snaps = await Promise.all(queries);
+    const seen = new Set<string>();
+    const rows = snaps
+      .flatMap((snap) => snap.docs)
+      .filter((d) => {
+        if (seen.has(d.id)) return false;
+        seen.add(d.id);
+        return true;
+      })
+      .map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          studentId: data.studentId ?? "",
+          studentName: data.studentName ?? "",
+          instructorId: data.instructorId ?? "",
+          instructorName: data.instructorName ?? "",
+          instructorUserId: data.instructorUserId,
+          studentPhone: data.studentPhone,
+          startsAt: data.startsAt ?? "",
+          status: data.status ?? "pending",
+          createdAt: toDate(data.createdAt),
+        };
+      });
     return rows.sort((a, b) => (a.startsAt < b.startsAt ? -1 : 1)); // chronological
   } catch {
     return [];
@@ -837,6 +890,13 @@ export type ConversationDoc = {
   unreadBy?: string[];
   readBy?: string[];
   lastSenderId?: string;
+  createdByName?: string;
+  createdByPhone?: string;
+  studentId?: string;
+  studentName?: string;
+  studentPhone?: string;
+  instructorId?: string;
+  instructorName?: string;
 };
 
 export type MessageDoc = {
@@ -855,6 +915,8 @@ export type MessageDoc = {
   width?: number;
   height?: number;
   senderRole?: string;
+  senderPhone?: string;
+  reactions?: Record<string, string>;
 };
 
 export function subscribeToConversations(
@@ -883,6 +945,13 @@ export function subscribeToConversations(
           unreadBy: data.unreadBy ?? [],
           readBy: data.readBy ?? [],
           lastSenderId: data.lastSenderId,
+          createdByName: data.createdByName,
+          createdByPhone: data.createdByPhone,
+          studentId: data.studentId,
+          studentName: data.studentName,
+          studentPhone: data.studentPhone,
+          instructorId: data.instructorId,
+          instructorName: data.instructorName,
         };
       })
     );
@@ -918,6 +987,8 @@ export function subscribeToMessages(
           width: data.width,
           height: data.height,
           senderRole: data.senderRole,
+          senderPhone: data.senderPhone,
+          reactions: data.reactions ?? {},
         };
       })
     );
@@ -939,6 +1010,7 @@ export async function sendMessage(
     fileSize?: number;
     width?: number;
     height?: number;
+    senderPhone?: string;
   }
 ): Promise<void> {
   const convRef = doc(db, "conversations", conversationId);
@@ -960,10 +1032,18 @@ export async function sendMessage(
     fileSize: params.fileSize,
     width: params.width,
     height: params.height,
+    senderPhone: params.senderPhone,
+    reactions: {},
   });
   await addDoc(collection(db, "conversations", conversationId, "messages"), payload);
+  const fallbackLastMessage =
+    params.mediaType === "document"
+      ? `📎 ${params.fileName ?? "Файл"}`
+      : params.mediaUrl
+        ? "📷 Фото"
+        : "";
   await updateDoc(convRef, {
-    lastMessage: params.text || "📷 Фото",
+    lastMessage: params.text || fallbackLastMessage,
     lastMessageAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
     lastSenderId: params.senderId,
@@ -984,6 +1064,37 @@ export async function markConversationRead(
   }).catch(() => {});
 }
 
+export async function markMessagesRead(
+  conversationId: string,
+  userId: string,
+  messages: MessageDoc[]
+): Promise<void> {
+  const unreadIncoming = messages
+    .filter((message) => message.senderId !== userId && !message.readBy?.includes(userId))
+    .slice(-30);
+
+  await Promise.all(
+    unreadIncoming.map((message) =>
+      updateDoc(doc(db, "conversations", conversationId, "messages", message.id), {
+        readBy: arrayUnion(userId),
+        readAt: serverTimestamp(),
+      }).catch(() => {})
+    )
+  );
+}
+
+export async function setMessageReaction(
+  conversationId: string,
+  messageId: string,
+  userId: string,
+  emoji: string | null
+): Promise<void> {
+  await updateDoc(doc(db, "conversations", conversationId, "messages", messageId), {
+    [`reactions.${userId}`]: emoji ?? deleteField(),
+    reactionUpdatedAt: serverTimestamp(),
+  });
+}
+
 // Find-or-create a conversation of a given type (support / manager / instructor).
 // Uses only the participantIds+updatedAt index; filters type client-side to avoid
 // a compound index. The backend Telegram bridge mirrors each thread to a topic.
@@ -991,7 +1102,8 @@ export async function ensureConversation(
   userId: string,
   userName: string,
   type: ConversationType,
-  title: string
+  title: string,
+  userPhone?: string
 ): Promise<string> {
   const q = query(
     collection(db, "conversations"),
@@ -1014,6 +1126,7 @@ export async function ensureConversation(
     updatedAt: serverTimestamp(),
     createdBy: userId,
     createdByName: userName,
+    createdByPhone: userPhone ?? "",
   });
   return ref.id;
 }
@@ -1030,10 +1143,11 @@ export async function ensureInstructorConversation(params: {
   callerId: string;
   studentId: string;
   studentName: string;
+  studentPhone?: string;
   instructorId: string;
   instructorName: string;
 }): Promise<string> {
-  const { callerId, studentId, studentName, instructorId, instructorName } = params;
+  const { callerId, studentId, studentName, studentPhone, instructorId, instructorName } = params;
   const q = query(
     collection(db, "conversations"),
     where("participantIds", "array-contains", callerId),
@@ -1054,6 +1168,7 @@ export async function ensureInstructorConversation(params: {
     title: `Інструктор · ${studentName}`,
     studentId,
     studentName,
+    studentPhone: studentPhone ?? "",
     instructorId,
     instructorName,
     lastMessage: null,

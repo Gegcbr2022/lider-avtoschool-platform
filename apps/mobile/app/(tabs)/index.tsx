@@ -257,67 +257,102 @@ function GuestHome() {
 // ─────────────────────────────────────────────────────────────────────────────
 // STUDENT HOME
 // ─────────────────────────────────────────────────────────────────────────────
-function StudentHome({ firstName }: { firstName: string }) {
+function StudentHome() {
   const { colors } = useTheme();
 
   return (
-    <Screen title={`${firstName}.`} subtitle="Ваш кабінет.">
+    <Screen title="Лідер · маршрут" subtitle="Твоя кабіна підготовки до прав.">
       <View
         style={{
-          backgroundColor: colors.bgCard,
+          backgroundColor: colors.red,
           borderRadius: radii.xl,
-          borderWidth: 1,
-          borderColor: colors.border,
+          borderWidth: 0,
           padding: 24,
-          gap: 16,
-          ...shadows.card,
+          gap: 18,
+          overflow: "hidden",
+          ...shadows.red,
         }}
       >
+        <View style={{ position: "absolute", right: -34, top: -18, width: 140, height: 140, borderRadius: 70, backgroundColor: "rgba(255,255,255,0.12)" }} />
+        <View style={{ position: "absolute", right: 28, bottom: -44, width: 120, height: 120, borderRadius: 60, backgroundColor: "rgba(0,0,0,0.12)" }} />
         <Text
           style={{
-            color: colors.textTertiary,
+            color: "rgba(255,255,255,0.72)",
             fontSize: 10,
             fontWeight: "900",
             letterSpacing: 1.5,
             textTransform: "uppercase",
           }}
         >
-          Ваша мета
+          Автошкола Лідер
         </Text>
         <Text
           style={{
-            color: colors.textPrimary,
-            fontSize: 22,
+            color: "#fff",
+            fontSize: 28,
             fontWeight: "900",
-            letterSpacing: -0.5,
+            letterSpacing: -0.6,
+            lineHeight: 34,
           }}
         >
-          Скласти іспит ПДР
+          Сьогодні веде Лідик
         </Text>
         <Text
           style={{
-            color: colors.textSecondary,
+            color: "rgba(255,255,255,0.82)",
             fontSize: 14,
             lineHeight: 22,
+            maxWidth: "88%",
           }}
         >
-          Тренажер, категорії знаків та AI-помічник Лідик.
+          15 хвилин ПДР, один слабкий знак і короткий чек перед практикою. Без хаосу, просто наступний крок.
         </Text>
+        <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+          {["ПДР", "Практика", "Документи"].map((item) => (
+            <View key={item} style={{ borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: "rgba(255,255,255,0.14)", borderWidth: 1, borderColor: "rgba(255,255,255,0.18)" }}>
+              <Text style={{ color: "#fff", fontSize: 12, fontWeight: "800" }}>{item}</Text>
+            </View>
+          ))}
+        </View>
         <ScalePressable
           onPress={() => router.push("/(tabs)/learning")}
           style={{
-            backgroundColor: colors.red,
+            backgroundColor: "#fff",
             borderRadius: radii.md,
             paddingVertical: 16,
             alignItems: "center",
             marginTop: 4,
           }}
         >
-          <Text style={{ color: "#fff", fontWeight: "900", fontSize: 15 }}>
-            До навчання
+          <Text style={{ color: colors.red, fontWeight: "900", fontSize: 15 }}>
+            Відкрити маршрут
           </Text>
         </ScalePressable>
       </View>
+
+      <ScalePressable
+        onPress={() => router.push("/(tabs)/assistant")}
+        style={{
+          backgroundColor: colors.bgCard,
+          borderRadius: radii.lg,
+          borderWidth: 1,
+          borderColor: colors.border,
+          padding: 16,
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 12,
+          ...shadows.card,
+        }}
+      >
+        <View style={{ width: 48, height: 48, borderRadius: 18, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center" }}>
+          <Text style={{ fontSize: 24 }}>🚗</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "900" }}>Лідик поруч</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 2 }}>Запитай правило, попроси пояснити помилку або скласти план на день.</Text>
+        </View>
+        <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
+      </ScalePressable>
 
       <DailyTip onPress={() => router.push("/(tabs)/tests")} />
 
@@ -789,6 +824,5 @@ export default function HomeTab() {
     return <InstructorHome name={user.name ?? "Інструктор"} />;
   }
 
-  const displayName = user?.name ?? "Учень";
-  return <StudentHome firstName={displayName.split(" ")[0]} />;
+  return <StudentHome />;
 }

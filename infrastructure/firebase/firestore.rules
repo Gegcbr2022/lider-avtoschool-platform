@@ -37,6 +37,19 @@ service cloud.firestore {
       return ownsResource() && request.resource.data.studentId == uid();
     }
 
+    function linkedInstructorOwnsBooking() {
+      return signedIn()
+        && (
+          resource.data.instructorUserId == uid()
+          || resource.data.instructorId == uid()
+          || (
+            resource.data.instructorId is string
+            && exists(/databases/$(database)/documents/instructors/$(resource.data.instructorId))
+            && get(/databases/$(database)/documents/instructors/$(resource.data.instructorId)).data.accountUserId == uid()
+          )
+        );
+    }
+
     function validPublicLeadCreate() {
       return request.resource.data.keys().hasAll(["name", "phone", "city", "category", "source", "status", "consentAccepted", "createdAt"])
         && request.resource.data.consentAccepted == true
@@ -59,7 +72,7 @@ service cloud.firestore {
     }
 
     match /bookings/{bookingId} {
-      allow read: if staff() || ownsResource();
+      allow read: if staff() || ownsResource() || linkedInstructorOwnsBooking();
       allow update: if staff() || keepsOwnResource();
       allow create: if staff() || createsOwnResource();
       allow delete: if staff();
@@ -200,7 +213,7 @@ service cloud.firestore {
       // Update: reactions/views only
       allow update: if staff()
         || (signedIn() && resource.data.authorId == uid())
-        || (signedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["reactions", "views", "viewedBy"]));
+        || (signedIn() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["reactions", "views", "viewedBy", "reactedBy"]));
       allow delete: if staff() || (signedIn() && resource.data.authorId == uid());
     }
 
@@ -226,8 +239,11 @@ service cloud.firestore {
           && request.resource.data.senderId == uid()
           && get(/databases/$(database)/documents/conversations/$(convId)).data.participantIds.hasAny([uid()]);
         allow update: if staff()
-          || (signedIn() && resource.data.senderId == uid()
-              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["readAt", "readBy"]));
+          || (
+            signedIn()
+            && get(/databases/$(database)/documents/conversations/$(convId)).data.participantIds.hasAny([uid()])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["readAt", "readBy", "reactions", "reactionUpdatedAt"])
+          );
         allow delete: if staff();
       }
     }

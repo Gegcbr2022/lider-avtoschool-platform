@@ -51,6 +51,9 @@ export type AiLogEntry = {
   latencyMs: number;
   error: string | null;
   userId: string | null;
+  userName: string | null;
+  userPhone: string | null;
+  userEmail: string | null;
   appVersion: string;
   platform: string;
   timestamp: Date | null;
@@ -93,6 +96,9 @@ export async function getAiLogs(limitCount = 100): Promise<AiLogEntry[]> {
       latencyMs: data.latencyMs ?? 0,
       error: data.error ?? null,
       userId: data.userId ?? null,
+      userName: data.userName ?? null,
+      userPhone: data.userPhone ?? null,
+      userEmail: data.userEmail ?? null,
       appVersion: data.appVersion ?? "",
       platform: data.platform ?? "",
       timestamp: toDate(data.timestamp),
@@ -154,6 +160,9 @@ export type ConversationEntry = {
   updatedAt: Date | null;
   participantIds: string[];
   createdByName?: string;
+  createdByPhone?: string;
+  studentName?: string;
+  studentPhone?: string;
 };
 
 export type ConversationMessage = {
@@ -163,6 +172,11 @@ export type ConversationMessage = {
   text: string;
   createdAt: Date | null;
   readBy: string[];
+  mediaUrl?: string;
+  mediaType?: "image" | "video" | "document";
+  fileName?: string;
+  fileSize?: number;
+  senderPhone?: string;
 };
 
 export type SupportThread = {
@@ -296,6 +310,10 @@ export type InstructorAdmin = {
   description?: string;
   categories?: string[];
   branchId?: string;
+  accountUserId?: string;
+  accountUserName?: string;
+  accountUserPhone?: string;
+  accountUserEmail?: string;
   active?: boolean;
 };
 
@@ -306,6 +324,11 @@ export async function getInstructorsAdmin(): Promise<InstructorAdmin[]> {
 
 export async function addInstructor(data: Omit<InstructorAdmin, "id">): Promise<void> {
   await addDoc(collection(db, "instructors"), { ...data, active: data.active ?? true, createdAt: serverTimestamp() });
+}
+
+export async function updateInstructor(id: string, data: Partial<Omit<InstructorAdmin, "id">>): Promise<void> {
+  const clean = Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined));
+  await setDoc(doc(db, "instructors", id), { ...clean, updatedAt: serverTimestamp() }, { merge: true });
 }
 
 export async function deleteInstructor(id: string): Promise<void> {
@@ -413,6 +436,9 @@ export async function getConversations(limitCount = 100): Promise<ConversationEn
       updatedAt: toDate(data.updatedAt),
       participantIds: data.participantIds ?? [],
       createdByName: data.createdByName,
+      createdByPhone: data.createdByPhone,
+      studentName: data.studentName,
+      studentPhone: data.studentPhone,
     };
   });
 }
@@ -431,6 +457,9 @@ export async function getConversationsAdmin(): Promise<ConversationEntry[]> {
       updatedAt: toDate(data.updatedAt),
       participantIds: data.participantIds ?? [],
       createdByName: data.createdByName,
+      createdByPhone: data.createdByPhone,
+      studentName: data.studentName,
+      studentPhone: data.studentPhone,
     };
   });
 }
@@ -447,6 +476,11 @@ export async function getConversationMessages(convId: string): Promise<Conversat
       text: data.text ?? "",
       createdAt: toDate(data.createdAt),
       readBy: data.readBy ?? [],
+      mediaUrl: data.mediaUrl,
+      mediaType: data.mediaType,
+      fileName: data.fileName,
+      fileSize: data.fileSize,
+      senderPhone: data.senderPhone,
     };
   });
 }

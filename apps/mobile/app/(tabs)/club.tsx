@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator, Alert, Animated, Easing, FlatList, Image,
   KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Share, Text,
@@ -91,6 +91,7 @@ function StoryViewer({
   }, [idx]);
 
   if (!story) { onClose(); return null; }
+  const reacted = Boolean(userId && story.reactedBy?.includes(userId));
 
   function goNext() { idx < stories.length - 1 ? setIdx(i => i + 1) : onClose(); }
   function goPrev() {
@@ -119,7 +120,17 @@ function StoryViewer({
 
   return (
     <Modal visible animationType="slide" onRequestClose={onClose} statusBarTranslucent>
-      <View style={{ flex: 1, backgroundColor: bg }}>
+      <View style={{ flex: 1, backgroundColor: story.mediaUrl && story.mediaType === "image" ? "#000" : bg }}>
+        {story.mediaUrl && story.mediaType === "image" ? (
+          <Image
+            source={{ uri: story.mediaUrl }}
+            style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, width: "100%", height: "100%" }}
+            resizeMode="cover"
+          />
+        ) : null}
+        {story.mediaUrl && story.mediaType === "image" ? (
+          <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "rgba(0,0,0,0.22)" }} />
+        ) : null}
         <SafeAreaView style={{ flex: 1 }}>
           {/* Progress bars */}
           <View style={{ flexDirection: "row", gap: 4, paddingHorizontal: 14, paddingTop: 8 }}>
@@ -163,23 +174,17 @@ function StoryViewer({
             <Pressable style={{ flex: 1 }} onPress={() => { progressAnimRef.current?.stop(); progressAnim.setValue(0); goNext(); }} />
           </View>
           {/* Content */}
-          <View style={{ paddingHorizontal: 20, paddingBottom: 36 }}>
-            {story.mediaUrl && story.mediaType === "image" ? (
-              <Image
-                source={{ uri: story.mediaUrl }}
-                style={{ width: "100%", height: 260, borderRadius: radii.md, marginBottom: 18, backgroundColor: "rgba(255,255,255,0.16)" }}
-                resizeMode="cover"
-              />
-            ) : null}
+          <View style={{ paddingHorizontal: 20, paddingBottom: 36, paddingTop: 18, backgroundColor: story.mediaUrl ? "rgba(0,0,0,0.24)" : "transparent" }}>
             <Text style={{ fontSize: 24, fontWeight: "900", lineHeight: 34, letterSpacing: -0.5, color: "#fff" }}>
               {story.text}
             </Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
               <TouchableOpacity
-                onPress={() => reactToStory(story.id)}
+                onPress={() => userId && reactToStory(story.id, userId, reacted)}
+                disabled={!userId}
                 style={{ flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(255,255,255,0.18)", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 }}
               >
-                <Text style={{ fontSize: 18 }}>♥</Text>
+                <Text style={{ fontSize: 18 }}>{reacted ? "♥" : "♡"}</Text>
                 <Text style={{ fontSize: 14, fontWeight: "800", color: "#fff" }}>{story.reactions}</Text>
               </TouchableOpacity>
               {story.tags.map(tag => (
@@ -375,7 +380,7 @@ function LidykView({ onBack }: { onBack: () => void }) {
     setResponse(null);
     setErrorType(null);
     setCustomQ("");
-    const result = await askLidyk(q, user?.id ?? null);
+    const result = await askLidyk(q, user);
     setResponse(result.answer);
     setResponseModel(result.model ?? null);
     setErrorType(result.errorType ?? null);
@@ -977,7 +982,7 @@ export default function ClubTab() {
   const { user, mode } = useAuth();
   const [view, setView] = useState<ClubView>("main");
   const [stories, setStories] = useState<StoryDoc[]>([]);
-  const [activeStoryIdx, setActiveStoryIdx] = useState<number | null>(null);
+  const [activeStoryGroupIdx, setActiveStoryGroupIdx] = useState<number | null>(null);
   const [showCreateStory, setShowCreateStory] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [stats, setStats] = useState<UserStats>(EMPTY_STATS);
@@ -990,6 +995,20 @@ export default function ClubTab() {
   const isAnswered = selectedAnswer !== null;
   const isCorrect = selectedAnswer === todayChallenge.correctIndex;
   const earnedCount = awards.filter(a => a.earned).length;
+  const storyGroups = useMemo(() => {
+    const groups = new Map<string, StoryDoc[]>();
+    for (const story of stories) {
+      const key = story.authorId || story.id;
+      groups.set(key, [...(groups.get(key) ?? []), story]);
+    }
+    return Array.from(groups.entries())
+      .map(([authorId, groupStories]) => ({
+        authorId,
+        stories: groupStories.sort((a, b) => (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0)),
+        latestAt: Math.max(...groupStories.map((s) => s.createdAt?.getTime() ?? 0)),
+      }))
+      .sort((a, b) => b.latestAt - a.latestAt);
+  }, [stories]);
 
   // Subscribe to live stories
   useEffect(() => {
@@ -1036,10 +1055,10 @@ export default function ClubTab() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-      {activeStoryIdx !== null && stories.length > 0 ? (
+      {activeStoryGroupIdx !== null && storyGroups[activeStoryGroupIdx]?.stories.length ? (
         <StoryViewer
-          stories={stories} startIndex={activeStoryIdx}
-          userId={user?.id} onClose={() => setActiveStoryIdx(null)}
+          stories={storyGroups[activeStoryGroupIdx].stories} startIndex={0}
+          userId={user?.id} onClose={() => setActiveStoryGroupIdx(null)}
         />
       ) : null}
       {showCreateStory && isAuth ? (
@@ -1076,22 +1095,29 @@ export default function ClubTab() {
         </View>
 
         {/* Stories */}
-        {stories.length > 0 ? (
+        {storyGroups.length > 0 ? (
           <View style={{ paddingTop: 4, paddingBottom: 18 }}>
             <FlatList
-              data={stories} horizontal showsHorizontalScrollIndicator={false}
-              keyExtractor={item => item.id}
+              data={storyGroups} horizontal showsHorizontalScrollIndicator={false}
+              keyExtractor={item => item.authorId}
               renderItem={({ item, index }) => {
-                const bg = (storyToneBg as Record<string, string>)[item.tone] ?? TONE_COLORS[item.tone] ?? "#374151";
-                const viewed = item.viewedBy?.includes(user?.id ?? "") ?? false;
+                const first = item.stories[0];
+                const latest = item.stories[item.stories.length - 1] ?? first;
+                const bg = (storyToneBg as Record<string, string>)[latest.tone] ?? TONE_COLORS[latest.tone] ?? "#374151";
+                const viewed = item.stories.every((story) => story.viewedBy?.includes(user?.id ?? ""));
                 return (
-                  <TouchableOpacity onPress={() => setActiveStoryIdx(index)} style={{ alignItems: "center", width: 68 }}>
+                  <TouchableOpacity onPress={() => setActiveStoryGroupIdx(index)} style={{ alignItems: "center", width: 72 }}>
                     <View style={{ width: 58, height: 58, borderRadius: 29, borderWidth: 2.5, borderColor: viewed ? colors.border : bg, alignItems: "center", justifyContent: "center", opacity: viewed ? 0.6 : 1 }}>
                       <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: bg, alignItems: "center", justifyContent: "center" }}>
-                        <Text style={{ fontSize: 20 }}>{item.authorEmoji ?? "🚗"}</Text>
+                        <Text style={{ fontSize: 20 }}>{latest.authorEmoji ?? "🚗"}</Text>
                       </View>
+                      {item.stories.length > 1 ? (
+                        <View style={{ position: "absolute", right: -4, bottom: -3, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: colors.red, borderWidth: 2, borderColor: colors.bg, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 }}>
+                          <Text style={{ color: "#fff", fontSize: 10, fontWeight: "900" }}>{item.stories.length}</Text>
+                        </View>
+                      ) : null}
                     </View>
-                    <Text style={{ marginTop: 5, fontSize: 10, fontWeight: "700", color: colors.textSecondary, textAlign: "center" }} numberOfLines={2}>{item.authorName}</Text>
+                    <Text style={{ marginTop: 5, fontSize: 10, fontWeight: "700", color: colors.textSecondary, textAlign: "center" }} numberOfLines={2}>{latest.authorName}</Text>
                   </TouchableOpacity>
                 );
               }}

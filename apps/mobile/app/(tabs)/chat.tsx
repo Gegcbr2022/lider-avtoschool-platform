@@ -9,6 +9,7 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -19,7 +20,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
+import * as Sharing from "expo-sharing";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useAuth } from "../../lib/auth";
@@ -29,6 +33,8 @@ import {
   ensureInstructorConversation,
   getMyBookings,
   markConversationRead,
+  markMessagesRead,
+  setMessageReaction,
   sendMessage,
   subscribeToMessages,
   subscribeToConversations,
@@ -36,13 +42,43 @@ import {
   type ConversationType,
   type ConversationDoc,
 } from "../../lib/firestore";
-import { uploadChatImage } from "../../lib/storage";
+import { uploadChatFile, uploadChatImage } from "../../lib/storage";
 import { useTheme, radii, spacing } from "../../lib/theme";
 import { useNetworkStatus } from "../../lib/useNetwork";
 
 function formatTime(d: Date | null): string {
   if (!d) return "";
   return d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatFileSize(bytes?: number): string {
+  if (!bytes || bytes <= 0) return "";
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function safeDownloadName(name?: string): string {
+  const cleaned = (name ?? `file-${Date.now()}`)
+    .trim()
+    .replace(/[^\w.\-() ]+/g, "_")
+    .replace(/\s+/g, "-");
+  return cleaned || `file-${Date.now()}`;
+}
+
+function messageReceipt(message: MessageDoc, currentUserId?: string): "sent" | "read" | null {
+  if (!currentUserId || message.senderId !== currentUserId) return null;
+  return message.readBy?.some((id) => id !== currentUserId) ? "read" : "sent";
+}
+
+const QUICK_REACTIONS = ["👍", "❤️", "🔥", "😂", "👀"] as const;
+
+function reactionSummary(reactions?: Record<string, string>): Array<{ emoji: string; count: number }> {
+  const counts = new Map<string, number>();
+  Object.values(reactions ?? {}).forEach((emoji) => {
+    if (!emoji) return;
+    counts.set(emoji, (counts.get(emoji) ?? 0) + 1);
+  });
+  return Array.from(counts.entries()).map(([emoji, count]) => ({ emoji, count }));
 }
 
 // ─── Chat list definition ─────────────────────────────────────────────────────
@@ -97,7 +133,7 @@ function ChatList({ onOpen }: { onOpen: (id: string) => void }) {
 
   return (
     <SafeAreaView style={s.safe} edges={["top"]}>
-      <View style={s.header}>
+      <View style={s.listHeader}>
         <Text style={s.headerTitle}>Чати</Text>
         <Text style={s.headerSub}>Зв'язок з автошколою</Text>
       </View>
@@ -138,7 +174,15 @@ function ChatList({ onOpen }: { onOpen: (id: string) => void }) {
 
 // ─── Conversation ─────────────────────────────────────────────────────────────
 
-function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
+function Conversation({
+  chat,
+  onBack,
+  conversationIdOverride,
+}: {
+  chat: ChatDef;
+  onBack: () => void;
+  conversationIdOverride?: string;
+}) {
   const { colors } = useTheme();
   const { user } = useAuth();
   const isOffline = useNetworkStatus() === "offline";
@@ -152,6 +196,9 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null);
+  const [reactionPickerFor, setReactionPickerFor] = useState<string | null>(null);
   const [fullscreenPhoto, setFullscreenPhoto] = useState<string | null>(null);
   const [fullscreenPhotoState, setFullscreenPhotoState] = useState<"loading" | "ready" | "error">("loading");
   const [photoErrors, setPhotoErrors] = useState<Record<string, boolean>>({});
@@ -164,7 +211,9 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
     (async () => {
       try {
         let convId: string;
-        if (chat.type === "instructor") {
+        if (conversationIdOverride) {
+          convId = conversationIdOverride;
+        } else if (chat.type === "instructor") {
           // Resolve the student's assigned instructor from their bookings.
           const bookings = await getMyBookings(user.id);
           const withInstructor = bookings.find((b) => b.instructorId);
@@ -179,11 +228,12 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
             callerId: user.id,
             studentId: user.id,
             studentName: user.name,
-            instructorId: withInstructor.instructorId,
+            studentPhone: user.phone,
+            instructorId: withInstructor.instructorUserId || withInstructor.instructorId,
             instructorName: withInstructor.instructorName,
           });
         } else {
-          convId = await ensureConversation(user.id, user.name, chat.type, chat.title);
+          convId = await ensureConversation(user.id, user.name, chat.type, chat.title, user.phone);
         }
         if (!active) return;
         setConversationId(convId);
@@ -191,6 +241,7 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
         unsub = subscribeToMessages(convId, (msgs) => {
           setMessages(msgs);
           void markConversationRead(convId, user.id);
+          void markMessagesRead(convId, user.id, msgs);
           setLoading(false);
           setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
         });
@@ -206,7 +257,7 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
       active = false;
       unsub?.();
     };
-  }, [user, chat.type]);
+  }, [user, chat.type, conversationIdOverride]);
 
   async function handleSend() {
     const text = input.trim();
@@ -214,7 +265,7 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
     setInput("");
     setSending(true);
     try {
-      await sendMessage(conversationId, { senderId: user.id, senderName: user.name, senderRole: user.role, text });
+      await sendMessage(conversationId, { senderId: user.id, senderName: user.name, senderRole: user.role, senderPhone: user.phone, text });
       void notifyChat({
         conversationId, userId: user.id, userName: user.name, text,
         conversationType: chat.type, userPhone: user.phone, userEmail: user.email,
@@ -249,6 +300,7 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
       await sendMessage(conversationId, {
         senderId: user.id, senderName: user.name,
         senderRole: user.role,
+        senderPhone: user.phone,
         text: "", mediaUrl: downloadURL, mediaPath: storagePath, mediaType: "image",
         fileName: asset.fileName ?? `photo-${Date.now()}.jpg`,
         fileSize: asset.fileSize ?? fileSize,
@@ -267,6 +319,113 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
       Alert.alert("Помилка", `Не вдалось надіслати фото.\n${__DEV__ ? msg : "Перевір з'єднання і спробуй ще раз."}`);
     } finally {
       setUploadingImage(false);
+    }
+  }
+
+  async function handlePickFile() {
+    if (!conversationId || !user || uploadingFile) return;
+    setUploadingFile(true);
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        copyToCacheDirectory: true,
+        multiple: false,
+        type: [
+          "application/pdf",
+          "text/*",
+          "application/msword",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "application/vnd.ms-excel",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/vnd.ms-powerpoint",
+          "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+          "application/zip",
+        ],
+      });
+      if (result.canceled || !result.assets?.[0]?.uri) return;
+      const asset = result.assets[0];
+      const { downloadURL, storagePath, fileSize } = await uploadChatFile(
+        conversationId,
+        asset.uri,
+        asset.name,
+        asset.mimeType
+      );
+      await sendMessage(conversationId, {
+        senderId: user.id,
+        senderName: user.name,
+        senderRole: user.role,
+        senderPhone: user.phone,
+        text: "",
+        mediaUrl: downloadURL,
+        mediaPath: storagePath,
+        mediaType: "document",
+        fileName: asset.name ?? `file-${Date.now()}`,
+        fileSize: asset.size ?? fileSize,
+      });
+      void notifyChat({
+        conversationId,
+        userId: user.id,
+        userName: user.name,
+        text: "",
+        mediaUrl: downloadURL,
+        mediaType: "document",
+        fileName: asset.name ?? `file-${Date.now()}`,
+        conversationType: chat.type,
+        userPhone: user.phone,
+        userEmail: user.email,
+        userCity: user.city,
+        userCategory: user.category,
+      });
+    } catch (err) {
+      console.error("[Chat] file upload failed:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      Alert.alert("Помилка", `Не вдалося надіслати файл.\n${__DEV__ ? msg : "Перевір з'єднання і спробуй ще раз."}`);
+    } finally {
+      setUploadingFile(false);
+    }
+  }
+
+  function handleAttach() {
+    Alert.alert("Додати вкладення", "Що надіслати в чат?", [
+      { text: "Фото", onPress: handlePickImage },
+      { text: "Файл", onPress: handlePickFile },
+      { text: "Скасувати", style: "cancel" },
+    ]);
+  }
+
+  async function handleOpenFile(message: MessageDoc) {
+    if (!message.mediaUrl || downloadingFileId) return;
+    setDownloadingFileId(message.id);
+    try {
+      const dir = `${FileSystem.cacheDirectory ?? ""}chat-downloads/`;
+      await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch(() => {});
+      const fileUri = `${dir}${safeDownloadName(message.fileName)}`;
+      const downloaded = await FileSystem.downloadAsync(message.mediaUrl, fileUri);
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(downloaded.uri, {
+          dialogTitle: message.fileName ?? "Файл з чату",
+        });
+      } else {
+        await Linking.openURL(message.mediaUrl);
+      }
+    } catch (err) {
+      console.warn("[Chat] file open failed:", err);
+      Linking.openURL(message.mediaUrl).catch(() => {
+        Alert.alert("Помилка", "Не вдалося відкрити файл. Спробуй ще раз або перевір з'єднання.");
+      });
+    } finally {
+      setDownloadingFileId(null);
+    }
+  }
+
+  async function handleReact(message: MessageDoc, emoji: string) {
+    if (!conversationId || !user) return;
+    const current = message.reactions?.[user.id];
+    try {
+      await setMessageReaction(conversationId, message.id, user.id, current === emoji ? null : emoji);
+      setReactionPickerFor(null);
+    } catch {
+      Alert.alert("Не вдалося поставити реакцію", "Перевір інтернет і спробуй ще раз.");
     }
   }
 
@@ -323,7 +482,7 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
       >
         {/* Header */}
-        <View style={s.header}>
+        <View style={s.conversationHeader}>
           <Pressable hitSlop={12} onPress={onBack} style={{ marginRight: 8 }}>
             <Text style={{ color: colors.red, fontSize: 22, fontWeight: "600" }}>‹</Text>
           </Pressable>
@@ -369,9 +528,15 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
 
           {messages.map((m) => {
             const mine = m.senderId === user?.id;
+            const reactions = reactionSummary(m.reactions);
+            const myReaction = user?.id ? m.reactions?.[user.id] : undefined;
             return (
               <View key={m.id} style={[s.bubbleWrap, mine ? s.bubbleWrapMine : s.bubbleWrapTheirs]}>
-                <View style={[s.bubble, mine ? s.bubbleMine : s.bubbleTheirs]}>
+                <Pressable
+                  style={[s.bubble, mine ? s.bubbleMine : s.bubbleTheirs]}
+                  onLongPress={() => setReactionPickerFor(reactionPickerFor === m.id ? null : m.id)}
+                  onPress={() => reactionPickerFor === m.id ? setReactionPickerFor(null) : undefined}
+                >
                   {!mine ? <Text style={s.senderName}>{chat.title}</Text> : null}
                   {m.mediaUrl && m.mediaType === "image" ? (
                     <Pressable
@@ -406,9 +571,72 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
                       )}
                     </Pressable>
                   ) : null}
+                  {m.mediaUrl && m.mediaType === "document" ? (
+                    <Pressable
+                      onPress={() => handleOpenFile(m)}
+                      disabled={downloadingFileId === m.id}
+                      style={{
+                        width: 230,
+                        maxWidth: "100%",
+                        borderRadius: radii.sm,
+                        padding: 12,
+                        marginBottom: m.text ? 6 : 0,
+                        backgroundColor: mine ? "rgba(255,255,255,0.16)" : colors.bgElevated,
+                        borderWidth: 1,
+                        borderColor: mine ? "rgba(255,255,255,0.22)" : colors.border,
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 10,
+                        opacity: downloadingFileId === m.id ? 0.72 : 1,
+                      }}
+                    >
+                      {downloadingFileId === m.id ? (
+                        <ActivityIndicator color={mine ? "#fff" : colors.red} size="small" />
+                      ) : (
+                        <Text style={{ fontSize: 24 }}>📎</Text>
+                      )}
+                      <View style={{ flex: 1 }}>
+                        <Text numberOfLines={2} style={{ color: mine ? "#fff" : colors.textPrimary, fontSize: 13, fontWeight: "800" }}>
+                          {m.fileName ?? "Файл"}
+                        </Text>
+                        <Text style={{ color: mine ? "rgba(255,255,255,0.72)" : colors.textTertiary, fontSize: 11, marginTop: 2 }}>
+                          {downloadingFileId === m.id ? "Завантаження..." : (formatFileSize(m.fileSize) || "Відкрити файл")}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  ) : null}
                   {m.text ? <Text style={[s.bubbleText, mine && s.bubbleTextMine]}>{m.text}</Text> : null}
-                  <Text style={[s.time, mine && s.timeMine]}>{formatTime(m.createdAt)}</Text>
-                </View>
+                  <View style={s.metaRow}>
+                    <Text style={[s.time, mine && s.timeMine]}>{formatTime(m.createdAt)}</Text>
+                    {messageReceipt(m, user?.id) ? (
+                      <Text style={[s.receipt, messageReceipt(m, user?.id) === "read" && s.receiptRead]}>
+                        {messageReceipt(m, user?.id) === "read" ? "✓✓" : "✓"}
+                      </Text>
+                    ) : null}
+                  </View>
+                  {reactions.length ? (
+                    <View style={s.reactionSummary}>
+                      {reactions.map((reaction) => (
+                        <Text key={reaction.emoji} style={[s.reactionPill, !mine && s.reactionPillTheirs]}>
+                          {reaction.emoji} {reaction.count}
+                        </Text>
+                      ))}
+                    </View>
+                  ) : null}
+                </Pressable>
+                {reactionPickerFor === m.id ? (
+                  <View style={[s.reactionPicker, mine ? s.reactionPickerMine : s.reactionPickerTheirs]}>
+                    {QUICK_REACTIONS.map((emoji) => (
+                      <Pressable
+                        key={emoji}
+                        onPress={() => handleReact(m, emoji)}
+                        style={[s.reactionBtn, myReaction === emoji && s.reactionBtnActive]}
+                      >
+                        <Text style={{ fontSize: 18 }}>{emoji}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : null}
               </View>
             );
           })}
@@ -425,11 +653,11 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
 
         <View style={s.inputRow}>
           <Pressable
-            style={[s.attachBtn, (uploadingImage) && { opacity: 0.4 }]}
-            onPress={handlePickImage}
-            disabled={uploadingImage || sending}
+            style={[s.attachBtn, (uploadingImage || uploadingFile) && { opacity: 0.4 }]}
+            onPress={handleAttach}
+            disabled={uploadingImage || uploadingFile || sending}
           >
-            {uploadingImage ? <ActivityIndicator color={colors.textTertiary} size="small" /> : <Text style={{ fontSize: 20 }}>📷</Text>}
+            {uploadingImage || uploadingFile ? <ActivityIndicator color={colors.textTertiary} size="small" /> : <Text style={{ fontSize: 20 }}>📎</Text>}
           </Pressable>
           <TextInput
             style={s.input}
@@ -438,12 +666,12 @@ function Conversation({ chat, onBack }: { chat: ChatDef; onBack: () => void }) {
             placeholder="Написати повідомлення..."
             placeholderTextColor={colors.textTertiary}
             multiline
-            editable={!sending && !uploadingImage}
+            editable={!sending && !uploadingImage && !uploadingFile}
           />
           <Pressable
-            style={[s.sendBtn, (!input.trim() || sending || uploadingImage) && { opacity: 0.4 }]}
+            style={[s.sendBtn, (!input.trim() || sending || uploadingImage || uploadingFile) && { opacity: 0.4 }]}
             onPress={handleSend}
-            disabled={!input.trim() || sending || uploadingImage}
+            disabled={!input.trim() || sending || uploadingImage || uploadingFile}
           >
             {sending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.sendText}>↑</Text>}
           </Pressable>
@@ -484,12 +712,12 @@ function InstructorChatTab() {
       subtitle: "Чат з учнем",
       systemMessage: "Відповідайте учню. Повідомлення відображаються у його додатку та Telegram.",
     };
-    return <Conversation chat={chatDef} onBack={() => setActiveChatId(null)} />;
+    return <Conversation chat={chatDef} conversationIdOverride={activeChatId} onBack={() => setActiveChatId(null)} />;
   }
 
   return (
     <SafeAreaView style={s.safe} edges={["top"]}>
-      <View style={s.header}>
+      <View style={s.listHeader}>
         <Text style={s.headerTitle}>Чати з учнями</Text>
         <Text style={s.headerSub}>Відповідайте учням та менеджерам</Text>
       </View>
@@ -550,7 +778,7 @@ export default function ChatTab() {
   if (isGuest) {
     return (
       <SafeAreaView style={s.safe} edges={["top"]}>
-        <View style={s.header}>
+        <View style={s.listHeader}>
           <Text style={s.headerTitle}>Чати</Text>
         </View>
         <View style={s.center}>
@@ -595,8 +823,26 @@ function makeStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       flexDirection: "row",
       alignItems: "center",
     },
-    headerTitle: { color: colors.textPrimary, fontSize: 18, fontWeight: "900" },
-    headerSub: { color: colors.textSecondary, fontSize: 11, marginTop: 1, flex: 1 },
+    listHeader: {
+      paddingHorizontal: spacing.md,
+      paddingTop: 14,
+      paddingBottom: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      backgroundColor: colors.bgCard,
+      gap: 3,
+    },
+    conversationHeader: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      backgroundColor: colors.bgCard,
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    headerTitle: { color: colors.textPrimary, fontSize: 18, lineHeight: 23, fontWeight: "900", flexShrink: 1 },
+    headerSub: { color: colors.textSecondary, fontSize: 11, lineHeight: 15, marginTop: 1, flexShrink: 1 },
 
     chatRow: {
       flexDirection: "row",
@@ -647,8 +893,53 @@ function makeStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     senderName: { color: colors.red, fontSize: 11, fontWeight: "800", marginBottom: 1 },
     bubbleText: { color: colors.textPrimary, fontSize: 15, lineHeight: 21, fontWeight: "500" },
     bubbleTextMine: { color: "#fff" },
-    time: { color: colors.textTertiary, fontSize: 10, alignSelf: "flex-end", marginTop: 2 },
+    metaRow: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 5, marginTop: 2 },
+    time: { color: colors.textTertiary, fontSize: 10 },
     timeMine: { color: "rgba(255,255,255,0.7)" },
+    receipt: { color: "rgba(255,255,255,0.7)", fontSize: 10, fontWeight: "900" },
+    receiptRead: { color: "#9ee7ff" },
+    reactionSummary: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", flexWrap: "wrap", gap: 4, marginTop: 5 },
+    reactionPill: {
+      overflow: "hidden",
+      borderRadius: 999,
+      backgroundColor: "rgba(255,255,255,0.16)",
+      color: "#fff",
+      fontSize: 11,
+      fontWeight: "900",
+      paddingHorizontal: 7,
+      paddingVertical: 3,
+    },
+    reactionPillTheirs: {
+      backgroundColor: colors.bgElevated,
+      color: colors.textPrimary,
+    },
+    reactionPicker: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginTop: 6,
+      padding: 6,
+      borderRadius: 999,
+      backgroundColor: colors.bgCard,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    reactionPickerMine: { alignSelf: "flex-end" },
+    reactionPickerTheirs: { alignSelf: "flex-start" },
+    reactionBtn: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.bgElevated,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    reactionBtnActive: {
+      backgroundColor: colors.redSoft,
+      borderColor: colors.red + "77",
+    },
 
     gateTitle: { color: colors.textPrimary, fontSize: 22, fontWeight: "900", textAlign: "center" },
     gateSub: { color: colors.textSecondary, fontSize: 14, lineHeight: 21, textAlign: "center", marginTop: 10 },

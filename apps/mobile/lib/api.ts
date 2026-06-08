@@ -28,6 +28,29 @@ export type LidykResponse = {
   errorType?: LidykErrorType;
 };
 
+type AiLogUserContext =
+  | string
+  | null
+  | undefined
+  | {
+      id?: string | null;
+      name?: string | null;
+      phone?: string | null;
+      email?: string | null;
+    };
+
+function normalizeAiLogUser(user?: AiLogUserContext) {
+  if (!user || typeof user === "string") {
+    return { userId: user ?? null, userName: null, userPhone: null, userEmail: null };
+  }
+  return {
+    userId: user.id ?? null,
+    userName: user.name ?? null,
+    userPhone: user.phone ?? null,
+    userEmail: user.email ?? null,
+  };
+}
+
 // ─── Error classification ─────────────────────────────────────────────────────
 
 function classifyError(err: unknown): LidykErrorType {
@@ -64,7 +87,7 @@ const ERROR_MESSAGES: Record<LidykErrorType, string> = {
 
 export async function askLidyk(
   question: string,
-  userId?: string | null
+  userContext?: AiLogUserContext
 ): Promise<LidykResponse> {
   if (!question.trim()) {
     return { answer: ERROR_MESSAGES.empty, mode: "fallback", errorType: "empty" };
@@ -116,6 +139,7 @@ export async function askLidyk(
   }
 
   // Fire-and-forget AI log (non-blocking, never throws)
+  const logUser = normalizeAiLogUser(userContext);
   void logAiQuery({
     question,
     answer: result.answer,
@@ -123,7 +147,7 @@ export async function askLidyk(
     model: result.model,
     latencyMs: Date.now() - startedAt,
     error: errorType,
-    userId: userId ?? null,
+    ...logUser,
   });
 
   return result;
@@ -138,7 +162,8 @@ export async function notifyChat(params: {
   userName: string;
   text: string;
   mediaUrl?: string;
-  mediaType?: "image" | "video";
+  mediaType?: "image" | "video" | "document";
+  fileName?: string;
   conversationType?: string;
   userPhone?: string;
   userEmail?: string;
@@ -172,6 +197,9 @@ interface AiLogEntry {
   latencyMs: number;
   error?: string;
   userId: string | null;
+  userName?: string | null;
+  userPhone?: string | null;
+  userEmail?: string | null;
 }
 
 async function logAiQuery(entry: AiLogEntry): Promise<void> {
@@ -185,6 +213,9 @@ async function logAiQuery(entry: AiLogEntry): Promise<void> {
       latencyMs: entry.latencyMs,
       error: entry.error ?? null,
       userId: entry.userId,
+      userName: entry.userName ?? null,
+      userPhone: entry.userPhone ?? null,
+      userEmail: entry.userEmail ?? null,
       appVersion: APP_VERSION,
       platform: Platform.OS,
       source: "mobile",

@@ -12,7 +12,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import {
  adminDeleteComment, adminDeletePost, adminDeleteStory,
- addInstructor, deleteInstructor, getBookings, getInstructorsAdmin, updateBookingStatus,
+ addInstructor, deleteInstructor, updateInstructor, getBookings, getInstructorsAdmin, updateBookingStatus,
  addLesson, deleteLesson, getLessonsAdmin,
  addServiceCenter, deleteServiceCenter, getServiceCentersAdmin,
  getAiLogs, getClubPosts, getComments, getConversations, getConversationsAdmin, getConversationMessages,
@@ -638,7 +638,14 @@ function AiLogsSection() {
  const filtered = useMemo(() => {
  if (!search) return logs;
  const q = search.toLowerCase();
- return logs.filter(l => l.question.toLowerCase().includes(q) || (l.userId ?? "").toLowerCase().includes(q) || (l.model ?? "").toLowerCase().includes(q));
+ return logs.filter(l =>
+ l.question.toLowerCase().includes(q) ||
+ (l.userId ?? "").toLowerCase().includes(q) ||
+ (l.userName ?? "").toLowerCase().includes(q) ||
+ (l.userPhone ?? "").toLowerCase().includes(q) ||
+ (l.userEmail ?? "").toLowerCase().includes(q) ||
+ (l.model ?? "").toLowerCase().includes(q)
+ );
  }, [logs, search]);
 
  const stats = useMemo(() => {
@@ -665,7 +672,7 @@ function AiLogsSection() {
 
  <div className="relative max-w-sm">
  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-lider-muted" />
- <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Пошук по питанню або userId..."
+ <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Пошук: питання, ім'я, телефон, userId..."
  className="w-full pl-9 pr-4 py-2.5 bg-white border border-lider-line rounded-[16px] text-sm focus:outline-none focus:border-lider-red focus:ring-1 focus:ring-lider-red" />
  </div>
 
@@ -674,7 +681,7 @@ function AiLogsSection() {
  <table className="w-full text-sm">
  <thead>
  <tr className="border-b border-lider-line ">
- {["Час", "Питання", "Модель", "Latency", "userId", "Статус"].map(h => (
+ {["Час", "Питання", "Користувач", "Модель", "Latency", "Статус"].map(h => (
  <th key={h} className="text-left px-4 py-3 text-xs font-bold uppercase tracking-wider text-lider-muted">{h}</th>
  ))}
  </tr>
@@ -684,12 +691,15 @@ function AiLogsSection() {
  <tr key={log.id} className="border-b border-neutral-50 /50 hover:bg-lider-background :bg-lider-graphite/30">
  <td className="px-4 py-3 text-xs text-lider-muted whitespace-nowrap">{formatRelative(log.timestamp)}</td>
  <td className="px-4 py-3 max-w-xs"><p className="truncate font-medium text-lider-graphite ">{log.question}</p></td>
+ <td className="px-4 py-3 min-w-[170px]">
+ <p className="text-xs font-bold text-lider-graphite">{log.userName ?? "Гість / невідомо"}</p>
+ <p className="text-[11px] text-lider-muted">{log.userPhone ?? log.userEmail ?? (log.userId ? log.userId.slice(0, 8) : "guest")}</p>
+ </td>
  <td className="px-4 py-3 text-xs text-lider-muted font-mono">{log.model ?? "—"}</td>
  <td className="px-4 py-3 text-xs font-mono text-lider-muted">{log.latencyMs}ms</td>
- <td className="px-4 py-3 text-xs text-lider-muted font-mono">{log.userId ? log.userId.slice(0, 8) : "guest"}</td>
  <td className="px-4 py-3">
  {log.error ? (
- <span className="px-2 py-1 bg-red-100 text-lider-redrounded-lg text-xs font-bold">{log.error}</span>
+ <span className="px-2 py-1 bg-red-100 text-lider-red rounded-lg text-xs font-bold">{log.error}</span>
  ) : (
  <span className="px-2 py-1 bg-[#e6f0ee] text-lider-green rounded-lg text-xs font-bold">✓ ok</span>
  )}
@@ -878,19 +888,25 @@ function NaisSection() {
 
 function InstructorsSection() {
  const [items, setItems] = useState<InstructorAdmin[]>([]);
+ const [users, setUsers] = useState<UserProfile[]>([]);
  const [loading, setLoading] = useState(true);
  const [error, setError] = useState<string | null>(null);
  const [adding, setAdding] = useState(false);
+ const [linkingId, setLinkingId] = useState<string | null>(null);
  // new instructor form
  const [name, setName] = useState("");
  const [emoji, setEmoji] = useState("🧑‍🏫");
  const [desc, setDesc] = useState("");
  const [cats, setCats] = useState("B");
  const [branch, setBranch] = useState("kyiv");
+ const [accountUserId, setAccountUserId] = useState("");
 
  function reload() {
  setLoading(true);
- getInstructorsAdmin().then(setItems).catch(e => setError(e?.message ?? "Помилка")).finally(() => setLoading(false));
+ Promise.all([getInstructorsAdmin(), getUserProfiles(300)])
+ .then(([instructors, profiles]) => { setItems(instructors); setUsers(profiles); })
+ .catch(e => setError(e?.message ?? "Помилка"))
+ .finally(() => setLoading(false));
  }
  useEffect(reload, []);
 
@@ -898,15 +914,48 @@ function InstructorsSection() {
  if (!name.trim()) return;
  setAdding(true);
  try {
+ const account = users.find(u => u.id === accountUserId);
  await addInstructor({
  name: name.trim(), photoEmoji: emoji.trim() || "🧑‍🏫",
  description: desc.trim(),
  categories: cats.split(",").map(c => c.trim()).filter(Boolean),
  branchId: branch.trim(), active: true,
+ ...(account ? {
+ accountUserId: account.id,
+ accountUserName: account.name,
+ accountUserPhone: account.phone,
+ accountUserEmail: account.email,
+ } : {}),
  });
- setName(""); setDesc(""); setCats("B");
+ if (account) await setUserRole(account.id, "instructor");
+ setName(""); setDesc(""); setCats("B"); setAccountUserId("");
  reload();
  } catch { alert("Не вдалось додати"); } finally { setAdding(false); }
+ }
+
+ async function handleLinkAccount(instructor: InstructorAdmin, nextUserId: string) {
+ setLinkingId(instructor.id);
+ try {
+ const account = users.find(u => u.id === nextUserId);
+ await updateInstructor(instructor.id, {
+ accountUserId: account?.id ?? "",
+ accountUserName: account?.name ?? "",
+ accountUserPhone: account?.phone ?? "",
+ accountUserEmail: account?.email ?? "",
+ });
+ if (account) await setUserRole(account.id, "instructor");
+ setItems(prev => prev.map(i => i.id === instructor.id ? {
+ ...i,
+ accountUserId: account?.id,
+ accountUserName: account?.name,
+ accountUserPhone: account?.phone,
+ accountUserEmail: account?.email,
+ } : i));
+ } catch (e: unknown) {
+ alert("Помилка прив'язки: " + (e instanceof Error ? e.message : String(e)));
+ } finally {
+ setLinkingId(null);
+ }
  }
 
  async function handleDelete(id: string) {
@@ -932,6 +981,12 @@ function InstructorsSection() {
  <input className={inputCls} value={emoji} onChange={e => setEmoji(e.target.value)} placeholder="Емодзі (🧑‍🏫)" />
  <input className={inputCls} value={cats} onChange={e => setCats(e.target.value)} placeholder="Категорії через кому (B, C)" />
  <input className={inputCls} value={branch} onChange={e => setBranch(e.target.value)} placeholder="Філія (kyiv)" />
+ <select className={inputCls} value={accountUserId} onChange={e => setAccountUserId(e.target.value)}>
+ <option value="">Без прив'язки до акаунта</option>
+ {users.map(u => (
+ <option key={u.id} value={u.id}>{u.name || u.email || u.phone || u.id} {u.phone ? `· ${u.phone}` : ""}</option>
+ ))}
+ </select>
  </div>
  <textarea className={`${inputCls} w-full`} value={desc} onChange={e => setDesc(e.target.value)} placeholder="Опис (досвід, авто, підхід)" rows={2} />
  <button onClick={handleAdd} disabled={adding || !name.trim()}
@@ -954,6 +1009,31 @@ function InstructorsSection() {
  </div>
  {i.description ? <p className="text-xs text-lider-muted mt-0.5 line-clamp-2">{i.description}</p> : null}
  <p className="text-xs text-lider-muted mt-1">Кат.: {i.categories?.join(", ") || "—"} · {i.branchId ?? "—"}</p>
+ <div className="mt-3 rounded-[14px] border border-lider-line bg-lider-background/60 p-3 space-y-2">
+ <div className="flex items-start justify-between gap-3">
+ <div className="min-w-0">
+ <p className="text-[11px] uppercase tracking-[0.14em] text-lider-muted font-black">Акаунт інструктора</p>
+ <p className="text-xs text-lider-graphite font-bold truncate">
+ {i.accountUserName || i.accountUserEmail || i.accountUserPhone || "Не прив'язано"}
+ </p>
+ {i.accountUserPhone || i.accountUserEmail ? (
+ <p className="text-[11px] text-lider-muted truncate">{i.accountUserPhone || i.accountUserEmail}</p>
+ ) : null}
+ </div>
+ {linkingId === i.id ? <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin shrink-0" /> : null}
+ </div>
+ <select
+ value={i.accountUserId ?? ""}
+ onChange={e => handleLinkAccount(i, e.target.value)}
+ disabled={linkingId === i.id}
+ className="w-full px-3 py-2 bg-white border border-lider-line rounded-lg text-xs font-semibold focus:outline-none focus:border-lider-red disabled:opacity-60"
+ >
+ <option value="">Без прив'язки</option>
+ {users.map(u => (
+ <option key={u.id} value={u.id}>{u.name || u.email || u.phone || u.id} {u.phone ? `· ${u.phone}` : ""}</option>
+ ))}
+ </select>
+ </div>
  </div>
  <button onClick={() => handleDelete(i.id)} className="shrink-0 w-8 h-8 rounded-lg bg-[#fff1f1] /20 flex items-center justify-center text-lider-red hover:bg-red-100 self-start">
  <Trash2 size={14} />
@@ -1231,7 +1311,10 @@ function ChatMonitorSection() {
  const q = search.toLowerCase();
  return convs.filter(c =>
  c.title.toLowerCase().includes(q) ||
- (c.createdByName ?? "").toLowerCase().includes(q)
+ (c.createdByName ?? "").toLowerCase().includes(q) ||
+ (c.createdByPhone ?? "").toLowerCase().includes(q) ||
+ (c.studentName ?? "").toLowerCase().includes(q) ||
+ (c.studentPhone ?? "").toLowerCase().includes(q)
  );
  }, [convs, search]);
 
@@ -1318,6 +1401,9 @@ function ChatMonitorSection() {
  {c.createdByName && (
  <p className={`text-xs truncate ${selectedId === c.id ? "text-red-200" : "text-lider-muted"}`}>👤 {c.createdByName}</p>
  )}
+ {(c.createdByPhone || c.studentPhone) && (
+ <p className={`text-xs truncate ${selectedId === c.id ? "text-red-200" : "text-lider-muted"}`}>☎ {c.createdByPhone ?? c.studentPhone}</p>
+ )}
  {c.lastMessage && (
  <p className={`text-xs truncate mt-0.5 ${selectedId === c.id ? "text-red-100" : "text-lider-muted"}`}>{c.lastMessage}</p>
  )}
@@ -1345,6 +1431,9 @@ function ChatMonitorSection() {
  {selectedConv.createdByName && (
  <span className="text-xs text-lider-muted">👤 {selectedConv.createdByName}</span>
  )}
+ {(selectedConv.createdByPhone || selectedConv.studentPhone) && (
+ <span className="text-xs text-lider-muted">☎ {selectedConv.createdByPhone ?? selectedConv.studentPhone}</span>
+ )}
  {!msgsLoading && (
  <span className="text-xs text-lider-muted">{messages.length} повід.</span>
  )}
@@ -1364,8 +1453,19 @@ function ChatMonitorSection() {
  return (
  <div key={m.id} className={`flex ${isClient ? "justify-end" : "justify-start"}`}>
  <div className={`max-w-[72%] rounded-[24px] px-4 py-2.5 ${isClient ? "bg-lider-red text-white" : "bg-lider-line/30 text-lider-graphite "}`}>
- <p className={`text-xs font-bold mb-0.5 ${isClient ? "text-red-200" : "text-lider-muted"}`}>{m.senderName}</p>
- <p className="text-sm break-words">{m.text}</p>
+ <p className={`text-xs font-bold mb-0.5 ${isClient ? "text-red-200" : "text-lider-muted"}`}>{m.senderName}{m.senderPhone ? ` · ${m.senderPhone}` : ""}</p>
+ {m.mediaUrl ? (
+ <a
+ href={m.mediaUrl}
+ target="_blank"
+ rel="noopener noreferrer"
+ className={`mb-1 inline-flex max-w-full items-center gap-2 rounded-[14px] px-3 py-2 text-xs font-bold ${isClient ? "bg-white/15 text-white" : "bg-white text-lider-graphite border border-lider-line"}`}
+ >
+ <FileText size={14} />
+ <span className="truncate">{m.mediaType === "image" ? "Фото" : (m.fileName ?? "Файл")}</span>
+ </a>
+ ) : null}
+ {m.text ? <p className="text-sm break-words">{m.text}</p> : null}
  <p className={`text-xs mt-1 text-right ${isClient ? "text-red-200" : "text-lider-muted"}`}>{m.createdAt ? m.createdAt.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" }) : ""}</p>
  </div>
  </div>

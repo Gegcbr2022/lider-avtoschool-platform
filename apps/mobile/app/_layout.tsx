@@ -37,7 +37,7 @@ import { GUEST_USER } from "../lib/auth";
 import { API_BASE } from "../lib/api";
 import { ThemeProvider, darkColors as colors, radii, spacing } from "../lib/theme";
 import { configureGoogleSignIn, signInWithGoogle as googleSignIn, signOutFromGoogle } from "../lib/googleAuth";
-import { getUserRole } from "../lib/firestore";
+import { getUserProfile, upsertUserProfile } from "../lib/firestore";
 
 // ─── Avatar emoji pool ────────────────────────────────────────────────────────
 const AVATAR_EMOJIS = ["🚗", "🏎️", "🚦", "🛞", "🏁", "🚘", "🧭", "⭐", "🔥", "😎", "🚙", "🛣️"];
@@ -124,12 +124,30 @@ export default function RootLayout() {
         const appUser = toAppUser(fbUser);
         setUser(appUser);
         setMode(fbUser.isAnonymous ? "guest" : "authenticated");
-        // Fetch role from Firestore and update user object
         if (!fbUser.isAnonymous) {
-          void getUserRole(fbUser.uid).then((role) => {
-            setUser((prev) =>
-              prev ? { ...prev, role: role as UserRole } : prev
-            );
+          void getUserProfile(fbUser.uid).then((profile) => {
+            const role = (profile?.role ?? "student") as UserRole;
+            setUser({
+              ...appUser,
+              name: profile?.name || appUser.name,
+              phone: profile?.phone ?? appUser.phone,
+              city: profile?.city,
+              category: profile?.category as User["category"],
+              avatarEmoji: profile?.avatarEmoji ?? appUser.avatarEmoji,
+              photoURL: profile?.photoURL ?? appUser.photoURL,
+              role,
+            });
+
+            const bootstrap: { name?: string; email?: string; photoURL?: string } = {};
+            if (!profile?.name) bootstrap.name = appUser.name;
+            if (!profile?.email && appUser.email) bootstrap.email = appUser.email;
+            if (!profile?.photoURL && appUser.photoURL) bootstrap.photoURL = appUser.photoURL;
+            if (bootstrap.name || bootstrap.email || bootstrap.photoURL) {
+              void upsertUserProfile(fbUser.uid, bootstrap).catch(() => {});
+            }
+          }).catch(() => {
+            setUser({ ...appUser, role: "student" });
+          }).finally(() => {
             setRoleLoaded(true);
           });
         } else {

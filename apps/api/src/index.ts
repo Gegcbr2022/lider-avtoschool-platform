@@ -393,6 +393,7 @@ app.post("/chat/notify", async (request, response) => {
   const text = typeof body.text === "string" ? body.text.trim() : "";
   const mediaUrl = typeof body.mediaUrl === "string" && body.mediaUrl.trim() ? body.mediaUrl.trim() : undefined;
   const mediaType = typeof body.mediaType === "string" ? body.mediaType : undefined;
+  const fileName = typeof body.fileName === "string" && body.fileName.trim() ? body.fileName.trim() : undefined;
   const conversationType = typeof body.conversationType === "string" ? body.conversationType : undefined;
   const userPhone = typeof body.userPhone === "string" ? body.userPhone.trim() : undefined;
   const userEmail = typeof body.userEmail === "string" ? body.userEmail.trim() : undefined;
@@ -442,6 +443,25 @@ app.post("/chat/notify", async (request, response) => {
           disable_web_page_preview: false,
         });
       }
+    } else if (mediaUrl && mediaType === "document") {
+      try {
+        await telegramCall("sendDocument", {
+          chat_id: process.env.TELEGRAM_LOG_CHAT_ID,
+          message_thread_id: topicId,
+          document: mediaUrl,
+          caption: `📎 <b>${escapeHtml(userName)}</b>${fileName ? `: ${escapeHtml(fileName)}` : ""}${text ? `\n${escapeHtml(text)}` : ""}`,
+          parse_mode: "HTML",
+        });
+      } catch (docErr) {
+        console.warn("chat/notify: document send failed, falling back to text link", docErr);
+        await telegramCall("sendMessage", {
+          chat_id: process.env.TELEGRAM_LOG_CHAT_ID,
+          message_thread_id: topicId,
+          text: `📎 <b>${escapeHtml(userName)}</b> надіслав файл${fileName ? ` <b>${escapeHtml(fileName)}</b>` : ""}:\n<a href="${mediaUrl}">Відкрити файл</a>${text ? `\n${escapeHtml(text)}` : ""}`,
+          parse_mode: "HTML",
+          disable_web_page_preview: false,
+        });
+      }
     } else if (text) {
       // Text-only message
       await telegramCall("sendMessage", {
@@ -454,7 +474,7 @@ app.post("/chat/notify", async (request, response) => {
     }
 
     await db.collection("supportThreads").doc(conversationId).set(
-      { lastMessage: mediaUrl ? "📷 Фото" : text, lastMessageAt: FieldValue.serverTimestamp(), status: "open" },
+      { lastMessage: mediaUrl ? (mediaType === "document" ? `📎 ${fileName ?? "Файл"}` : "📷 Фото") : text, lastMessageAt: FieldValue.serverTimestamp(), status: "open" },
       { merge: true }
     );
     response.json({ ok: true });
@@ -883,7 +903,7 @@ type TelegramUpdate = {
     message_thread_id?: number;
     from?: { is_bot?: boolean; first_name?: string; last_name?: string };
     photo?: Array<{ file_id: string; file_unique_id: string; width: number; height: number; file_size?: number }>;
-    document?: { file_id: string; file_name?: string; mime_type?: string };
+    document?: { file_id: string; file_name?: string; mime_type?: string; file_size?: number };
   };
 };
 
@@ -892,7 +912,16 @@ function extFromContentType(contentType: string): string {
   if (contentType.includes("webp")) return "webp";
   if (contentType.includes("mp4")) return "mp4";
   if (contentType.includes("pdf")) return "pdf";
-  return "jpg";
+  if (contentType.includes("wordprocessingml")) return "docx";
+  if (contentType.includes("spreadsheetml")) return "xlsx";
+  if (contentType.includes("presentationml")) return "pptx";
+  if (contentType.includes("msword")) return "doc";
+  if (contentType.includes("ms-excel")) return "xls";
+  if (contentType.includes("ms-powerpoint")) return "ppt";
+  if (contentType.includes("zip")) return "zip";
+  if (contentType.includes("text/plain")) return "txt";
+  if (contentType.includes("image/")) return "jpg";
+  return "bin";
 }
 
 async function telegramCall<T = Record<string, unknown>>(method: string, payload: Record<string, unknown>): Promise<T> {
@@ -967,6 +996,7 @@ async function saveTelegramFileToStorage(params: {
   conversationId: string;
   filePath: string;
   fallbackFileName: string;
+  contentTypeOverride?: string;
 }): Promise<{ mediaUrl: string; mediaPath: string; fileName: string; fileSize: number }> {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   if (!botToken) throw new Error("TELEGRAM_BOT_TOKEN is missing");
@@ -976,7 +1006,7 @@ async function saveTelegramFileToStorage(params: {
     throw new Error(`Telegram file download failed: ${downloadRes.status}`);
   }
 
-  const contentType = downloadRes.headers.get("content-type") ?? "image/jpeg";
+  const contentType = params.contentTypeOverride || downloadRes.headers.get("content-type") || "application/octet-stream";
   const buffer = Buffer.from(await downloadRes.arrayBuffer());
   const ext = extFromContentType(contentType);
   const token = randomUUID();
@@ -1155,7 +1185,7 @@ async function handleManagerReply(update: TelegramUpdate): Promise<void> {
   let mediaPath: string | undefined;
   let fileName: string | undefined;
   let fileSize: number | undefined;
-  let mediaType: "image" | undefined;
+  let mediaType: "image" | "document" | undefined;
 
   // Handle incoming photo from Telegram manager
   if (msg.photo && msg.photo.length > 0) {
@@ -1167,7 +1197,8 @@ async function handleManagerReply(update: TelegramUpdate): Promise<void> {
         const stored = await saveTelegramFileToStorage({
           conversationId,
           filePath: fileInfo.file_path,
-          fallbackFileName: `${photo.file_unique_id}.jpg`
+          fallbackFileName: `${photo.file_unique_id}.jpg`,
+          contentTypeOverride: "image/jpeg",
         });
         mediaUrl = stored.mediaUrl;
         mediaPath = stored.mediaPath;
@@ -1177,6 +1208,28 @@ async function handleManagerReply(update: TelegramUpdate): Promise<void> {
       }
     } catch (err) {
       console.warn("handleManagerReply: failed to store Telegram photo", err);
+    }
+  }
+
+  // Handle incoming document/file from Telegram manager
+  if (!mediaUrl && msg.document?.file_id) {
+    try {
+      const fileInfo = await telegramCall<{ file_path: string }>("getFile", { file_id: msg.document.file_id });
+      if (fileInfo.file_path) {
+        const stored = await saveTelegramFileToStorage({
+          conversationId,
+          filePath: fileInfo.file_path,
+          fallbackFileName: msg.document.file_name ?? `telegram-document-${msg.document.file_id}`,
+          contentTypeOverride: msg.document.mime_type,
+        });
+        mediaUrl = stored.mediaUrl;
+        mediaPath = stored.mediaPath;
+        fileName = stored.fileName;
+        fileSize = msg.document.file_size ?? stored.fileSize;
+        mediaType = "document";
+      }
+    } catch (err) {
+      console.warn("handleManagerReply: failed to store Telegram document", err);
     }
   }
 
@@ -1200,7 +1253,7 @@ async function handleManagerReply(update: TelegramUpdate): Promise<void> {
   await db.collection("conversations").doc(conversationId).collection("messages").add(payload);
   await db.collection("conversations").doc(conversationId).set(
     {
-      lastMessage: mediaUrl ? "📷 Фото" : messageText,
+      lastMessage: mediaUrl ? (mediaType === "document" ? `📎 ${fileName ?? "Файл"}` : "📷 Фото") : messageText,
       lastMessageAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
       lastSenderId: "support",
@@ -1212,7 +1265,7 @@ async function handleManagerReply(update: TelegramUpdate): Promise<void> {
 
   // Send FCM push to the student's device
   if (conversationUserId) {
-    const pushBody = mediaUrl ? "📷 Нове фото від менеджера" : messageText;
+    const pushBody = mediaUrl ? (mediaType === "document" ? `📎 Новий файл${fileName ? `: ${fileName}` : ""}` : "📷 Нове фото від менеджера") : messageText;
     await sendFCMPush(conversationUserId, managerName, pushBody, { conversationId, type: "chat" });
   }
 }

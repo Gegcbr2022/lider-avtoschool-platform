@@ -17,8 +17,12 @@ function extFromContentType(contentType: string): string {
   if (contentType.includes("spreadsheetml")) return "xlsx";
   if (contentType.includes("presentationml")) return "pptx";
   if (contentType.includes("msword")) return "doc";
+  if (contentType.includes("ms-excel")) return "xls";
+  if (contentType.includes("ms-powerpoint")) return "ppt";
+  if (contentType.includes("zip")) return "zip";
   if (contentType.includes("text/plain")) return "txt";
-  return "jpg";
+  if (contentType.includes("image/")) return "jpg";
+  return "bin";
 }
 
 function safeFileName(name: string): string {

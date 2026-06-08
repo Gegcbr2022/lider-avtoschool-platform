@@ -75,8 +75,10 @@ export default function BookingScreen() {
       await createBooking({
         studentId: user.id,
         studentName: user.name,
+        studentPhone: user.phone,
         instructorId: selInstructor.id,
         instructorName: selInstructor.name,
+        instructorUserId: selInstructor.accountUserId,
         startsAt,
       });
       setSelInstructor(null); setSelDay(null); setSelTime(null);
