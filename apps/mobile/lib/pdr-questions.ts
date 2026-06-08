@@ -18,7 +18,19 @@ export type PdrVisualKind =
   | "pedestrianCrossingInfo"
   | "settlement"
   | "hospital"
-  | "gasStation";
+  | "gasStation"
+  | "trafficLight"
+  | "railwayCrossing"
+  | "roadWorks"
+  | "slipperyRoad"
+  | "laneMerge"
+  | "busStop"
+  | "schoolZone"
+  | "motorway"
+  | "truckSteepDescent"
+  | "cargoShift"
+  | "trailerSway"
+  | "motorcycleCurve";
 
 export type PDRQuestion = {
   id: string;
@@ -165,6 +177,78 @@ export const PDR_VISUALS = {
     imageUrl: wikiVisual("UA_road_sign_6.11.svg"),
     label: "Знак сервісу: автозаправна станція",
     source: "Wikimedia Commons · UA road sign 6.11",
+  },
+  trafficLight: {
+    kind: "trafficLight",
+    imageUrl: wikiVisual("UA_road_sign_1.24.svg"),
+    label: "Дорожня ситуація: світлофор і стоп-лінія",
+    source: "Local vector scene · traffic light",
+  },
+  railwayCrossing: {
+    kind: "railwayCrossing",
+    imageUrl: wikiVisual("UA_road_sign_1.29.svg"),
+    label: "Дорожня ситуація: залізничний переїзд",
+    source: "Local vector scene · railway crossing",
+  },
+  roadWorks: {
+    kind: "roadWorks",
+    imageUrl: wikiVisual("UA_road_sign_1.37.svg"),
+    label: "Дорожня ситуація: дорожні роботи",
+    source: "Local vector scene · road works",
+  },
+  slipperyRoad: {
+    kind: "slipperyRoad",
+    imageUrl: wikiVisual("UA_road_sign_1.13.svg"),
+    label: "Дорожня ситуація: слизька дорога",
+    source: "Local vector scene · slippery road",
+  },
+  laneMerge: {
+    kind: "laneMerge",
+    imageUrl: wikiVisual("UA_road_sign_1.5.1.svg"),
+    label: "Дорожня ситуація: перестроювання і смуги",
+    source: "Local vector scene · lane merge",
+  },
+  busStop: {
+    kind: "busStop",
+    imageUrl: wikiVisual("UA_road_sign_5.41.1.svg"),
+    label: "Дорожня ситуація: автобусна зупинка",
+    source: "Local vector scene · bus stop",
+  },
+  schoolZone: {
+    kind: "schoolZone",
+    imageUrl: wikiVisual("UA_road_sign_1.33.svg"),
+    label: "Дорожня ситуація: діти поруч із дорогою",
+    source: "Local vector scene · school zone",
+  },
+  motorway: {
+    kind: "motorway",
+    imageUrl: wikiVisual("UA_road_sign_5.1.svg"),
+    label: "Дорожня ситуація: швидкісна дорога",
+    source: "Local vector scene · motorway",
+  },
+  truckSteepDescent: {
+    kind: "truckSteepDescent",
+    imageUrl: wikiVisual("UA_road_sign_1.6.svg"),
+    label: "Категорія C: спуск і гальмівний шлях вантажівки",
+    source: "Local vector scene · truck descent",
+  },
+  cargoShift: {
+    kind: "cargoShift",
+    imageUrl: wikiVisual("UA_road_sign_1.1.svg"),
+    label: "Категорія C: кріплення вантажу",
+    source: "Local vector scene · cargo safety",
+  },
+  trailerSway: {
+    kind: "trailerSway",
+    imageUrl: wikiVisual("UA_road_sign_1.1.svg"),
+    label: "Категорія BE/CE: причіп і стабільність",
+    source: "Local vector scene · trailer sway",
+  },
+  motorcycleCurve: {
+    kind: "motorcycleCurve",
+    imageUrl: wikiVisual("UA_road_sign_1.2.1.svg"),
+    label: "Категорія A/A1: поворот і зчеплення",
+    source: "Local vector scene · motorcycle curve",
   },
 } as const;
 
@@ -2184,6 +2268,46 @@ const VISUAL_DRILL_SCENARIOS: Array<Omit<PDRQuestion, "id">> = [
     visual: PDR_VISUALS.speedLimit,
   },
   {
+    question: "Що найважливіше перед стоп-лінією на регульованому перехресті?",
+    options: ["Зупинитися на заборонний сигнал і не перекривати перехрестя", "Виїхати за стоп-лінію, якщо позаду тиснуть", "Ігнорувати стоп-лінію, якщо немає пішоходів", "Завжди їхати першим"],
+    correctIndex: 0,
+    explanation: "Стоп-лінія показує місце зупинки перед світлофором або знаком. Виїзд за неї може створити небезпеку пішоходам і транспорту.",
+    category: "Перехрестя",
+    visual: PDR_VISUALS.trafficLight,
+  },
+  {
+    question: "Як діяти біля дорожніх робіт на зображенні?",
+    options: ["Зменшити швидкість, тримати дистанцію і слідкувати за тимчасовими знаками", "Об'їхати конуси на максимальній швидкості", "Ігнорувати тимчасову розмітку", "Рухатися впритул до працівників"],
+    correctIndex: 0,
+    explanation: "Дорожні роботи часто змінюють ширину смуг, покриття та траєкторію руху. Безпечна дія - знизити швидкість і читати тимчасові знаки.",
+    category: "Безпека",
+    visual: PDR_VISUALS.roadWorks,
+  },
+  {
+    question: "Що робити перед залізничним переїздом, якщо видимість обмежена?",
+    options: ["Знизити швидкість і переконатися, що переїзд вільний", "Прискоритися, щоб швидше перетнути колії", "Зупинитися на коліях", "Об'їхати шлагбаум"],
+    correctIndex: 0,
+    explanation: "Перед переїздом потрібен контроль обстановки. Рух через колії дозволений тільки коли це безпечно і немає заборонних сигналів.",
+    category: "Безпека",
+    visual: PDR_VISUALS.railwayCrossing,
+  },
+  {
+    question: "Як змінити стиль керування на слизькій дорозі?",
+    options: ["Плавно гальмувати, збільшити дистанцію і уникати різких маневрів", "Різко гальмувати перед кожним поворотом", "Їхати ближче до авто попереду", "Різко прискорюватися після знака"],
+    correctIndex: 0,
+    explanation: "На слизькому покритті гальмівний шлях зростає. Потрібні плавні дії, більша дистанція і нижча швидкість.",
+    category: "Безпека",
+    visual: PDR_VISUALS.slipperyRoad,
+  },
+  {
+    question: "Що перевірити перед перестроюванням у сусідню смугу?",
+    options: ["Дзеркала, сліпу зону, швидкість потоку і безпечний інтервал", "Тільки увімкнути поворотник", "Тільки подивитися вперед", "Перестроїтися різко, якщо є вільне місце"],
+    correctIndex: 0,
+    explanation: "Перестроювання без контролю дзеркал і сліпої зони - типова причина конфлікту в потоці.",
+    category: "Маневр",
+    visual: PDR_VISUALS.laneMerge,
+  },
+  {
     question: "Що означає знак «Зупинку заборонено»?",
     options: ["Не можна зупинятися у зоні дії знака", "Не можна тільки залишати авто на ніч", "Можна зупинитися на аварійці без причини", "Заборонено рух прямо"],
     correctIndex: 0,
@@ -2358,7 +2482,7 @@ const LICENSE_DRILL_SCENARIOS: Array<Omit<PDRQuestion, "id">> = [
     explanation: "Для двоколісного транспорту критичні видимість, справні гальма, шолом та захисне екіпірування. Помилка майже не має запасу безпеки.",
     category: "Безпека",
     licenseCategories: ["A", "A1"],
-    visual: PDR_VISUALS.danger,
+    visual: PDR_VISUALS.motorcycleCurve,
   },
   {
     question: "Категорія A/A1: як проходити поворот на мокрій дорозі?",
@@ -2367,7 +2491,7 @@ const LICENSE_DRILL_SCENARIOS: Array<Omit<PDRQuestion, "id">> = [
     explanation: "На мотоциклі запас зчеплення менший: швидкість гасять до повороту, нахил і газ тримають плавними.",
     category: "Безпека",
     licenseCategories: ["A", "A1"],
-    visual: PDR_VISUALS.danger,
+    visual: PDR_VISUALS.slipperyRoad,
   },
   {
     question: "Категорія A/A1: яка дистанція безпечна для мотоцикліста в потоці?",
@@ -2376,7 +2500,7 @@ const LICENSE_DRILL_SCENARIOS: Array<Omit<PDRQuestion, "id">> = [
     explanation: "Мотоциклісту потрібен простір не лише для гальмування, а й для маневру, якщо авто попереду різко зупиниться.",
     category: "Безпека",
     licenseCategories: ["A", "A1"],
-    visual: PDR_VISUALS.pedestrianCrossing,
+    visual: PDR_VISUALS.motorcycleCurve,
   },
   {
     question: "Категорія A/A1: як перевозити пасажира на мотоциклі?",
@@ -2385,7 +2509,7 @@ const LICENSE_DRILL_SCENARIOS: Array<Omit<PDRQuestion, "id">> = [
     explanation: "Пасажир має сидіти на штатному місці, користуватися підніжками і шоломом. Це базова умова безпечного руху.",
     category: "Безпека",
     licenseCategories: ["A", "A1"],
-    visual: PDR_VISUALS.straightOnly,
+    visual: PDR_VISUALS.motorcycleCurve,
   },
   {
     question: "Категорія C: що треба врахувати водію вантажівки перед початком руху?",
@@ -2394,7 +2518,7 @@ const LICENSE_DRILL_SCENARIOS: Array<Omit<PDRQuestion, "id">> = [
     explanation: "Вантажний транспорт повільніше розганяється, довше гальмує і сильніше залежить від правильного кріплення вантажу.",
     category: "Безпека",
     licenseCategories: ["C"],
-    visual: PDR_VISUALS.danger,
+    visual: PDR_VISUALS.cargoShift,
   },
   {
     question: "Категорія C: як діяти перед поворотом на вузькій вулиці?",
@@ -2403,7 +2527,7 @@ const LICENSE_DRILL_SCENARIOS: Array<Omit<PDRQuestion, "id">> = [
     explanation: "Габаритний транспорт має іншу траєкторію. Перед маневром потрібні сигнал, огляд дзеркал і запас простору.",
     category: "Маневр",
     licenseCategories: ["C"],
-    visual: PDR_VISUALS.straightOnly,
+    visual: PDR_VISUALS.laneMerge,
   },
   {
     question: "Категорія C: що робити, якщо вантаж частково змістився під час руху?",
@@ -2412,7 +2536,7 @@ const LICENSE_DRILL_SCENARIOS: Array<Omit<PDRQuestion, "id">> = [
     explanation: "Незакріплений вантаж змінює керованість і може впасти на дорогу. Рух продовжують тільки після безпечної перевірки.",
     category: "Безпека",
     licenseCategories: ["C"],
-    visual: PDR_VISUALS.noStopping,
+    visual: PDR_VISUALS.cargoShift,
   },
   {
     question: "Категорія C: яка помилка найчастіше небезпечна на спуску?",
@@ -2421,7 +2545,7 @@ const LICENSE_DRILL_SCENARIOS: Array<Omit<PDRQuestion, "id">> = [
     explanation: "На довгому спуску гальма можуть перегрітися. Водій має обирати режим руху з урахуванням маси та ухилу.",
     category: "Швидкість",
     licenseCategories: ["C"],
-    visual: PDR_VISUALS.speedLimit,
+    visual: PDR_VISUALS.truckSteepDescent,
   },
   {
     question: "Категорія D: що має зробити водій автобуса перед від'їздом від зупинки?",
@@ -2430,7 +2554,7 @@ const LICENSE_DRILL_SCENARIOS: Array<Omit<PDRQuestion, "id">> = [
     explanation: "Автобус перевозить пасажирів, тому старт має бути плавним і контрольованим: двері, дзеркала, сигнал, безпечний інтервал.",
     category: "Безпека",
     licenseCategories: ["D"],
-    visual: PDR_VISUALS.settlement,
+    visual: PDR_VISUALS.busStop,
   },
   {
     question: "Категорія D: як водій автобуса має наближатися до пішохідного переходу?",
@@ -2439,7 +2563,7 @@ const LICENSE_DRILL_SCENARIOS: Array<Omit<PDRQuestion, "id">> = [
     explanation: "Автобус має довший гальмівний шлях і більшу сліпу зону. Перед переходом потрібна рання реакція.",
     category: "Пішоходи",
     licenseCategories: ["D"],
-    visual: PDR_VISUALS.pedestrianCrossing,
+    visual: PDR_VISUALS.schoolZone,
   },
   {
     question: "Категорія D: що небезпечно під час висадки пасажирів?",
@@ -2448,7 +2572,7 @@ const LICENSE_DRILL_SCENARIOS: Array<Omit<PDRQuestion, "id">> = [
     explanation: "Пасажири можуть опинитися біля дверей або перед автобусом. Рух дозволений лише після контролю небезпечної зони.",
     category: "Безпека",
     licenseCategories: ["D"],
-    visual: PDR_VISUALS.hospital,
+    visual: PDR_VISUALS.busStop,
   },
   {
     question: "Категорія D: яка дистанція потрібна автобусу на швидкісній дорозі?",
@@ -2457,7 +2581,7 @@ const LICENSE_DRILL_SCENARIOS: Array<Omit<PDRQuestion, "id">> = [
     explanation: "Маса автобуса і пасажири збільшують відповідальність та гальмівний шлях. Дистанцію обирають із запасом.",
     category: "Швидкість",
     licenseCategories: ["D"],
-    visual: PDR_VISUALS.speedLimit,
+    visual: PDR_VISUALS.motorway,
   },
   {
     question: "Категорія BE/CE: що перевіряють перед рухом з причепом?",
@@ -2466,7 +2590,7 @@ const LICENSE_DRILL_SCENARIOS: Array<Omit<PDRQuestion, "id">> = [
     explanation: "Причіп змінює габарити, гальмування і траєкторію. Перед стартом треба перевірити зчіпку та світлотехніку.",
     category: "Безпека",
     licenseCategories: ["BE", "CE"],
-    visual: PDR_VISUALS.danger,
+    visual: PDR_VISUALS.trailerSway,
   },
   {
     question: "Категорія BE/CE: що змінюється під час повороту з причепом?",
@@ -2475,7 +2599,7 @@ const LICENSE_DRILL_SCENARIOS: Array<Omit<PDRQuestion, "id">> = [
     explanation: "Причіп зрізає траєкторію, тому водій має залишати запас і контролювати дзеркала до завершення маневру.",
     category: "Маневр",
     licenseCategories: ["BE", "CE"],
-    visual: PDR_VISUALS.roundabout,
+    visual: PDR_VISUALS.trailerSway,
   },
   {
     question: "Категорія BE/CE: як безпечно рухатися заднім ходом з причепом?",
@@ -2484,7 +2608,7 @@ const LICENSE_DRILL_SCENARIOS: Array<Omit<PDRQuestion, "id">> = [
     explanation: "Причіп швидко змінює кут під час руху назад. Потрібні низька швидкість, огляд і готовність зупинитися.",
     category: "Маневр",
     licenseCategories: ["BE", "CE"],
-    visual: PDR_VISUALS.noParking,
+    visual: PDR_VISUALS.trailerSway,
   },
   {
     question: "Категорія BE/CE: що робити, якщо причіп почав розгойдуватися?",
@@ -2493,7 +2617,7 @@ const LICENSE_DRILL_SCENARIOS: Array<Omit<PDRQuestion, "id">> = [
     explanation: "Розгойдування причепа посилюється різкими діями. Потрібно плавно стабілізувати состав і зменшити швидкість.",
     category: "Безпека",
     licenseCategories: ["BE", "CE"],
-    visual: PDR_VISUALS.speedLimit,
+    visual: PDR_VISUALS.trailerSway,
   },
 ];
 
@@ -2533,16 +2657,37 @@ const CATEGORY_VISUAL_FALLBACK: Record<string, VisualAsset> = {
   "Безпека": PDR_VISUALS.danger,
   "Знаки": PDR_VISUALS.giveWay,
   "Зупинка": PDR_VISUALS.noStopping,
-  "Маневр": PDR_VISUALS.straightOnly,
+  "Маневр": PDR_VISUALS.laneMerge,
   "Місто": PDR_VISUALS.settlement,
   "Паркування": PDR_VISUALS.noParking,
-  "Перехрестя": PDR_VISUALS.stop,
-  "Пішоходи": PDR_VISUALS.pedestrianCrossing,
+  "Перехрестя": PDR_VISUALS.trafficLight,
+  "Пішоходи": PDR_VISUALS.schoolZone,
   "Пріоритет": PDR_VISUALS.priorityRoad,
-  "Розмітка": PDR_VISUALS.straightOnly,
+  "Розмітка": PDR_VISUALS.laneMerge,
   "Стоянка": PDR_VISUALS.noParking,
   "Швидкість": PDR_VISUALS.speedLimit,
 };
+
+function inferVisualFromQuestion(question: PDRQuestion): VisualAsset | undefined {
+  const text = `${question.question} ${question.options.join(" ")} ${question.explanation}`;
+  const has = (pattern: RegExp) => pattern.test(text);
+
+  if (has(/\bSTOP\b|\u0441\u0442\u043e\u043f-\u043b\u0456\u043d|\u0441\u0442\u043e\u043f-\u043b\u0438\u043d/i)) return PDR_VISUALS.stop;
+  if (has(/\u0434\u0430\u0442\u0438 \u0434\u043e\u0440\u043e\u0433|\u0434\u0430\u0439\u0442\u0435 \u0434\u043e\u0440\u043e\u0433|\bYIELD\b/i)) return PDR_VISUALS.giveWay;
+  if (has(/\u0441\u0432\u0456\u0442\u043b\u043e\u0444\u043e\u0440|\u0441\u0432\u0435\u0442\u043e\u0444\u043e\u0440/i)) return PDR_VISUALS.trafficLight;
+  if (has(/\u0437\u0430\u043b\u0456\u0437\u043d|\u0437\u0430\u043b\u0438\u0437\u043d|\u043f\u0435\u0440\u0435\u0457\u0437\u0434|\u043f\u0435\u0440\u0435\u0435\u0437\u0434|\u0448\u043b\u0430\u0433\u0431\u0430\u0443\u043c/i)) return PDR_VISUALS.railwayCrossing;
+  if (has(/\u0441\u043b\u0438\u0437\u044c\u043a|\u0441\u043a\u043e\u043b\u044c\u0437/i)) return PDR_VISUALS.slipperyRoad;
+  if (has(/\u0434\u043e\u0440\u043e\u0436\u043d.*\u0440\u043e\u0431|\u0440\u0435\u043c\u043e\u043d\u0442.*\u0434\u043e\u0440\u043e\u0433|\u0440\u043e\u0431\u043e\u0442.*\u0434\u043e\u0440\u043e\u0437/i)) return PDR_VISUALS.roadWorks;
+  if (has(/\u0437\u043b\u0438\u0442\u0442\u044f|\u0437\u0432\u0443\u0436\u0435\u043d|\u043f\u0435\u0440\u0435\u0448\u0438\u043a\u0443\u0432|\u043f\u0435\u0440\u0435\u0441\u0442\u0440\u043e\u0435/i)) return PDR_VISUALS.laneMerge;
+  if (has(/\u0430\u0432\u0442\u043e\u0431\u0443\u0441|\u043c\u0430\u0440\u0448\u0440\u0443\u0442\u043d|\u0437\u0443\u043f\u0438\u043d\u043a.*\u0442\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442|\u043e\u0441\u0442\u0430\u043d\u043e\u0432\u043a.*\u0442\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442/i)) return PDR_VISUALS.busStop;
+  if (has(/\u0434\u0456\u0442|\u0434\u0435\u0442|\u0448\u043a\u043e\u043b|\u043f\u0456\u0448\u043e\u0445\u0456\u0434|\u043f\u0435\u0448\u0435\u0445\u043e\u0434/i)) return PDR_VISUALS.schoolZone;
+  if (has(/\u0430\u0432\u0442\u043e\u0441\u0442\u0440\u0430\u0434|\u043c\u0430\u0433\u0456\u0441\u0442\u0440\u0430\u043b|\u043c\u0430\u0433\u0438\u0441\u0442\u0440\u0430\u043b/i)) return PDR_VISUALS.motorway;
+  if (has(/\u0437\u0443\u043f\u0438\u043d\u043a.*\u0437\u0430\u0431\u043e\u0440\u043e\u043d|\u043e\u0441\u0442\u0430\u043d\u043e\u0432\u043a.*\u0437\u0430\u043f\u0440\u0435\u0449/i)) return PDR_VISUALS.noStopping;
+  if (has(/\u0441\u0442\u043e\u044f\u043d\u043a|\u043f\u0430\u0440\u043a\u0443\u0432|\u043f\u0430\u0440\u043a\u043e\u0432/i)) return PDR_VISUALS.noParking;
+  if (has(/\u0448\u0432\u0438\u0434\u043a|\u0441\u043a\u043e\u0440\u043e\u0441\u0442/i)) return PDR_VISUALS.speedLimit;
+
+  return undefined;
+}
 
 const TARGET_PDR_QUESTION_COUNT = 500;
 PDR_QUESTIONS.push(...EXTRA_VISUAL_PDR_QUESTIONS);
@@ -2556,7 +2701,7 @@ PDR_QUESTIONS.push(
 
 PDR_QUESTIONS.forEach((question) => {
   if (!question.visual) {
-    question.visual = CATEGORY_VISUAL_FALLBACK[question.category] ?? PDR_VISUALS.danger;
+    question.visual = inferVisualFromQuestion(question) ?? CATEGORY_VISUAL_FALLBACK[question.category] ?? PDR_VISUALS.danger;
   }
   if (!question.licenseCategories) {
     const text = `${question.question} ${question.explanation}`;

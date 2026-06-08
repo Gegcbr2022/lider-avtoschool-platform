@@ -158,6 +158,7 @@ export async function askLidyk(
 // Telegram topic. Never throws — chat works even if the bridge is down.
 export async function notifyChat(params: {
   conversationId: string;
+  messageId?: string;
   userId: string;
   userName: string;
   text: string;

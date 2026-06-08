@@ -57,6 +57,27 @@ export type PdrMarathonState = {
   updatedAt: string;
 };
 
+export type PdrCoachTopic = {
+  category: string;
+  percent: number;
+  seen: number;
+  correct: number;
+  mistakeCount: number;
+  priority: number;
+  reason: string;
+};
+
+export type PdrCoachPlan = {
+  overallPercent: number;
+  seen: number;
+  correct: number;
+  mistakeCount: number;
+  weakTopics: PdrCoachTopic[];
+  recommendedCategory: string | null;
+  summary: string;
+  nextSteps: string[];
+};
+
 function progressKey(scopeId: string): string {
   return `${PROGRESS_PREFIX}:${scopeId || "guest"}`;
 }
@@ -153,6 +174,103 @@ export async function recordPdrSession(
 export function getTopicPercent(progress?: PdrTopicProgress): number {
   if (!progress || progress.seen <= 0) return 0;
   return Math.round((progress.correct / progress.seen) * 100);
+}
+
+export function buildPdrCoachPlan(
+  progress: PdrProgressState,
+  licenseCategory: DrivingLicenseCategory
+): PdrCoachPlan {
+  const topics = Object.values(progress.topicProgress);
+  const mistakes = Object.values(progress.mistakes).filter((mistake) => mistake.licenseCategory === licenseCategory);
+  const mistakesByCategory = mistakes.reduce<Record<string, number>>((acc, mistake) => {
+    acc[mistake.category] = (acc[mistake.category] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  const categories = new Set<string>([
+    ...topics.map((topic) => topic.category),
+    ...Object.keys(mistakesByCategory),
+  ]);
+
+  const seen = topics.reduce((sum, topic) => sum + topic.seen, 0);
+  const correct = topics.reduce((sum, topic) => sum + topic.correct, 0);
+  const overallPercent = seen > 0 ? Math.round((correct / seen) * 100) : 0;
+
+  if (!categories.size) {
+    return {
+      overallPercent,
+      seen,
+      correct,
+      mistakeCount: mistakes.length,
+      weakTopics: [],
+      recommendedCategory: null,
+      summary: "Лідик ще не має історії відповідей. Почни з короткого тесту або екзамену МВС, і план з'явиться автоматично.",
+      nextSteps: [
+        "Пройди 10 питань у швидкому старті.",
+        "Після першої помилки відкрий пояснення Лідика.",
+        "Повернися до плану - він покаже слабкі теми.",
+      ],
+    };
+  }
+
+  const weakTopics = Array.from(categories)
+    .map<PdrCoachTopic>((category) => {
+      const topic = progress.topicProgress[category];
+      const percent = getTopicPercent(topic);
+      const topicSeen = topic?.seen ?? 0;
+      const topicCorrect = topic?.correct ?? 0;
+      const mistakeCount = mistakesByCategory[category] ?? 0;
+      const lowCoverageBoost = topicSeen < 8 ? 10 : 0;
+      const priority = (100 - percent) + mistakeCount * 14 + lowCoverageBoost;
+      const reason = mistakeCount > 0
+        ? `${mistakeCount} пит. у черзі помилок`
+        : topicSeen < 8
+          ? "мало практики"
+          : `${percent}% точність`;
+
+      return {
+        category,
+        percent,
+        seen: topicSeen,
+        correct: topicCorrect,
+        mistakeCount,
+        priority,
+        reason,
+      };
+    })
+    .filter((topic) => topic.mistakeCount > 0 || topic.seen < 8 || topic.percent < 82)
+    .sort((a, b) => b.priority - a.priority)
+    .slice(0, 3);
+
+  const recommendedCategory = weakTopics[0]?.category ?? null;
+  const summary = recommendedCategory
+    ? `Фокус на ${recommendedCategory}: там зараз найбільший приріст до екзамену.`
+    : overallPercent >= 85
+      ? "Ти вже близько до стабільного рівня. Час тренувати екзамен МВС і швидкість відповіді."
+      : "Прогрес є. Лідик радить закріпити теми з точністю нижче 82%.";
+
+  const nextSteps = recommendedCategory
+    ? [
+        `Пройди 10 питань з теми "${recommendedCategory}".`,
+        "Після кожної помилки відкрий пояснення простішими словами.",
+        "Повернися до екзамену МВС, коли у слабкій темі буде 80%+.",
+      ]
+    : [
+        "Пройди екзамен МВС на 20 питань.",
+        "Збери нові помилки у чергу повторення.",
+        "Повтори питання, доки помилка не закриється двома правильними відповідями.",
+      ];
+
+  return {
+    overallPercent,
+    seen,
+    correct,
+    mistakeCount: mistakes.length,
+    weakTopics,
+    recommendedCategory,
+    summary,
+    nextSteps,
+  };
 }
 
 export async function loadMarathonState(scopeId: string): Promise<PdrMarathonState | null> {

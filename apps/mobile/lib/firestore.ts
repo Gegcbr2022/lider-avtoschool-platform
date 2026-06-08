@@ -75,6 +75,16 @@ export type StoryDoc = {
   authorName: string;
   authorEmoji?: string;
   text: string;
+  kind?: "custom" | "pdrResult";
+  result?: {
+    correct: number;
+    total: number;
+    percent: number;
+    passed: boolean;
+    mode?: string;
+    licenseCategory?: string;
+    elapsedSeconds?: number;
+  };
   tone: "red" | "green" | "yellow" | "dark";
   reactions: number;
   views: number;
@@ -179,6 +189,8 @@ function mapStory(id: string, data: DocumentData): StoryDoc {
     authorName: data.authorName ?? "Учень",
     authorEmoji: data.authorEmoji,
     text: data.text ?? "",
+    kind: data.kind,
+    result: data.result,
     tone: data.tone ?? "dark",
     reactions: data.reactions ?? 0,
     views: data.views ?? 0,
@@ -352,6 +364,16 @@ export async function createStory(params: {
   authorName: string;
   authorEmoji?: string;
   text: string;
+  kind?: "custom" | "pdrResult";
+  result?: {
+    correct: number;
+    total: number;
+    percent: number;
+    passed: boolean;
+    mode?: string;
+    licenseCategory?: string;
+    elapsedSeconds?: number;
+  };
   tone: "red" | "green" | "yellow" | "dark";
   tags: string[];
   mediaUrl?: string;
@@ -906,6 +928,9 @@ export type MessageDoc = {
   text: string;
   createdAt: Date | null;
   readBy?: string[];
+  deliveredAt?: Date | null;
+  deliveredTo?: string[];
+  deliveryStatus?: "sent" | "delivered";
   mediaUrl?: string;
   mediaPath?: string;
   mediaType?: "image" | "video" | "document";
@@ -978,6 +1003,9 @@ export function subscribeToMessages(
           text: data.text ?? "",
           createdAt: toDate(data.createdAt),
           readBy: data.readBy ?? [],
+          deliveredAt: toDate(data.deliveredAt),
+          deliveredTo: data.deliveredTo ?? [],
+          deliveryStatus: data.deliveryStatus,
           mediaUrl: data.mediaUrl,
           mediaPath: data.mediaPath,
           mediaType: data.mediaType,
@@ -1012,7 +1040,7 @@ export async function sendMessage(
     height?: number;
     senderPhone?: string;
   }
-): Promise<void> {
+): Promise<string> {
   const convRef = doc(db, "conversations", conversationId);
   const convSnap = await getDoc(convRef);
   const participantIds = convSnap.exists() ? ((convSnap.data().participantIds ?? []) as string[]) : [];
@@ -1024,6 +1052,8 @@ export async function sendMessage(
     text: params.text,
     createdAt: serverTimestamp(),
     readBy: [params.senderId],
+    deliveredTo: [],
+    deliveryStatus: "sent",
     mediaUrl: params.mediaUrl,
     mediaPath: params.mediaPath,
     mediaType: params.mediaUrl ? (params.mediaType ?? "image") : undefined,
@@ -1035,7 +1065,7 @@ export async function sendMessage(
     senderPhone: params.senderPhone,
     reactions: {},
   });
-  await addDoc(collection(db, "conversations", conversationId, "messages"), payload);
+  const messageRef = await addDoc(collection(db, "conversations", conversationId, "messages"), payload);
   const fallbackLastMessage =
     params.mediaType === "document"
       ? `📎 ${params.fileName ?? "Файл"}`
@@ -1050,6 +1080,7 @@ export async function sendMessage(
     unreadBy,
     readBy: [params.senderId],
   });
+  return messageRef.id;
 }
 
 export async function markConversationRead(

@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card, Label, ProgressBar } from "../../components/mobile-ui";
 import { askLidyk } from "../../lib/api";
@@ -35,6 +36,7 @@ import {
   type PdrVisualKind,
 } from "../../lib/pdr-questions";
 import {
+  buildPdrCoachPlan,
   clearMarathonState,
   getTopicPercent,
   loadMarathonState,
@@ -150,6 +152,28 @@ function PdrVisual({ question }: { question: PDRQuestion }) {
                 : "danger");
   const hasCrosswalk = kind === "pedestrianCrossing" || kind === "pedestrianCrossingInfo" || kind === "pedestrianCycleCrossing";
   const hasIntersection = kind === "roundabout" || kind === "stop" || kind === "giveWay" || kind === "priorityRoad" || kind === "endPriorityRoad";
+  const hasTrafficLight = kind === "trafficLight";
+  const hasRailway = kind === "railwayCrossing";
+  const hasRoadWorks = kind === "roadWorks";
+  const hasWetRoad = kind === "slipperyRoad" || kind === "motorcycleCurve";
+  const hasLaneMerge = kind === "laneMerge";
+  const hasBusStop = kind === "busStop";
+  const hasSchoolZone = kind === "schoolZone";
+  const vehicleType = kind === "truckSteepDescent" || kind === "cargoShift"
+    ? "truck"
+    : kind === "busStop"
+      ? "bus"
+      : kind === "trailerSway"
+        ? "trailer"
+        : kind === "motorcycleCurve"
+          ? "motorcycle"
+          : question.licenseCategories?.some((cat) => cat === "C" || cat === "CE")
+            ? "truck"
+            : question.licenseCategories?.some((cat) => cat === "D")
+              ? "bus"
+              : question.licenseCategories?.some((cat) => cat === "A" || cat === "A1")
+                ? "motorcycle"
+                : "car";
 
   const roundSign = (content: string, options?: { bg?: string; color?: string; border?: string; slash?: boolean }) => (
     <View style={{ width: 82, height: 82, borderRadius: 41, backgroundColor: options?.bg ?? "#fff", borderWidth: 8, borderColor: options?.border ?? "#e63946", alignItems: "center", justifyContent: "center", shadowColor: "#000", shadowOpacity: 0.18, shadowRadius: 8, elevation: 2 }}>
@@ -210,6 +234,70 @@ function PdrVisual({ question }: { question: PDRQuestion }) {
         return blueSign("H");
       case "gasStation":
         return blueSign("АЗС");
+      case "trafficLight":
+        return (
+          <View style={{ width: 52, height: 92, borderRadius: 18, backgroundColor: "#111827", borderWidth: 4, borderColor: "#334155", alignItems: "center", justifyContent: "space-around", paddingVertical: 8 }}>
+            <View style={{ width: 19, height: 19, borderRadius: 10, backgroundColor: "#ef4444" }} />
+            <View style={{ width: 19, height: 19, borderRadius: 10, backgroundColor: "#f59e0b", opacity: 0.55 }} />
+            <View style={{ width: 19, height: 19, borderRadius: 10, backgroundColor: "#22c55e", opacity: 0.45 }} />
+          </View>
+        );
+      case "railwayCrossing":
+        return (
+          <View style={{ width: 88, height: 88, alignItems: "center", justifyContent: "center" }}>
+            <View style={{ position: "absolute", width: 94, height: 10, borderRadius: 5, backgroundColor: "#fff", borderWidth: 2, borderColor: "#e63946", transform: [{ rotate: "45deg" }] }} />
+            <View style={{ position: "absolute", width: 94, height: 10, borderRadius: 5, backgroundColor: "#fff", borderWidth: 2, borderColor: "#e63946", transform: [{ rotate: "-45deg" }] }} />
+            <Text style={{ color: "#111827", fontSize: 14, fontWeight: "900", marginTop: 54 }}>RAIL</Text>
+          </View>
+        );
+      case "roadWorks":
+        return (
+          <View style={{ width: 86, height: 74, borderRadius: 12, borderWidth: 7, borderColor: "#e63946", transform: [{ rotate: "45deg" }], alignItems: "center", justifyContent: "center", backgroundColor: "#fff" }}>
+            <Text style={{ transform: [{ rotate: "-45deg" }], color: "#111827", fontSize: 16, fontWeight: "900" }}>WORK</Text>
+          </View>
+        );
+      case "slipperyRoad":
+        return (
+          <View style={{ width: 86, height: 74, borderRadius: 12, borderWidth: 7, borderColor: "#e63946", transform: [{ rotate: "45deg" }], alignItems: "center", justifyContent: "center", backgroundColor: "#fff" }}>
+            <Text style={{ transform: [{ rotate: "-45deg" }], color: "#111827", fontSize: 28, fontWeight: "900" }}>≈</Text>
+          </View>
+        );
+      case "laneMerge":
+        return blueSign("⇢");
+      case "busStop":
+        return blueSign("BUS");
+      case "schoolZone":
+        return (
+          <View style={{ width: 82, height: 82, borderRadius: 18, backgroundColor: "#facc15", borderWidth: 7, borderColor: "#111827", alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ color: "#111827", fontSize: 16, fontWeight: "900" }}>KIDS</Text>
+          </View>
+        );
+      case "motorway":
+        return blueSign("M");
+      case "truckSteepDescent":
+        return (
+          <View style={{ width: 86, height: 74, borderRadius: 12, borderWidth: 7, borderColor: "#e63946", transform: [{ rotate: "45deg" }], alignItems: "center", justifyContent: "center", backgroundColor: "#fff" }}>
+            <Text style={{ transform: [{ rotate: "-45deg" }], color: "#111827", fontSize: 18, fontWeight: "900" }}>10%</Text>
+          </View>
+        );
+      case "cargoShift":
+        return (
+          <View style={{ width: 86, height: 74, borderRadius: 12, borderWidth: 7, borderColor: "#e63946", transform: [{ rotate: "45deg" }], alignItems: "center", justifyContent: "center", backgroundColor: "#fff" }}>
+            <Text style={{ transform: [{ rotate: "-45deg" }], color: "#111827", fontSize: 15, fontWeight: "900" }}>LOAD</Text>
+          </View>
+        );
+      case "trailerSway":
+        return (
+          <View style={{ width: 86, height: 74, borderRadius: 12, borderWidth: 7, borderColor: "#e63946", transform: [{ rotate: "45deg" }], alignItems: "center", justifyContent: "center", backgroundColor: "#fff" }}>
+            <Text style={{ transform: [{ rotate: "-45deg" }], color: "#111827", fontSize: 15, fontWeight: "900" }}>TRLR</Text>
+          </View>
+        );
+      case "motorcycleCurve":
+        return (
+          <View style={{ width: 86, height: 74, borderRadius: 12, borderWidth: 7, borderColor: "#e63946", transform: [{ rotate: "45deg" }], alignItems: "center", justifyContent: "center", backgroundColor: "#fff" }}>
+            <Text style={{ transform: [{ rotate: "-45deg" }], color: "#111827", fontSize: 15, fontWeight: "900" }}>MOTO</Text>
+          </View>
+        );
       case "pedestrianCrossing":
       case "pedestrianCycleCrossing":
         return (
@@ -226,23 +314,98 @@ function PdrVisual({ question }: { question: PDRQuestion }) {
     }
   };
 
+  const renderVehicle = () => {
+    if (vehicleType === "motorcycle") {
+      return (
+        <View style={{ position: "absolute", right: 34, bottom: 31, width: 78, height: 38 }}>
+          <View style={{ position: "absolute", left: 9, bottom: 0, width: 24, height: 24, borderRadius: 12, backgroundColor: "#111827", borderWidth: 4, borderColor: "#475569" }} />
+          <View style={{ position: "absolute", right: 4, bottom: 0, width: 24, height: 24, borderRadius: 12, backgroundColor: "#111827", borderWidth: 4, borderColor: "#475569" }} />
+          <View style={{ position: "absolute", left: 24, bottom: 15, width: 36, height: 11, borderRadius: 6, backgroundColor: "#e63946", transform: [{ rotate: "-8deg" }] }} />
+          <View style={{ position: "absolute", left: 38, bottom: 24, width: 14, height: 14, borderRadius: 7, backgroundColor: "#fde68a" }} />
+        </View>
+      );
+    }
+
+    const width = vehicleType === "bus" ? 118 : vehicleType === "truck" ? 116 : vehicleType === "trailer" ? 136 : 86;
+    const cabWidth = vehicleType === "truck" || vehicleType === "trailer" ? 42 : width;
+    const bodyColor = vehicleType === "bus" ? "#f59e0b" : vehicleType === "truck" ? "#2563eb" : "#e63946";
+    return (
+      <View style={{ position: "absolute", right: 24, bottom: 29, width, height: 42 }}>
+        {vehicleType === "trailer" ? (
+          <View style={{ position: "absolute", left: 0, top: 6, width: 72, height: 32, borderRadius: 8, backgroundColor: "#94a3b8", borderWidth: 3, borderColor: "#e2e8f0" }}>
+            <View style={{ position: "absolute", left: 18, top: 7, width: 24, height: 10, borderRadius: 4, backgroundColor: "#cbd5e1" }} />
+          </View>
+        ) : null}
+        <View style={{ position: "absolute", right: 0, top: vehicleType === "trailer" ? 6 : 0, width: cabWidth, height: vehicleType === "truck" || vehicleType === "trailer" ? 34 : 34, borderRadius: 10, backgroundColor: bodyColor, borderWidth: 3, borderColor: vehicleType === "bus" ? "#fde68a" : "#dbeafe" }}>
+          <View style={{ position: "absolute", left: 9, top: 7, width: 18, height: 10, borderRadius: 4, backgroundColor: "#bfdbfe" }} />
+          {cabWidth > 55 ? <View style={{ position: "absolute", right: 10, top: 7, width: 20, height: 10, borderRadius: 4, backgroundColor: "#bfdbfe" }} /> : null}
+        </View>
+        {vehicleType === "truck" ? (
+          <View style={{ position: "absolute", left: 0, top: 3, width: 70, height: 34, borderRadius: 8, backgroundColor: "#94a3b8", borderWidth: 3, borderColor: "#e2e8f0" }}>
+            {kind === "cargoShift" ? <View style={{ position: "absolute", left: 16, top: 8, width: 35, height: 14, borderRadius: 4, backgroundColor: "#facc15", transform: [{ rotate: "-10deg" }] }} /> : null}
+          </View>
+        ) : null}
+        <View style={{ position: "absolute", left: 10, bottom: -8, width: 18, height: 18, borderRadius: 9, backgroundColor: "#111827" }} />
+        <View style={{ position: "absolute", right: 10, bottom: -8, width: 18, height: 18, borderRadius: 9, backgroundColor: "#111827" }} />
+      </View>
+    );
+  };
+
   return (
     <View style={{ borderRadius: radii.md, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, padding: 14, gap: 10 }}>
       <View style={{ height: 174, borderRadius: radii.sm, backgroundColor: "#cfe8f7", overflow: "hidden" }}>
         <View style={{ position: "absolute", left: 0, right: 0, top: 0, height: 78, backgroundColor: "#dbeafe" }} />
         <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 96, backgroundColor: "#364152" }} />
         <View style={{ position: "absolute", left: 0, right: 0, bottom: 46, height: 4, backgroundColor: "#f8fafc", opacity: 0.9 }} />
-        {hasIntersection ? (
+        {hasIntersection || hasTrafficLight ? (
           <>
             <View style={{ position: "absolute", left: "44%", top: 0, bottom: 0, width: 58, backgroundColor: "#364152" }} />
             <View style={{ position: "absolute", left: "50%", top: 10, bottom: 10, width: 4, backgroundColor: "#f8fafc", opacity: 0.75 }} />
           </>
         ) : null}
-        {hasCrosswalk ? (
+        {hasCrosswalk || hasSchoolZone ? (
           <View style={{ position: "absolute", left: 130, right: 20, bottom: 28, flexDirection: "row", justifyContent: "space-between" }}>
             {[0, 1, 2, 3, 4].map((stripe) => (
               <View key={stripe} style={{ width: 14, height: 58, borderRadius: 3, backgroundColor: "#f8fafc" }} />
             ))}
+          </View>
+        ) : null}
+        {hasTrafficLight ? (
+          <View style={{ position: "absolute", left: 138, right: 28, bottom: 84, height: 5, backgroundColor: "#f8fafc", opacity: 0.95 }} />
+        ) : null}
+        {hasRailway ? (
+          <>
+            <View style={{ position: "absolute", left: 120, right: 26, bottom: 30, height: 6, borderRadius: 3, backgroundColor: "#94a3b8", transform: [{ rotate: "-8deg" }] }} />
+            <View style={{ position: "absolute", left: 120, right: 26, bottom: 62, height: 6, borderRadius: 3, backgroundColor: "#94a3b8", transform: [{ rotate: "-8deg" }] }} />
+            {[0, 1, 2, 3, 4].map((rail) => (
+              <View key={rail} style={{ position: "absolute", left: 136 + rail * 42, bottom: 30 + rail * -6, width: 6, height: 44, borderRadius: 3, backgroundColor: "#cbd5e1", transform: [{ rotate: "-8deg" }] }} />
+            ))}
+          </>
+        ) : null}
+        {hasRoadWorks ? (
+          <>
+            {[0, 1, 2].map((cone) => (
+              <View key={cone} style={{ position: "absolute", left: 132 + cone * 42, bottom: 24, width: 24, height: 34, borderRadius: 5, backgroundColor: "#f97316", borderWidth: 3, borderColor: "#fed7aa" }} />
+            ))}
+            <View style={{ position: "absolute", left: 252, bottom: 65, width: 78, height: 8, borderRadius: 4, backgroundColor: "#facc15", transform: [{ rotate: "-8deg" }] }} />
+          </>
+        ) : null}
+        {hasWetRoad ? (
+          <>
+            {[0, 1, 2].map((line) => (
+              <View key={line} style={{ position: "absolute", left: 145 + line * 48, bottom: 32 + line * 15, width: 54, height: 4, borderRadius: 2, backgroundColor: "#93c5fd", opacity: 0.65, transform: [{ rotate: "-12deg" }] }} />
+            ))}
+          </>
+        ) : null}
+        {hasLaneMerge ? (
+          <>
+            <View style={{ position: "absolute", left: 164, bottom: 72, width: 98, height: 5, borderRadius: 3, backgroundColor: "#f8fafc", transform: [{ rotate: "18deg" }] }} />
+            <Text style={{ position: "absolute", left: 214, bottom: 58, color: "#f8fafc", fontSize: 28, fontWeight: "900" }}>↗</Text>
+          </>
+        ) : null}
+        {hasBusStop ? (
+          <View style={{ position: "absolute", right: 18, top: 70, width: 118, height: 34, borderRadius: 8, backgroundColor: "#e2e8f0", borderWidth: 2, borderColor: "#94a3b8", alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ color: "#1f2937", fontSize: 12, fontWeight: "900" }}>ЗУПИНКА</Text>
           </View>
         ) : null}
         {(kind === "noParking" || kind === "noStopping") ? (
@@ -252,12 +415,7 @@ function PdrVisual({ question }: { question: PDRQuestion }) {
         <View style={{ position: "absolute", left: 14, top: 20, width: 92, height: 92, alignItems: "center", justifyContent: "center" }}>
           {renderSign()}
         </View>
-        <View style={{ position: "absolute", right: 28, bottom: 29, width: 86, height: 34, borderRadius: 10, backgroundColor: "#e63946", borderWidth: 3, borderColor: "#fee2e2" }}>
-          <View style={{ position: "absolute", left: 12, top: 7, width: 20, height: 10, borderRadius: 4, backgroundColor: "#bfdbfe" }} />
-          <View style={{ position: "absolute", right: 12, top: 7, width: 20, height: 10, borderRadius: 4, backgroundColor: "#bfdbfe" }} />
-          <View style={{ position: "absolute", left: 10, bottom: -9, width: 18, height: 18, borderRadius: 9, backgroundColor: "#111827" }} />
-          <View style={{ position: "absolute", right: 10, bottom: -9, width: 18, height: 18, borderRadius: 9, backgroundColor: "#111827" }} />
-        </View>
+        {renderVehicle()}
       </View>
       <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: "900", lineHeight: 18 }}>
         {question.visual?.label ?? question.category}
@@ -266,7 +424,71 @@ function PdrVisual({ question }: { question: PDRQuestion }) {
   );
 }
 
+function getVisualScan(question: PDRQuestion): { title: string; items: string[] } {
+  const kind = question.visual?.kind;
+  switch (kind) {
+    case "trafficLight":
+      return { title: "Скан сцени", items: ["Сигнал світлофора", "Стоп-лінія перед перехрестям", "Чи не перекриваєш перехрестя"] };
+    case "railwayCrossing":
+      return { title: "Скан переїзду", items: ["Сигнали і шлагбаум", "Чи вільні колії", "Запас місця після переїзду"] };
+    case "roadWorks":
+      return { title: "Скан ремонту", items: ["Тимчасові знаки", "Конуси і звуження смуги", "Дистанція до працівників"] };
+    case "slipperyRoad":
+    case "motorcycleCurve":
+      return { title: "Скан зчеплення", items: ["Покриття дороги", "Швидкість до маневру", "Плавність керма і гальм"] };
+    case "laneMerge":
+      return { title: "Скан маневру", items: ["Дзеркала", "Сліпа зона", "Швидкість сусідньої смуги"] };
+    case "busStop":
+      return { title: "Скан зупинки", items: ["Пасажири біля дверей", "Дзеркала автобуса", "Безпечний старт у потік"] };
+    case "schoolZone":
+    case "pedestrianCrossing":
+    case "pedestrianCrossingInfo":
+    case "pedestrianCycleCrossing":
+      return { title: "Скан переходу", items: ["Пішоходи з обох боків", "Авто, що закриває огляд", "Готовність зупинитися"] };
+    case "truckSteepDescent":
+    case "cargoShift":
+      return { title: "Скан вантажівки", items: ["Маса і гальмівний шлях", "Кріплення вантажу", "Запас дистанції"] };
+    case "trailerSway":
+      return { title: "Скан причепа", items: ["Кут причепа", "Радіус повороту", "Плавність швидкості"] };
+    case "noParking":
+    case "noStopping":
+      return { title: "Скан зони дії", items: ["Де починається знак", "Чи це зупинка або стоянка", "Чи не блокуєш огляд"] };
+    case "giveWay":
+    case "stop":
+    case "priorityRoad":
+    case "endPriorityRoad":
+    case "roundabout":
+      return { title: "Скан пріоритету", items: ["Хто на головній", "Чи потрібна повна зупинка", "Конфліктні точки"] };
+    default:
+      return { title: "Скан правила", items: ["Знак або розмітка", "Зона дії", "Найбезпечніша дія водія"] };
+  }
+}
+
 // ─── Lidyk Explanation Modal ──────────────────────────────────────────────────
+
+type LidykExplanationStyle = "short" | "friend" | "road";
+
+const LIDYK_EXPLANATION_STYLES: Array<{
+  id: LidykExplanationStyle;
+  label: string;
+  prompt: string;
+}> = [
+  {
+    id: "short",
+    label: "Коротко",
+    prompt: "Поясни дуже коротко: 2-3 речення, тільки суть правила і чому відповідь правильна.",
+  },
+  {
+    id: "friend",
+    label: "Як другу",
+    prompt: "Поясни простими словами, як другу перед іспитом. Без канцеляриту, з людською логікою.",
+  },
+  {
+    id: "road",
+    label: "Приклад",
+    prompt: "Поясни через приклад на дорозі: що бачить водій, який ризик і яку дію треба зробити.",
+  },
+];
 
 function LidykExplainModal({
   question, options, correctIndex, onClose,
@@ -278,11 +500,13 @@ function LidykExplainModal({
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<string | null>(null);
   const [error, setError] = useState(false);
+  const [style, setStyle] = useState<LidykExplanationStyle>("friend");
 
-  async function askForExplanation() {
+  async function askForExplanation(nextStyle = style) {
     setLoading(true);
     setError(false);
-    const prompt = `Поясни питання ПДР:\n"${question}"\nВаріанти: ${options.map((o, i) => `${String.fromCharCode(65 + i)}) ${o}`).join(", ")}. Правильна відповідь: ${String.fromCharCode(65 + correctIndex)}) ${options[correctIndex]}.\nПоясни коротко чому саме ця відповідь правильна. Відповідай українською.`;
+    const selectedStyle = LIDYK_EXPLANATION_STYLES.find((item) => item.id === nextStyle) ?? LIDYK_EXPLANATION_STYLES[1];
+    const prompt = `Поясни питання ПДР:\n"${question}"\nВаріанти: ${options.map((o, i) => `${String.fromCharCode(65 + i)}) ${o}`).join(", ")}. Правильна відповідь: ${String.fromCharCode(65 + correctIndex)}) ${options[correctIndex]}.\n${selectedStyle.prompt}\nВідповідай українською.`;
     const result = await askLidyk(prompt, user);
     if (result.errorType) {
       setError(true);
@@ -318,10 +542,43 @@ function LidykExplainModal({
             </Text>
           </View>
 
+          <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
+            {LIDYK_EXPLANATION_STYLES.map((item) => {
+              const selected = item.id === style;
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  onPress={() => {
+                    setStyle(item.id);
+                    if (response && !loading) {
+                      setResponse(null);
+                      void askForExplanation(item.id);
+                    }
+                  }}
+                  disabled={loading}
+                  style={{
+                    flex: 1,
+                    borderRadius: 999,
+                    paddingVertical: 10,
+                    alignItems: "center",
+                    backgroundColor: selected ? colors.redSoft : colors.bgElevated,
+                    borderWidth: 1,
+                    borderColor: selected ? colors.red + "66" : colors.border,
+                    opacity: loading ? 0.6 : 1,
+                  }}
+                >
+                  <Text style={{ color: selected ? colors.red : colors.textSecondary, fontSize: 12, fontWeight: "900" }}>
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
           {/* Ask button or response */}
           {!response && !loading ? (
             <TouchableOpacity
-              onPress={askForExplanation}
+              onPress={() => void askForExplanation()}
               style={{ backgroundColor: colors.red, borderRadius: radii.md, paddingVertical: 16, alignItems: "center", ...shadows.red }}
             >
               <Text style={{ color: "#fff", fontWeight: "800", fontSize: 16 }}>🚗 Поясни, Лідику!</Text>
@@ -348,7 +605,7 @@ function LidykExplainModal({
                   </Text>
                 </View>
                 <TouchableOpacity
-                  onPress={() => { setResponse(null); askForExplanation(); }}
+                  onPress={() => { setResponse(null); void askForExplanation(); }}
                   style={{ flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start", backgroundColor: colors.bgElevated, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 }}
                 >
                   <Text style={{ fontSize: 13, fontWeight: "700", color: colors.textTertiary }}>🔄 Запитати ще раз</Text>
@@ -362,7 +619,7 @@ function LidykExplainModal({
               <Text style={{ fontSize: 13, fontWeight: "700", color: colors.warning }}>
                 Не вдалось отримати відповідь. Перевір з'єднання і спробуй знову.
               </Text>
-              <TouchableOpacity onPress={askForExplanation} style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <TouchableOpacity onPress={() => void askForExplanation()} style={{ marginTop: 10, flexDirection: "row", alignItems: "center", gap: 6 }}>
                 <Text style={{ fontSize: 13, fontWeight: "700", color: colors.warning }}>🔄 Спробувати знову</Text>
               </TouchableOpacity>
             </View>
@@ -395,6 +652,7 @@ function QuizScreen({
   const [answers, setAnswers] = useState<(number | null)[]>(initialAnswers);
   const [showExplanation, setShowExplanation] = useState(false);
   const [showLidyk, setShowLidyk] = useState(false);
+  const [showVisualScan, setShowVisualScan] = useState(false);
   const [visualHints, setVisualHints] = useState(true);
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(meta.mode === "exam" ? EXAM_DURATION_SECONDS : null);
   const startedAt = useRef(Date.now());
@@ -453,6 +711,7 @@ function QuizScreen({
   const isCorrect = selected === q.correctIndex;
   const isLast = current === questions.length - 1;
   const progress = ((current + (isAnswered ? 1 : 0)) / questions.length) * 100;
+  const visualScan = getVisualScan(q);
 
   function handleSelect(idx: number) {
     if (isAnswered) return;
@@ -473,6 +732,7 @@ function QuizScreen({
       setSelected(answers[nextIndex] ?? null);
       onSnapshot?.({ currentIndex: nextIndex, answers });
       setShowExplanation(false);
+      setShowVisualScan(false);
     }
   }
 
@@ -510,6 +770,36 @@ function QuizScreen({
 
       <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: 140 }}>
         {visualHints ? <PdrVisual question={q} /> : null}
+        {visualHints ? (
+          <Pressable
+            onPress={() => setShowVisualScan((value) => !value)}
+            style={{ backgroundColor: colors.bgCard, borderWidth: 1, borderColor: showVisualScan ? colors.red + "66" : colors.border, borderRadius: radii.md, padding: 14, gap: 10 }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ color: colors.red, fontSize: 16, fontWeight: "900" }}>🔎</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "900" }}>Візуальний розбір</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 2 }} numberOfLines={2}>
+                  {showVisualScan ? "Перевір ці точки перед відповіддю." : "Підказка по картинці без правильної відповіді"}
+                </Text>
+              </View>
+              <Text style={{ color: colors.textTertiary, fontSize: 18, fontWeight: "900" }}>{showVisualScan ? "−" : "+"}</Text>
+            </View>
+            {showVisualScan ? (
+              <View style={{ backgroundColor: colors.bgElevated, borderRadius: radii.sm, padding: 12, gap: 8 }}>
+                <Text style={{ color: colors.red, fontSize: 12, fontWeight: "900" }}>{visualScan.title}</Text>
+                {visualScan.items.map((item, index) => (
+                  <View key={item} style={{ flexDirection: "row", gap: 8, alignItems: "flex-start" }}>
+                    <Text style={{ color: colors.textTertiary, fontSize: 12, fontWeight: "900", width: 16 }}>{index + 1}</Text>
+                    <Text style={{ flex: 1, color: colors.textSecondary, fontSize: 12, lineHeight: 17 }}>{item}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+          </Pressable>
+        ) : null}
 
         {/* Question */}
         <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "800", lineHeight: 26 }}>{q.question}</Text>
@@ -584,16 +874,25 @@ function ResultStorySheet({
   total,
   percent,
   passed,
+  mode,
+  licenseCategory,
+  elapsedSeconds,
   onClose,
 }: {
   correct: number;
   total: number;
   percent: number;
   passed: boolean;
+  mode: PdrQuizMode;
+  licenseCategory: DrivingLicenseCategory;
+  elapsedSeconds: number;
   onClose: () => void;
 }) {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const wrong = Math.max(0, total - correct);
+  const previewAccent = passed ? colors.success : "#f59e0b";
+  const previewBackground = "#111827";
   const [text, setText] = useState(
     `Мій результат у ПДР-тренажері Лідер: ${correct}/${total} (${percent}%). ${passed ? "Лідик каже: можна йти до складніших білетів." : "Лідик вже підготував мені план повторення."}`
   );
@@ -636,7 +935,17 @@ function ResultStorySheet({
         authorName: user.name ?? "Учень",
         authorEmoji: user.avatarEmoji,
         text: text.trim(),
-        tone: passed ? "green" : "yellow",
+        kind: "pdrResult",
+        result: {
+          correct,
+          total,
+          percent,
+          passed,
+          mode,
+          licenseCategory,
+          elapsedSeconds,
+        },
+        tone: "dark",
         tags: ["ПДР", `${percent}%`],
         mediaUrl: uploaded?.downloadURL,
         mediaPath: uploaded?.storagePath,
@@ -648,7 +957,13 @@ function ResultStorySheet({
         status: "published",
         visibility: "school",
       });
-      Alert.alert("Готово", "Результат опубліковано в сторис Лідер Клубу.");
+      Alert.alert("Готово", "Результат опубліковано в сторис Лідер Клубу.", [
+        { text: "Залишитись", style: "cancel" },
+        {
+          text: "Відкрити клуб",
+          onPress: () => router.push("/(tabs)/club" as import("expo-router").Href),
+        },
+      ]);
       onClose();
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -668,6 +983,33 @@ function ResultStorySheet({
           <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 19, marginTop: 4 }}>
             Додай фото з уроку, дороги або себе після тренування. Лідик підпише результат акуратно.
           </Text>
+
+          <View style={{ marginTop: 16, borderRadius: radii.lg, overflow: "hidden", backgroundColor: previewBackground, borderWidth: 1.5, borderColor: previewAccent + "66" }}>
+            {selectedImage ? (
+              <Image source={{ uri: selectedImage.uri }} style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, width: "100%", height: "100%" }} resizeMode="cover" />
+            ) : null}
+            {selectedImage ? <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.42)" }} /> : null}
+            <View style={{ padding: 16, minHeight: 178, justifyContent: "space-between" }}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                <View>
+                  <Text style={{ color: "rgba(255,255,255,0.78)", fontSize: 11, fontWeight: "900", textTransform: "uppercase" }}>сторис · ПДР</Text>
+                  <Text style={{ color: "#fff", fontSize: 20, fontWeight: "900", marginTop: 3 }}>
+                    {passed ? "Лідик зарахував" : "Лідик дав план"}
+                  </Text>
+                </View>
+                <Image source={MASCOT} style={{ width: 50, height: 50, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.84)" }} resizeMode="contain" />
+              </View>
+              <View>
+                <Text style={{ color: previewAccent, fontSize: 48, fontWeight: "900", lineHeight: 54 }}>{percent}%</Text>
+                <Text style={{ color: "rgba(255,255,255,0.86)", fontSize: 14, fontWeight: "800" }}>
+                  {correct}/{total} правильних · {wrong} помилок · {licenseCategory}
+                </Text>
+                <View style={{ height: 7, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.24)", overflow: "hidden", marginTop: 10 }}>
+                  <View style={{ width: `${Math.min(100, Math.max(0, percent))}%`, height: 7, borderRadius: 999, backgroundColor: previewAccent }} />
+                </View>
+              </View>
+            </View>
+          </View>
 
           <View style={{ marginTop: 16, backgroundColor: colors.bgCard, borderRadius: radii.sm, borderWidth: 1.5, borderColor: colors.border, padding: 14 }}>
             <TextInput
@@ -765,12 +1107,15 @@ function ResultScreen({ result, onRestart, onBack, onMistakes }: {
           total={total}
           percent={percent}
           passed={passed}
+          mode={result.mode}
+          licenseCategory={result.licenseCategory}
+          elapsedSeconds={result.elapsedSeconds}
           onClose={() => setShowStorySheet(false)}
         />
       ) : null}
       <ScrollView contentContainerStyle={{ padding: spacing.xl, gap: spacing.lg, alignItems: "center", paddingTop: 60 }}>
         <Text style={{ fontSize: 64 }}>{passed ? "🏆" : "📚"}</Text>
-        <Text style={{ color: colors.textPrimary, fontSize: 32, fontWeight: "900", textAlign: "center", letterSpacing: -0.5 }}>
+        <Text style={{ color: colors.textPrimary, fontSize: 32, fontWeight: "900", textAlign: "center" }}>
           {passed ? "Молодець!" : "Потренуйся ще!"}
         </Text>
         <View style={{ backgroundColor: passed ? colors.successSoft : colors.warningSoft, borderRadius: radii.lg, padding: spacing.xl, alignItems: "center", gap: spacing.sm, width: "100%", borderWidth: 1, borderColor: passed ? colors.success + "44" : colors.warning + "44" }}>
@@ -837,7 +1182,7 @@ function ResultScreen({ result, onRestart, onBack, onMistakes }: {
             <Text style={{ color: colors.warning, fontWeight: "800", fontSize: 15 }}>Робота над помилками</Text>
           </Pressable>
           <Pressable onPress={handleOpenStorySheet} style={{ borderWidth: 1.5, borderColor: colors.success + "77", backgroundColor: colors.successSoft, borderRadius: radii.md, paddingVertical: 14, alignItems: "center" }}>
-            <Text style={{ color: colors.success, fontWeight: "800", fontSize: 15 }}>Викласти в сторис з фото</Text>
+            <Text style={{ color: colors.success, fontWeight: "800", fontSize: 15 }}>Створити сторис з результатом</Text>
           </Pressable>
           {showShare ? (
             <Pressable onPress={handleShare} style={{ borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.bgCard, borderRadius: radii.md, paddingVertical: 14, alignItems: "center" }}>
@@ -850,6 +1195,138 @@ function ResultScreen({ result, onRestart, onBack, onMistakes }: {
         </View>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+// ─── Lidyk Coach Plan ─────────────────────────────────────────────────────────
+
+function LidykPlanSheet({
+  visible,
+  progressState,
+  licenseCategory,
+  onClose,
+  onStartCategory,
+  onStartExam,
+}: {
+  visible: boolean;
+  progressState: PdrProgressState;
+  licenseCategory: DrivingLicenseCategory;
+  onClose: () => void;
+  onStartCategory: (cat: string) => void;
+  onStartExam: () => void;
+}) {
+  const { colors } = useTheme();
+  const plan = buildPdrCoachPlan(progressState, licenseCategory);
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <Pressable style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "flex-end" }} onPress={onClose}>
+        <View
+          onStartShouldSetResponder={() => true}
+          style={{ backgroundColor: colors.bgSheet, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 22, paddingBottom: 42, borderTopWidth: 1, borderTopColor: colors.border, maxHeight: "88%" }}
+        >
+          <View style={{ width: 44, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginBottom: 18 }} />
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 16 }}>
+            <Image source={MASCOT} style={{ width: 48, height: 48 }} resizeMode="contain" />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.textPrimary, fontSize: 20, fontWeight: "900" }}>Мій план від Лідика</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>Категорія {licenseCategory} · персональний маршрут</Text>
+            </View>
+            <TouchableOpacity onPress={onClose} hitSlop={12}>
+              <Text style={{ color: colors.textTertiary, fontSize: 22, fontWeight: "800" }}>×</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
+            <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.border, gap: 12 }}>
+              <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "800", lineHeight: 20 }}>
+                {plan.summary}
+              </Text>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <View style={{ flex: 1, backgroundColor: colors.bgElevated, borderRadius: radii.sm, padding: 12 }}>
+                  <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800" }}>Точність</Text>
+                  <Text style={{ color: plan.overallPercent >= 75 ? colors.success : colors.warning, fontSize: 24, fontWeight: "900", marginTop: 2 }}>
+                    {plan.seen ? `${plan.overallPercent}%` : "—"}
+                  </Text>
+                </View>
+                <View style={{ flex: 1, backgroundColor: colors.bgElevated, borderRadius: radii.sm, padding: 12 }}>
+                  <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800" }}>Відповіді</Text>
+                  <Text style={{ color: colors.textPrimary, fontSize: 24, fontWeight: "900", marginTop: 2 }}>{plan.seen}</Text>
+                </View>
+                <View style={{ flex: 1, backgroundColor: colors.bgElevated, borderRadius: radii.sm, padding: 12 }}>
+                  <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800" }}>Помилки</Text>
+                  <Text style={{ color: plan.mistakeCount ? colors.red : colors.success, fontSize: 24, fontWeight: "900", marginTop: 2 }}>{plan.mistakeCount}</Text>
+                </View>
+              </View>
+            </View>
+
+            {plan.weakTopics.length ? (
+              <View style={{ gap: 8 }}>
+                <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "900" }}>Слабкі теми</Text>
+                {plan.weakTopics.map((topic) => {
+                  const catDef = PDR_CATEGORIES.find((cat) => cat.name === topic.category);
+                  return (
+                    <Pressable
+                      key={topic.category}
+                      onPress={() => {
+                        onClose();
+                        onStartCategory(topic.category);
+                      }}
+                      style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, padding: 14, gap: 9 }}
+                    >
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                        <Text style={{ fontSize: 22 }}>{catDef?.icon ?? "📘"}</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "900" }}>{topic.category}</Text>
+                          <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>{topic.reason}</Text>
+                        </View>
+                        <Text style={{ color: topic.percent < 60 ? colors.red : colors.warning, fontSize: 15, fontWeight: "900" }}>{topic.percent}%</Text>
+                      </View>
+                      <ProgressBar value={topic.percent} color={topic.percent < 60 ? colors.red : colors.warning} height={5} />
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ) : null}
+
+            <View style={{ backgroundColor: colors.bgElevated, borderRadius: radii.md, padding: 14, gap: 10 }}>
+              <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "900" }}>Наступні кроки</Text>
+              {plan.nextSteps.map((step, index) => (
+                <View key={step} style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
+                  <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center" }}>
+                    <Text style={{ color: colors.red, fontSize: 12, fontWeight: "900" }}>{index + 1}</Text>
+                  </View>
+                  <Text style={{ flex: 1, color: colors.textSecondary, fontSize: 13, lineHeight: 19 }}>{step}</Text>
+                </View>
+              ))}
+            </View>
+
+            <View style={{ gap: 10 }}>
+              {plan.recommendedCategory ? (
+                <Pressable
+                  onPress={() => {
+                    onClose();
+                    onStartCategory(plan.recommendedCategory!);
+                  }}
+                  style={{ backgroundColor: colors.red, borderRadius: radii.md, paddingVertical: 15, alignItems: "center", ...shadows.red }}
+                >
+                  <Text style={{ color: "#fff", fontSize: 15, fontWeight: "900" }}>Тренувати {plan.recommendedCategory}</Text>
+                </Pressable>
+              ) : null}
+              <Pressable
+                onPress={() => {
+                  onClose();
+                  onStartExam();
+                }}
+                style={{ borderWidth: 1.5, borderColor: colors.border, backgroundColor: colors.bgCard, borderRadius: radii.md, paddingVertical: 14, alignItems: "center" }}
+              >
+                <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "900" }}>Почати екзамен МВС</Text>
+              </Pressable>
+            </View>
+          </ScrollView>
+        </View>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -938,9 +1415,11 @@ export default function TestsTab() {
   const [quizMeta, setQuizMeta] = useState<QuizMeta>({ mode: "exam", title: "Екзамен", licenseCategory: "B" });
   const [progressState, setProgressState] = useState<PdrProgressState>({ mistakes: {}, topicProgress: {} });
   const [marathonState, setMarathonState] = useState<PdrMarathonState | null>(null);
+  const [showCoachPlan, setShowCoachPlan] = useState(false);
   const selectedLicense = RIGHTS_CATEGORIES.find((cat) => cat.value === licenseCategory) ?? RIGHTS_CATEGORIES[1];
   const scopeId = user?.id ?? "guest";
   const mistakeCount = Object.values(progressState.mistakes).filter((mistake) => mistake.licenseCategory === licenseCategory).length;
+  const coachPlan = useMemo(() => buildPdrCoachPlan(progressState, licenseCategory), [progressState, licenseCategory]);
 
   useEffect(() => {
     let alive = true;
@@ -1191,9 +1670,17 @@ export default function TestsTab() {
   // ─── Main menu ──────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
+      <LidykPlanSheet
+        visible={showCoachPlan}
+        progressState={progressState}
+        licenseCategory={licenseCategory}
+        onClose={() => setShowCoachPlan(false)}
+        onStartCategory={startCategoryTest}
+        onStartExam={startExam}
+      />
       <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: 100 }}>
         <View style={{ paddingTop: 4 }}>
-          <Text style={{ color: colors.textPrimary, fontSize: 28, fontWeight: "900", letterSpacing: -0.5 }}>ПДР Тренажер</Text>
+          <Text style={{ color: colors.textPrimary, fontSize: 28, fontWeight: "900" }}>ПДР Тренажер</Text>
           <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 4, lineHeight: 20 }}>
             Готуйся до іспиту з поясненнями від Лідика
           </Text>
@@ -1205,7 +1692,7 @@ export default function TestsTab() {
           style={{ backgroundColor: colors.red, borderRadius: radii.lg, padding: spacing.lg, shadowColor: colors.red, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 16, elevation: 10 }}
         >
           <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 11, fontWeight: "900", textTransform: "uppercase", letterSpacing: 1.2 }}>🏁 ІСПИТ ЯК У МВС</Text>
-          <Text style={{ color: "#fff", fontSize: 24, fontWeight: "900", marginTop: 6, letterSpacing: -0.5 }}>Екзаменаційний тест</Text>
+          <Text style={{ color: "#fff", fontSize: 24, fontWeight: "900", marginTop: 6 }}>Екзаменаційний тест</Text>
           <Text style={{ color: "rgba(255,255,255,0.75)", fontSize: 13, marginTop: 4, lineHeight: 19 }}>
             {selectedLicense.code} · 20 питань · 20 хв · ≤2 помилки · протокол МВС
           </Text>
@@ -1242,6 +1729,49 @@ export default function TestsTab() {
             );})}
           </View>
         </View>
+
+        {/* Personal coach route */}
+        <Pressable
+          onPress={() => setShowCoachPlan(true)}
+          style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.border, gap: 12, ...shadows.card }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <View style={{ width: 54, height: 54, borderRadius: 16, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center" }}>
+              <Image source={MASCOT} style={{ width: 44, height: 44 }} resizeMode="contain" />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "900" }} numberOfLines={1}>
+                Мій план від Лідика
+              </Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 3 }} numberOfLines={2}>
+                {coachPlan.recommendedCategory
+                  ? `Фокус: ${coachPlan.recommendedCategory} · точність ${coachPlan.overallPercent || 0}%`
+                  : coachPlan.seen
+                    ? `Точність ${coachPlan.overallPercent}% · ${coachPlan.mistakeCount} помилок у черзі`
+                    : "Почни з першого тесту - я складу маршрут автоматично"}
+              </Text>
+            </View>
+            <Text style={{ color: colors.textTertiary, fontSize: 20, fontWeight: "900" }}>›</Text>
+          </View>
+
+          {coachPlan.weakTopics.length ? (
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {coachPlan.weakTopics.map((topic) => (
+                <View key={topic.category} style={{ backgroundColor: colors.bgElevated, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, maxWidth: "100%" }}>
+                  <Text style={{ color: topic.percent < 60 ? colors.red : colors.warning, fontSize: 11, fontWeight: "900" }} numberOfLines={1}>
+                    {topic.category} · {topic.percent}%
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View style={{ backgroundColor: colors.bgElevated, borderRadius: radii.sm, padding: 10 }}>
+              <Text style={{ color: colors.textTertiary, fontSize: 12, fontWeight: "700" }}>
+                Новий план з'явиться після перших відповідей.
+              </Text>
+            </View>
+          )}
+        </Pressable>
 
         {/* Швидкий старт */}
         <Pressable

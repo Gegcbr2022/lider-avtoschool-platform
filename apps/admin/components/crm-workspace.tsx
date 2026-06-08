@@ -60,6 +60,34 @@ function formatRelative(d: Date | null) {
  return `${Math.floor(diff / 86400)} дн. тому`;
 }
 
+function formatAdminFileSize(bytes?: number) {
+ if (!bytes || bytes <= 0) return "";
+ if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+ return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function attachmentLabel(message: ConversationMessage) {
+ if (!message.mediaUrl) return "";
+ if (message.mediaType === "image") return "Фото";
+ if (message.mediaType === "video") return "Відео";
+ return message.fileName ?? "Файл";
+}
+
+function reactionText(reactions?: Record<string, string>) {
+ const counts = new Map<string, number>();
+ Object.values(reactions ?? {}).forEach((emoji) => {
+  if (!emoji) return;
+  counts.set(emoji, (counts.get(emoji) ?? 0) + 1);
+ });
+ return Array.from(counts.entries()).map(([emoji, count]) => `${emoji} ${count}`).join(" ");
+}
+
+function deliveryText(message: ConversationMessage) {
+ if (message.readBy?.some((id) => id && id !== message.senderId)) return "прочитано";
+ if (message.deliveryStatus === "delivered" || message.deliveredTo?.length) return "доставлено";
+ return "надіслано";
+}
+
 function exportCSV<T extends Record<string, unknown>>(rows: T[], filename: string, header: (keyof T)[]) {
  const csv = [
  header.map(String).join(","),
@@ -508,6 +536,9 @@ function StoriesSection() {
  <div className="flex items-center gap-2 mb-1">
  <span className="font-bold text-sm text-lider-graphite ">{s.authorName}</span>
  <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${TONE_COLORS[s.tone] ?? TONE_COLORS.dark}`}>{s.tone}</span>
+ {s.kind === "pdrResult" && s.result ? (
+ <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-lider-red text-white">ПДР {s.result.percent ?? 0}%</span>
+ ) : null}
  {isExpired ? <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-lider-line/30 text-lider-muted">expired</span> : null}
  </div>
  <p className="text-sm text-neutral-700 line-clamp-2">{s.text}</p>
@@ -1331,14 +1362,19 @@ function ChatMonitorSection() {
  function exportCsv() {
  const selected = convs.find(c => c.id === selectedId);
  if (!selected || messages.length === 0) return;
- type MsgRow = { conv: string; sender: string; text: string; time: string };
+ type MsgRow = { conv: string; sender: string; phone: string; text: string; attachment: string; attachmentUrl: string; status: string; reactions: string; time: string };
  const rows: MsgRow[] = messages.map(m => ({
  conv: selected.title,
  sender: m.senderName,
+ phone: m.senderPhone ?? "",
  text: m.text,
+ attachment: attachmentLabel(m),
+ attachmentUrl: m.mediaUrl ?? "",
+ status: deliveryText(m),
+ reactions: reactionText(m.reactions),
  time: m.createdAt ? m.createdAt.toLocaleString("uk-UA") : "—",
  }));
- exportCSV<MsgRow>(rows, `chat-${selected.id}`, ["conv", "sender", "text", "time"]);
+ exportCSV<MsgRow>(rows, `chat-${selected.id}`, ["conv", "sender", "phone", "text", "attachment", "attachmentUrl", "status", "reactions", "time"]);
  }
 
  function typePill(type: string) {
@@ -1353,7 +1389,7 @@ function ChatMonitorSection() {
  <div className="space-y-4">
  <div className="flex items-center justify-between flex-wrap gap-2">
  <div>
- <h2 className="text-3xl font-black tracking-[-0.04em] tracking-[-0.04em] text-lider-graphite ">Чати (аналіз)</h2>
+ <h2 className="text-3xl font-black tracking-[-0.04em] text-lider-graphite ">Чати (аналіз)</h2>
  <p className="text-lider-muted text-sm">{convs.length} розмов · натисни на чат, щоб переглянути повідомлення</p>
  </div>
  {selectedId && (
@@ -1450,23 +1486,35 @@ function ChatMonitorSection() {
  messages.map(m => {
  // heuristic: if senderId matches first participantId, treat as client (right/red)
  const isClient = selectedConv.participantIds[0] === m.senderId || selectedConv.participantIds.length === 0;
+ const reactions = reactionText(m.reactions);
  return (
  <div key={m.id} className={`flex ${isClient ? "justify-end" : "justify-start"}`}>
  <div className={`max-w-[72%] rounded-[24px] px-4 py-2.5 ${isClient ? "bg-lider-red text-white" : "bg-lider-line/30 text-lider-graphite "}`}>
- <p className={`text-xs font-bold mb-0.5 ${isClient ? "text-red-200" : "text-lider-muted"}`}>{m.senderName}{m.senderPhone ? ` · ${m.senderPhone}` : ""}</p>
- {m.mediaUrl ? (
+ <p className={`text-xs font-bold mb-1 ${isClient ? "text-red-200" : "text-lider-muted"}`}>
+ {m.senderName}{m.senderPhone ? ` · ${m.senderPhone}` : ""}{m.senderRole ? ` · ${m.senderRole}` : ""}
+ </p>
+ {m.mediaUrl && m.mediaType === "image" ? (
+ <a href={m.mediaUrl} target="_blank" rel="noopener noreferrer" className="mb-2 block overflow-hidden rounded-[16px]">
+ {/* eslint-disable-next-line @next/next/no-img-element */}
+ <img src={m.mediaUrl} alt={m.fileName ?? "Фото з чату"} className="max-h-56 w-full object-cover" />
+ </a>
+ ) : m.mediaUrl ? (
  <a
  href={m.mediaUrl}
  target="_blank"
  rel="noopener noreferrer"
- className={`mb-1 inline-flex max-w-full items-center gap-2 rounded-[14px] px-3 py-2 text-xs font-bold ${isClient ? "bg-white/15 text-white" : "bg-white text-lider-graphite border border-lider-line"}`}
+ className={`mb-2 flex max-w-full items-center gap-2 rounded-[14px] px-3 py-2 text-xs font-bold ${isClient ? "bg-white/15 text-white" : "bg-white text-lider-graphite border border-lider-line"}`}
  >
- <FileText size={14} />
- <span className="truncate">{m.mediaType === "image" ? "Фото" : (m.fileName ?? "Файл")}</span>
+ <FileText size={15} className="shrink-0" />
+ <span className="min-w-0 flex-1 truncate">{attachmentLabel(m)}</span>
+ {formatAdminFileSize(m.fileSize) ? <span className={isClient ? "text-red-100" : "text-lider-muted"}>{formatAdminFileSize(m.fileSize)}</span> : null}
  </a>
  ) : null}
  {m.text ? <p className="text-sm break-words">{m.text}</p> : null}
- <p className={`text-xs mt-1 text-right ${isClient ? "text-red-200" : "text-lider-muted"}`}>{m.createdAt ? m.createdAt.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" }) : ""}</p>
+ {reactions ? <p className={`text-xs mt-1 font-bold ${isClient ? "text-red-100" : "text-lider-muted"}`}>{reactions}</p> : null}
+ <p className={`text-xs mt-1 text-right ${isClient ? "text-red-200" : "text-lider-muted"}`}>
+ {deliveryText(m)} · {m.createdAt ? m.createdAt.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" }) : ""}
+ </p>
  </div>
  </div>
  );

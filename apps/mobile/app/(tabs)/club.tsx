@@ -57,6 +57,71 @@ function formatRelativeTime(date: Date | null): string {
 
 const STORY_DURATION_MS = 5000;
 
+function formatStoryDuration(seconds?: number): string {
+  if (!seconds || seconds <= 0) return "";
+  const minutes = Math.floor(seconds / 60);
+  const rest = Math.floor(seconds % 60);
+  return `${minutes}:${rest.toString().padStart(2, "0")}`;
+}
+
+function StoryResultCard({ story, hasMedia }: { story: StoryDoc; hasMedia: boolean }) {
+  const result = story.result;
+  if (!result) return null;
+  const percent = Math.max(0, Math.min(100, result.percent));
+  const wrong = Math.max(0, result.total - result.correct);
+  const passed = Boolean(result.passed);
+  const accent = passed ? "#22c55e" : "#f59e0b";
+  const modeLabel = result.mode === "exam" ? "Іспит МВС" : result.mode === "marathon" ? "Марафон" : "Тренування";
+  const time = formatStoryDuration(result.elapsedSeconds);
+
+  return (
+    <View
+      style={{
+        marginHorizontal: 20,
+        borderRadius: 28,
+        padding: 20,
+        backgroundColor: hasMedia ? "rgba(12,12,12,0.56)" : "rgba(255,255,255,0.16)",
+        borderWidth: 1,
+        borderColor: hasMedia ? "rgba(255,255,255,0.28)" : "rgba(255,255,255,0.22)",
+      }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: "rgba(255,255,255,0.72)", fontSize: 11, fontWeight: "900", textTransform: "uppercase" }}>ПДР · {modeLabel}</Text>
+          <Text style={{ color: "#fff", fontSize: 24, fontWeight: "900", marginTop: 4 }}>
+            {passed ? "Лідик зарахував" : "Лідик дав план"}
+          </Text>
+        </View>
+        <Image source={MASCOT} style={{ width: 58, height: 58, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.88)" }} resizeMode="contain" />
+      </View>
+
+      <Text style={{ color: "#fff", fontSize: 74, fontWeight: "900", lineHeight: 84, marginTop: 18 }}>{percent}%</Text>
+      <View style={{ height: 8, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.22)", overflow: "hidden" }}>
+        <View style={{ width: `${percent}%`, height: 8, borderRadius: 999, backgroundColor: accent }} />
+      </View>
+
+      <View style={{ flexDirection: "row", gap: 8, marginTop: 16 }}>
+        {[
+          { label: "Вірно", value: `${result.correct}/${result.total}` },
+          { label: "Помилки", value: `${wrong}` },
+          { label: "Категорія", value: result.licenseCategory ?? "B" },
+        ].map((item) => (
+          <View key={item.label} style={{ flex: 1, borderRadius: 16, padding: 10, backgroundColor: "rgba(255,255,255,0.14)" }}>
+            <Text style={{ color: "rgba(255,255,255,0.62)", fontSize: 10, fontWeight: "900" }}>{item.label}</Text>
+            <Text style={{ color: "#fff", fontSize: 18, fontWeight: "900", marginTop: 2 }}>{item.value}</Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={{ alignSelf: "flex-start", marginTop: 14, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7, backgroundColor: accent }}>
+        <Text style={{ color: "#fff", fontSize: 12, fontWeight: "900" }}>
+          {passed ? "готовий до складнішого" : "повторю слабкі теми"}{time ? ` · ${time}` : ""}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 function StoryViewer({
   stories, startIndex, userId, onClose,
 }: {
@@ -92,6 +157,8 @@ function StoryViewer({
 
   if (!story) { onClose(); return null; }
   const reacted = Boolean(userId && story.reactedBy?.includes(userId));
+  const hasMedia = Boolean(story.mediaUrl && story.mediaType === "image");
+  const hasResult = story.kind === "pdrResult" && Boolean(story.result);
 
   function goNext() { idx < stories.length - 1 ? setIdx(i => i + 1) : onClose(); }
   function goPrev() {
@@ -120,15 +187,15 @@ function StoryViewer({
 
   return (
     <Modal visible animationType="slide" onRequestClose={onClose} statusBarTranslucent>
-      <View style={{ flex: 1, backgroundColor: story.mediaUrl && story.mediaType === "image" ? "#000" : bg }}>
-        {story.mediaUrl && story.mediaType === "image" ? (
+      <View style={{ flex: 1, backgroundColor: hasMedia ? "#000" : bg }}>
+        {hasMedia ? (
           <Image
             source={{ uri: story.mediaUrl }}
             style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, width: "100%", height: "100%" }}
             resizeMode="cover"
           />
         ) : null}
-        {story.mediaUrl && story.mediaType === "image" ? (
+        {hasMedia ? (
           <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, backgroundColor: "rgba(0,0,0,0.22)" }} />
         ) : null}
         <SafeAreaView style={{ flex: 1 }}>
@@ -169,13 +236,16 @@ function StoryViewer({
             </View>
           </View>
           {/* Tap zones */}
-          <View style={{ flex: 1, flexDirection: "row" }}>
-            <Pressable style={{ flex: 1 }} onPress={() => { progressAnimRef.current?.stop(); progressAnim.setValue(0); goPrev(); }} />
-            <Pressable style={{ flex: 1 }} onPress={() => { progressAnimRef.current?.stop(); progressAnim.setValue(0); goNext(); }} />
+          <View style={{ flex: 1, justifyContent: "center" }}>
+            {hasResult ? <StoryResultCard story={story} hasMedia={hasMedia} /> : null}
+            <View style={{ position: "absolute", top: 0, right: 0, bottom: 0, left: 0, flexDirection: "row" }}>
+              <Pressable style={{ flex: 1 }} onPress={() => { progressAnimRef.current?.stop(); progressAnim.setValue(0); goPrev(); }} />
+              <Pressable style={{ flex: 1 }} onPress={() => { progressAnimRef.current?.stop(); progressAnim.setValue(0); goNext(); }} />
+            </View>
           </View>
           {/* Content */}
-          <View style={{ paddingHorizontal: 20, paddingBottom: 36, paddingTop: 18, backgroundColor: story.mediaUrl ? "rgba(0,0,0,0.24)" : "transparent" }}>
-            <Text style={{ fontSize: 24, fontWeight: "900", lineHeight: 34, letterSpacing: -0.5, color: "#fff" }}>
+          <View style={{ paddingHorizontal: 20, paddingBottom: 36, paddingTop: 18, backgroundColor: hasMedia ? "rgba(0,0,0,0.24)" : "transparent" }}>
+            <Text style={{ fontSize: hasResult ? 18 : 24, fontWeight: "900", lineHeight: hasResult ? 25 : 34, letterSpacing: 0, color: "#fff" }}>
               {story.text}
             </Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
@@ -1114,6 +1184,11 @@ export default function ClubTab() {
                       {item.stories.length > 1 ? (
                         <View style={{ position: "absolute", right: -4, bottom: -3, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: colors.red, borderWidth: 2, borderColor: colors.bg, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 }}>
                           <Text style={{ color: "#fff", fontSize: 10, fontWeight: "900" }}>{item.stories.length}</Text>
+                        </View>
+                      ) : null}
+                      {latest.kind === "pdrResult" ? (
+                        <View style={{ position: "absolute", left: -7, top: -5, borderRadius: 8, backgroundColor: "#111827", borderWidth: 2, borderColor: colors.bg, paddingHorizontal: 5, paddingVertical: 2 }}>
+                          <Text style={{ color: "#fff", fontSize: 8, fontWeight: "900" }}>ПДР</Text>
                         </View>
                       ) : null}
                     </View>

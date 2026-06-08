@@ -65,9 +65,41 @@ function safeDownloadName(name?: string): string {
   return cleaned || `file-${Date.now()}`;
 }
 
-function messageReceipt(message: MessageDoc, currentUserId?: string): "sent" | "read" | null {
+type MessageReceiptState = "sent" | "delivered" | "read";
+
+function messageReceipt(message: MessageDoc, currentUserId?: string): MessageReceiptState | null {
   if (!currentUserId || message.senderId !== currentUserId) return null;
-  return message.readBy?.some((id) => id !== currentUserId) ? "read" : "sent";
+  const readByOther = message.readBy?.some((id) => id && id !== currentUserId);
+  if (readByOther) return "read";
+  const delivered = message.deliveryStatus === "delivered" || message.deliveredTo?.some((id) => id && id !== currentUserId);
+  return delivered ? "delivered" : "sent";
+}
+
+function receiptMarks(state: MessageReceiptState): string {
+  return state === "sent" ? "✓" : "✓✓";
+}
+
+function attachmentIcon(message: MessageDoc): string {
+  const name = message.fileName?.toLowerCase() ?? "";
+  if (message.mediaType === "video") return "🎬";
+  if (name.endsWith(".pdf")) return "📕";
+  if (name.endsWith(".doc") || name.endsWith(".docx")) return "📘";
+  if (name.endsWith(".xls") || name.endsWith(".xlsx")) return "📗";
+  if (name.endsWith(".ppt") || name.endsWith(".pptx")) return "📙";
+  if (name.endsWith(".zip") || name.endsWith(".rar") || name.endsWith(".7z")) return "🗜️";
+  return "📎";
+}
+
+function attachmentTitle(message: MessageDoc): string {
+  if (message.fileName) return message.fileName;
+  if (message.mediaType === "video") return "Відео з чату";
+  return "Файл з чату";
+}
+
+function attachmentMeta(message: MessageDoc): string {
+  const size = formatFileSize(message.fileSize);
+  const type = message.mediaType === "video" ? "Відео" : "Документ";
+  return [type, size || null, "відкрити"].filter(Boolean).join(" · ");
 }
 
 const QUICK_REACTIONS = ["👍", "❤️", "🔥", "😂", "👀"] as const;
@@ -265,9 +297,9 @@ function Conversation({
     setInput("");
     setSending(true);
     try {
-      await sendMessage(conversationId, { senderId: user.id, senderName: user.name, senderRole: user.role, senderPhone: user.phone, text });
+      const messageId = await sendMessage(conversationId, { senderId: user.id, senderName: user.name, senderRole: user.role, senderPhone: user.phone, text });
       void notifyChat({
-        conversationId, userId: user.id, userName: user.name, text,
+        conversationId, messageId, userId: user.id, userName: user.name, text,
         conversationType: chat.type, userPhone: user.phone, userEmail: user.email,
         userCity: user.city, userCategory: user.category,
       });
@@ -297,7 +329,7 @@ function Conversation({
     setUploadingImage(true);
     try {
       const { downloadURL, storagePath, fileSize } = await uploadChatImage(conversationId, uri);
-      await sendMessage(conversationId, {
+      const messageId = await sendMessage(conversationId, {
         senderId: user.id, senderName: user.name,
         senderRole: user.role,
         senderPhone: user.phone,
@@ -308,7 +340,7 @@ function Conversation({
         height: asset.height,
       });
       void notifyChat({
-        conversationId, userId: user.id, userName: user.name, text: "",
+        conversationId, messageId, userId: user.id, userName: user.name, text: "",
         mediaUrl: downloadURL, mediaType: "image",
         conversationType: chat.type, userPhone: user.phone, userEmail: user.email,
         userCity: user.city, userCategory: user.category,
@@ -349,7 +381,7 @@ function Conversation({
         asset.name,
         asset.mimeType
       );
-      await sendMessage(conversationId, {
+      const messageId = await sendMessage(conversationId, {
         senderId: user.id,
         senderName: user.name,
         senderRole: user.role,
@@ -363,6 +395,7 @@ function Conversation({
       });
       void notifyChat({
         conversationId,
+        messageId,
         userId: user.id,
         userName: user.name,
         text: "",
@@ -528,8 +561,11 @@ function Conversation({
 
           {messages.map((m) => {
             const mine = m.senderId === user?.id;
+            const receipt = messageReceipt(m, user?.id);
             const reactions = reactionSummary(m.reactions);
             const myReaction = user?.id ? m.reactions?.[user.id] : undefined;
+            const showAsImage = Boolean(m.mediaUrl && (m.mediaType === "image" || (!m.mediaType && !m.fileName)));
+            const showAsFile = Boolean(m.mediaUrl && !showAsImage);
             return (
               <View key={m.id} style={[s.bubbleWrap, mine ? s.bubbleWrapMine : s.bubbleWrapTheirs]}>
                 <Pressable
@@ -538,7 +574,7 @@ function Conversation({
                   onPress={() => reactionPickerFor === m.id ? setReactionPickerFor(null) : undefined}
                 >
                   {!mine ? <Text style={s.senderName}>{chat.title}</Text> : null}
-                  {m.mediaUrl && m.mediaType === "image" ? (
+                  {showAsImage ? (
                     <Pressable
                       onPress={() => {
                         setFullscreenPhotoState("loading");
@@ -571,7 +607,7 @@ function Conversation({
                       )}
                     </Pressable>
                   ) : null}
-                  {m.mediaUrl && m.mediaType === "document" ? (
+                  {showAsFile ? (
                     <Pressable
                       onPress={() => handleOpenFile(m)}
                       disabled={downloadingFileId === m.id}
@@ -593,14 +629,14 @@ function Conversation({
                       {downloadingFileId === m.id ? (
                         <ActivityIndicator color={mine ? "#fff" : colors.red} size="small" />
                       ) : (
-                        <Text style={{ fontSize: 24 }}>📎</Text>
+                        <Text style={{ fontSize: 24 }}>{attachmentIcon(m)}</Text>
                       )}
                       <View style={{ flex: 1 }}>
                         <Text numberOfLines={2} style={{ color: mine ? "#fff" : colors.textPrimary, fontSize: 13, fontWeight: "800" }}>
-                          {m.fileName ?? "Файл"}
+                          {attachmentTitle(m)}
                         </Text>
                         <Text style={{ color: mine ? "rgba(255,255,255,0.72)" : colors.textTertiary, fontSize: 11, marginTop: 2 }}>
-                          {downloadingFileId === m.id ? "Завантаження..." : (formatFileSize(m.fileSize) || "Відкрити файл")}
+                          {downloadingFileId === m.id ? "Завантаження..." : attachmentMeta(m)}
                         </Text>
                       </View>
                     </Pressable>
@@ -608,9 +644,9 @@ function Conversation({
                   {m.text ? <Text style={[s.bubbleText, mine && s.bubbleTextMine]}>{m.text}</Text> : null}
                   <View style={s.metaRow}>
                     <Text style={[s.time, mine && s.timeMine]}>{formatTime(m.createdAt)}</Text>
-                    {messageReceipt(m, user?.id) ? (
-                      <Text style={[s.receipt, messageReceipt(m, user?.id) === "read" && s.receiptRead]}>
-                        {messageReceipt(m, user?.id) === "read" ? "✓✓" : "✓"}
+                    {receipt ? (
+                      <Text style={[s.receipt, receipt === "read" && s.receiptRead]}>
+                        {receiptMarks(receipt)}
                       </Text>
                     ) : null}
                   </View>
@@ -825,12 +861,12 @@ function makeStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     listHeader: {
       paddingHorizontal: spacing.md,
-      paddingTop: 14,
-      paddingBottom: 12,
+      paddingTop: 18,
+      paddingBottom: 14,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
       backgroundColor: colors.bgCard,
-      gap: 3,
+      gap: 5,
     },
     conversationHeader: {
       paddingHorizontal: spacing.md,
@@ -841,8 +877,8 @@ function makeStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       flexDirection: "row",
       alignItems: "center",
     },
-    headerTitle: { color: colors.textPrimary, fontSize: 18, lineHeight: 23, fontWeight: "900", flexShrink: 1 },
-    headerSub: { color: colors.textSecondary, fontSize: 11, lineHeight: 15, marginTop: 1, flexShrink: 1 },
+    headerTitle: { color: colors.textPrimary, fontSize: 19, lineHeight: 25, fontWeight: "900", flexShrink: 1 },
+    headerSub: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 1, flexShrink: 1 },
 
     chatRow: {
       flexDirection: "row",

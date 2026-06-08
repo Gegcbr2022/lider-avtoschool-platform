@@ -172,11 +172,16 @@ export type ConversationMessage = {
   text: string;
   createdAt: Date | null;
   readBy: string[];
+  deliveredTo?: string[];
+  deliveryStatus?: string;
   mediaUrl?: string;
+  mediaPath?: string;
   mediaType?: "image" | "video" | "document";
   fileName?: string;
   fileSize?: number;
   senderPhone?: string;
+  senderRole?: string;
+  reactions?: Record<string, string>;
 };
 
 export type SupportThread = {
@@ -195,6 +200,16 @@ export type StoryEntry = {
   authorName: string;
   authorEmoji?: string;
   text: string;
+  kind?: string;
+  result?: {
+    correct?: number;
+    total?: number;
+    percent?: number;
+    passed?: boolean;
+    mode?: string;
+    licenseCategory?: string;
+    elapsedSeconds?: number;
+  };
   tone: string;
   reactions: number;
   views: number;
@@ -476,11 +491,16 @@ export async function getConversationMessages(convId: string): Promise<Conversat
       text: data.text ?? "",
       createdAt: toDate(data.createdAt),
       readBy: data.readBy ?? [],
+      deliveredTo: data.deliveredTo ?? [],
+      deliveryStatus: data.deliveryStatus,
       mediaUrl: data.mediaUrl,
+      mediaPath: data.mediaPath,
       mediaType: data.mediaType,
       fileName: data.fileName,
       fileSize: data.fileSize,
       senderPhone: data.senderPhone,
+      senderRole: data.senderRole,
+      reactions: data.reactions ?? {},
     };
   });
 }
@@ -513,6 +533,8 @@ export async function getStories(limitCount = 100): Promise<StoryEntry[]> {
       authorName: data.authorName ?? "",
       authorEmoji: data.authorEmoji,
       text: data.text ?? "",
+      kind: data.kind,
+      result: data.result,
       tone: data.tone ?? "dark",
       reactions: data.reactions ?? 0,
       views: data.views ?? 0,

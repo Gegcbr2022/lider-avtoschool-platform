@@ -388,6 +388,7 @@ app.post("/telegram/webhook", async (request, response) => {
 app.post("/chat/notify", async (request, response) => {
   const body = request.body ?? {};
   const conversationId = typeof body.conversationId === "string" ? body.conversationId : "";
+  const messageId = typeof body.messageId === "string" && body.messageId.trim() ? body.messageId.trim() : undefined;
   const userId = typeof body.userId === "string" ? body.userId : "";
   const userName = typeof body.userName === "string" && body.userName.trim() ? body.userName.trim() : "Учень";
   const text = typeof body.text === "string" ? body.text.trim() : "";
@@ -477,6 +478,24 @@ app.post("/chat/notify", async (request, response) => {
       { lastMessage: mediaUrl ? (mediaType === "document" ? `📎 ${fileName ?? "Файл"}` : "📷 Фото") : text, lastMessageAt: FieldValue.serverTimestamp(), status: "open" },
       { merge: true }
     );
+    if (messageId) {
+      await db
+        .collection("conversations")
+        .doc(conversationId)
+        .collection("messages")
+        .doc(messageId)
+        .set(
+          {
+            deliveredAt: FieldValue.serverTimestamp(),
+            deliveredTo: FieldValue.arrayUnion("telegram"),
+            deliveryStatus: "delivered"
+          },
+          { merge: true }
+        )
+        .catch((error: unknown) => {
+          console.warn("chat/notify: delivery receipt update failed", error);
+        });
+    }
     response.json({ ok: true });
   } catch (error) {
     console.error("chat/notify failed", error);
