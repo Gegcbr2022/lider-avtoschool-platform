@@ -13,9 +13,11 @@
   "dependencies": {
     "@lider/shared": "file:../../packages/shared",
     "@lider/types": "file:../../packages/types",
+    "@notifee/react-native": "^9.1.8",
     "@react-native-async-storage/async-storage": "2.1.2",
     "@react-native-firebase/app": "^24.1.0",
     "@react-native-firebase/app-check": "^24.1.0",
+    "@react-native-firebase/messaging": "^24.1.0",
     "@react-native-google-signin/google-signin": "^16.1.2",
     "expo": "^53.0.0",
     "expo-constants": "~17.1.3",

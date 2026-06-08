@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Platform, Text, View } from "react-native";
 import { useAuth } from "../../lib/auth";
 import { subscribeToConversations } from "../../lib/firestore";
+import { subscribeNotificationInbox } from "../../lib/notifications";
 import { useTheme, radii } from "../../lib/theme";
 
 function TabIcon({ icon, active, badge }: { icon: string; active: boolean; badge?: number }) {
@@ -38,6 +39,7 @@ export default function TabsLayout() {
   const { colors } = useTheme();
   const { user, mode } = useAuth();
   const [chatBadge, setChatBadge] = useState(0);
+  const [notificationBadge, setNotificationBadge] = useState(0);
   const lastSeenRef = useRef(new Date());
 
   useEffect(() => {
@@ -59,6 +61,16 @@ export default function TabsLayout() {
     });
     return unsub;
   }, [user?.id, mode]);
+
+  useEffect(() => {
+    if (mode !== "authenticated" || user?.isGuest) {
+      setNotificationBadge(0);
+      return;
+    }
+    return subscribeNotificationInbox((items) => {
+      setNotificationBadge(items.filter((item) => !item.readAt).length);
+    });
+  }, [mode, user?.isGuest]);
 
   return (
     <Tabs
@@ -128,7 +140,7 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: "Профіль",
-          tabBarIcon: ({ focused }) => <TabIcon icon="👤" active={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon icon="👤" active={focused} badge={notificationBadge} />,
         }}
       />
 

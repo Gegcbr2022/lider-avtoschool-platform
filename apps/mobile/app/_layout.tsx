@@ -16,7 +16,10 @@ import {
   createNotificationChannels,
   registerPushToken,
   requestNotificationPermission,
+  setupPushTokenRefresh,
   setupNotificationListeners,
+  syncEngagementNotifications,
+  type NotificationResponsePayload,
 } from "../lib/notifications";
 import {
   Animated,
@@ -101,20 +104,42 @@ export default function RootLayout() {
   }, []);
 
   // ─── Setup push notifications (Android channels + request permission) ───────
+  const handleNotificationResponse = useCallback((response: NotificationResponsePayload) => {
+    const { data, kind } = response;
+    if (kind === "chat" && data.conversationId) {
+      router.push("/(tabs)/chat");
+      return;
+    }
+    if (kind === "booking") {
+      router.push("/(tabs)/practice");
+      return;
+    }
+    if (kind === "daily-test") {
+      router.push("/(tabs)/tests");
+      return;
+    }
+    if (kind === "streak") {
+      router.push("/(tabs)/club");
+    }
+  }, []);
+
   useEffect(() => {
     void createNotificationChannels();
-    const cleanup = setupNotificationListeners();
+    const cleanup = setupNotificationListeners(undefined, handleNotificationResponse);
     return cleanup;
-  }, []);
+  }, [handleNotificationResponse]);
 
   // Register push token when authenticated user is known
   useEffect(() => {
     if (mode !== "authenticated" || !user?.id) return;
+    const stopTokenRefresh = setupPushTokenRefresh(user.id);
     void requestNotificationPermission().then((status) => {
       if (status === "granted") {
         void registerPushToken(user.id);
+        void syncEngagementNotifications(user.id);
       }
     });
+    return stopTokenRefresh;
   }, [mode, user?.id]);
 
   // ─── Listen to Firebase auth state (persists across restarts) ─────────────

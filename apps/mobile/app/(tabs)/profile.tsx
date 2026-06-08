@@ -9,7 +9,14 @@ import { GhostButton, Label, Pill, Row, Screen } from "../../components/mobile-u
 import { useTheme, radii, type ThemePreference, spacing, shadows } from "../../lib/theme";
 import { useNetworkStatus } from "../../lib/useNetwork";
 import { getUserProfile, upsertUserProfile, getUserStats, type UserStats } from "../../lib/firestore";
-import { requestNotificationPermission, scheduleLocalNotification } from "../../lib/notifications";
+import {
+  clearNotificationInbox,
+  getNotificationInbox,
+  markAllNotificationsRead,
+  requestNotificationPermission,
+  scheduleLocalNotification,
+  type NotificationInboxItem,
+} from "../../lib/notifications";
 import { DEFAULT_APP_SETTINGS, loadAppSettings, saveAppSettings, type AppSettings } from "../../lib/app-settings";
 
 const APP_VERSION = (Constants.expoConfig?.version as string | undefined) ?? "1.0.0";
@@ -310,29 +317,119 @@ function SettingsSheet({ visible, onClose }: { visible: boolean; onClose: () => 
 
 // ─── Notifications Sheet ──────────────────────────────────────────────────────
 
+function formatNotificationDate(value: string): string {
+  try {
+    return new Date(value).toLocaleString("uk-UA", {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return value;
+  }
+}
+
 function NotificationsSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { colors } = useTheme();
+  const [items, setItems] = useState<NotificationInboxItem[]>([]);
+
+  const refresh = useCallback(async () => {
+    const inbox = await getNotificationInbox();
+    setItems(inbox);
+  }, []);
+
+  useEffect(() => {
+    if (!visible) return;
+    refresh().catch(() => {});
+    markAllNotificationsRead().then(refresh).catch(() => {});
+  }, [visible, refresh]);
+
   return (
     <BottomSheet visible={visible} title="Сповіщення" onClose={onClose}>
-      <Pressable
-        onPress={async () => {
-          const status = await requestNotificationPermission();
-          if (status !== "granted") {
-            Alert.alert("Дозвіл потрібен", "Увімкніть сповіщення в Налаштуваннях → Застосунки → Автошкола Лідер.", [{ text: "OK" }]);
-            return;
-          }
-          await scheduleLocalNotification({ title: "⏰ Час тренуватися!", body: "Пройди тест дня — підтримуй серію та готуйся до іспиту.", channelId: "reminders", delaySeconds: 5 });
-          Alert.alert("Нагадування встановлено", "Отримаєш сповіщення через 5 секунд — перевір!");
-        }}
-        style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.border }}
-      >
-        <Text style={{ fontSize: 28 }}>🔔</Text>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 16, fontWeight: "800", color: colors.textPrimary }}>Щоденне нагадування</Text>
-          <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>Тест дня та підтримка серії</Text>
+      <View style={{ gap: 12 }}>
+        <Pressable
+          onPress={async () => {
+            const status = await requestNotificationPermission();
+            if (status !== "granted") {
+              Alert.alert("Дозвіл потрібен", "Увімкніть сповіщення в Налаштуваннях → Застосунки → Автошкола Лідер.", [{ text: "OK" }]);
+              return;
+            }
+            await scheduleLocalNotification({
+              id: "manual-test-notification",
+              title: "🧪 Тест-сповіщення",
+              body: "Push notifications працюють. Натисни, щоб повернутися в застосунок.",
+              channelId: "reminders",
+              delaySeconds: 2,
+              data: { type: "system" },
+            });
+            Alert.alert("Нагадування встановлено", "Отримаєш сповіщення через 2 секунди.");
+            refresh().catch(() => {});
+          }}
+          style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.border }}
+        >
+          <Text style={{ fontSize: 28 }}>🔔</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 16, fontWeight: "800", color: colors.textPrimary }}>Перевірити push</Text>
+            <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>Тестове сповіщення через 2 секунди</Text>
+          </View>
+          <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
+        </Pressable>
+
+        <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, overflow: "hidden" }}>
+          <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "900" }}>Центр сповіщень</Text>
+            {items.length > 0 ? (
+              <Pressable
+                onPress={async () => {
+                  await clearNotificationInbox();
+                  setItems([]);
+                }}
+                hitSlop={10}
+              >
+                <Text style={{ color: colors.red, fontSize: 12, fontWeight: "800" }}>Очистити</Text>
+              </Pressable>
+            ) : null}
+          </View>
+
+          {items.length === 0 ? (
+            <View style={{ padding: 18, alignItems: "center" }}>
+              <Text style={{ fontSize: 26 }}>📭</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "700", marginTop: 8, textAlign: "center" }}>
+                Тут зʼявляться відповіді менеджера, нагадування про заняття та тест дня.
+              </Text>
+            </View>
+          ) : (
+            <ScrollView style={{ maxHeight: 260 }} showsVerticalScrollIndicator={false}>
+              {items.map((item, index) => (
+                <View
+                  key={item.id}
+                  style={{
+                    padding: 14,
+                    borderTopWidth: index === 0 ? 0 : 1,
+                    borderTopColor: colors.border,
+                    gap: 4,
+                  }}
+                >
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 10 }}>
+                    <Text style={{ flex: 1, color: colors.textPrimary, fontSize: 14, fontWeight: "900" }} numberOfLines={1}>
+                      {item.title}
+                    </Text>
+                    <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "700" }}>
+                      {formatNotificationDate(item.createdAt)}
+                    </Text>
+                  </View>
+                  {item.body ? (
+                    <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 17 }} numberOfLines={2}>
+                      {item.body}
+                    </Text>
+                  ) : null}
+                </View>
+              ))}
+            </ScrollView>
+          )}
         </View>
-        <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
-      </Pressable>
+      </View>
     </BottomSheet>
   );
 }
