@@ -39,7 +39,7 @@ export function FaqAccordion({ items }: { items: readonly FaqItem[] }) {
                   transition={{ duration: 0.2 }}
                   className="overflow-hidden"
                 >
-                  <p className="px-5 pb-5 text-sm leading-7 text-lider-muted">{item.answer}</p>
+                  <p className="px-5 pb-5 text-sm font-semibold leading-7 text-lider-muted">{item.answer}</p>
                 </motion.div>
               ) : null}
             </AnimatePresence>

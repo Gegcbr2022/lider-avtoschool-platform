@@ -56,8 +56,8 @@ export function ReviewsCarousel() {
             >
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-[20px] bg-lider-red text-xl font-black text-white">
-                    {review.name.slice(0, 1)}
+                  <div className="flex h-16 w-16 items-center justify-center rounded-[20px] bg-lider-red text-lg font-black tracking-tight text-white">
+                    {review.name.slice(0, 2)}
                   </div>
                   <div>
                     <h3 className="text-xl font-semibold text-lider-graphite">{review.name}</h3>
@@ -72,7 +72,7 @@ export function ReviewsCarousel() {
                   ))}
                 </div>
               </div>
-              <p className="mt-8 text-xl leading-9 text-lider-graphite">“{review.text}”</p>
+              <p className="mt-8 text-xl leading-9 text-lider-graphite">{"«"}{review.text}{"»"}</p>
               <div className="mt-8 flex gap-2">
                 {graduateReviews.map((item, itemIndex) => (
                   <button

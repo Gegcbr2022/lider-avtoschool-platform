@@ -58,8 +58,8 @@ const homeCopy: Record<
     ],
     heroBadge: "Підготовка до прав A, A1, B, C, CE",
     heroTitle: "Права без хаосу",
-    heroText: "Оберіть категорію й залиште телефон. Менеджер підкаже ціну, документи та найближчий старт.",
-    heroHighlights: ["1 хвилина", "Документи онлайн", "Підтримка до іспиту"],
+    heroText: "Оберіть категорію й залиште номер. Менеджер підкаже ціну, документи та найближчий старт — без черг і зайвих питань.",
+    heroHighlights: ["Заявка за 1 хв", "Документи онлайн", "Супровід до прав"],
     primaryCta: "Залишити заявку",
     telegramCta: "Запис через Telegram"
   },
@@ -72,8 +72,8 @@ const homeCopy: Record<
     ],
     heroBadge: "Подготовка к правам A, A1, B, C, CE",
     heroTitle: "Права без хаоса",
-    heroText: "Выберите категорию и оставьте телефон. Менеджер подскажет цену, документы и ближайший старт.",
-    heroHighlights: ["1 минута", "Документы онлайн", "Поддержка до экзамена"],
+    heroText: "Выберите категорию и оставьте номер. Менеджер подскажет цену, документы и ближайший старт — без очередей и лишних вопросов.",
+    heroHighlights: ["Заявка за 1 мин", "Документы онлайн", "Сопровождение до прав"],
     primaryCta: "Оставить заявку",
     telegramCta: "Запись через Telegram"
   },
@@ -86,8 +86,8 @@ const homeCopy: Record<
     ],
     heroBadge: "Driving licence training A, A1, B, C, CE",
     heroTitle: "Driving licence without chaos",
-    heroText: "Choose a category and leave your phone. A manager will explain price, documents and the nearest start.",
-    heroHighlights: ["1-minute request", "Online documents", "Exam support"],
+    heroText: "Choose a category and leave your number. A manager will explain price, documents and the nearest start — no queues, no fuss.",
+    heroHighlights: ["Apply in 1 min", "Online documents", "Guided to licence"],
     primaryCta: "Send request",
     telegramCta: "Apply via Telegram"
   }
@@ -391,7 +391,8 @@ export default async function HomePage({
               </div>
               <div className="grid grid-cols-3 gap-2 sm:max-w-2xl sm:gap-3">
                 {copy.heroHighlights.map((item) => (
-                  <div key={item} className="rounded-2xl border border-lider-line bg-white px-3 py-3 text-center text-xs font-black text-lider-graphite shadow-soft sm:text-sm">
+                  <div key={item} className="flex items-center justify-center gap-1.5 rounded-2xl border border-lider-line bg-white px-3 py-3 text-center text-xs font-black text-lider-graphite shadow-soft sm:text-sm">
+                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-lider-red" aria-hidden />
                     {item}
                   </div>
                 ))}
