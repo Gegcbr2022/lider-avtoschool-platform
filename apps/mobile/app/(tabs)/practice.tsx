@@ -28,6 +28,7 @@ function formatDate(iso: string): string {
 function statusLabel(status: string): { text: string; color: string } {
   switch (status) {
     case "confirmed": return { text: "Підтверджено ✅", color: "#22c55e" };
+    case "completed": return { text: "Проведено", color: "#6b7280" };
     case "cancelled": return { text: "Скасовано ❌", color: "#ef4444" };
     default: return { text: "Очікує підтвердження ⏳", color: "#f59e0b" };
   }
@@ -61,7 +62,7 @@ export default function PracticeTab() {
   // Next upcoming booking (soonest in future)
   const now = new Date().toISOString();
   const upcoming = bookings
-    .filter((b) => b.status !== "cancelled" && b.startsAt >= now)
+    .filter((b) => b.status !== "cancelled" && b.status !== "completed" && b.startsAt >= now)
     .sort((a, b) => (a.startsAt < b.startsAt ? -1 : 1))[0] ?? null;
 
   // ─── Guest state ──────────────────────────────────────────────────────────

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -18,7 +19,9 @@ import {
   getInstructorBookings,
   subscribeToConversations,
   type BookingDoc,
+  type BookingStatus,
   type ConversationDoc,
+  updateBookingStatus,
 } from "../lib/firestore";
 
 function formatDateTime(iso: string): string {
@@ -54,6 +57,7 @@ export default function InstructorHomeScreen() {
   const [convs, setConvs]           = useState<ConversationDoc[]>([]);
   const [loadingB, setLoadingB]     = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   // ─── Load instructor bookings ──────────────────────────────────────────────
   async function loadBookings() {
@@ -80,6 +84,27 @@ export default function InstructorHomeScreen() {
     setRefreshing(true);
     await loadBookings();
     setRefreshing(false);
+  }
+
+  async function handleBookingStatus(
+    bookingId: string,
+    status: Extract<BookingStatus, "confirmed" | "completed">
+  ) {
+    setUpdatingId(bookingId);
+    try {
+      await updateBookingStatus(bookingId, status);
+      await loadBookings();
+      Alert.alert(
+        status === "confirmed" ? "Заняття підтверджено" : "Заняття завершено",
+        status === "confirmed"
+          ? "Учень побачить оновлений статус у своєму розкладі."
+          : "Заняття перенесено в завершені."
+      );
+    } catch {
+      Alert.alert("Не вдалося оновити статус", "Перевірте зв'язок і спробуйте ще раз.");
+    } finally {
+      setUpdatingId(null);
+    }
   }
 
   // Upcoming = not cancelled/completed, sorted soonest first
@@ -130,6 +155,25 @@ export default function InstructorHomeScreen() {
                   <Text style={[s.statusBadge, { color: st.color }]}>{st.label}</Text>
                 </View>
                 <Text style={s.bookingTime}>🕐 {formatDateTime(b.startsAt)}</Text>
+                {b.carLabel ? <Text style={s.bookingMeta}>{b.carLabel}</Text> : null}
+                {b.status === "pending" ? (
+                  <Pressable
+                    style={[s.statusAction, updatingId === b.id && s.statusActionDisabled]}
+                    disabled={updatingId === b.id}
+                    onPress={() => handleBookingStatus(b.id, "confirmed")}
+                  >
+                    <Text style={s.statusActionText}>{updatingId === b.id ? "Оновлюємо..." : "Підтвердити"}</Text>
+                  </Pressable>
+                ) : null}
+                {b.status === "confirmed" ? (
+                  <Pressable
+                    style={[s.statusAction, s.statusActionSecondary, updatingId === b.id && s.statusActionDisabled]}
+                    disabled={updatingId === b.id}
+                    onPress={() => handleBookingStatus(b.id, "completed")}
+                  >
+                    <Text style={[s.statusActionText, s.statusActionSecondaryText]}>{updatingId === b.id ? "Оновлюємо..." : "Завершити"}</Text>
+                  </Pressable>
+                ) : null}
               </View>
             );
           })
@@ -221,6 +265,24 @@ function makeStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     studentName: { color: colors.textPrimary, fontSize: 15, fontWeight: "800" },
     statusBadge: { fontSize: 12, fontWeight: "700" },
     bookingTime: { color: colors.textSecondary, fontSize: 13, marginTop: 4 },
+    bookingMeta: { color: colors.textTertiary, fontSize: 12, marginTop: 2 },
+    statusAction: {
+      alignItems: "center",
+      backgroundColor: colors.red,
+      borderRadius: radii.sm,
+      marginTop: spacing.md,
+      paddingVertical: 11,
+    },
+    statusActionSecondary: {
+      backgroundColor: colors.bgElevated,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    statusActionDisabled: {
+      opacity: 0.55,
+    },
+    statusActionText: { color: "#fff", fontSize: 13, fontWeight: "900" },
+    statusActionSecondaryText: { color: colors.textPrimary },
 
     emptyCard: {
       alignItems: "center",

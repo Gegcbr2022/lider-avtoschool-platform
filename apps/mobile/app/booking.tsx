@@ -1,6 +1,3 @@
-// ─── Запис на практику ──────────────────────────────────────────────────────────
-// Выбор инструктора → дата (7 дней) → время → бронь в Firestore bookings
-// (правило createsOwnResource: studentId == uid). Статус "pending" до подтверждения школой.
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator, Alert, Pressable, ScrollView, Text, View,
@@ -9,23 +6,26 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useAuth } from "../lib/auth";
 import {
-  getInstructors, createBooking, getMyBookings,
-  type Instructor, type BookingDoc,
+  createBooking,
+  getAvailableBookingSlots,
+  getInstructors,
+  getMyBookings,
+  type BookingDoc,
+  type BookingSlotDoc,
+  type Instructor,
 } from "../lib/firestore";
+import { scheduleLocalNotification, syncEngagementNotifications } from "../lib/notifications";
 import { useTheme, radii, spacing } from "../lib/theme";
 
-const TIME_SLOTS = ["09:00", "10:30", "12:00", "14:00", "15:30", "17:00"];
 const WEEKDAYS = ["Нд", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
 
-function next7Days(): Date[] {
-  const today = new Date();
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    d.setHours(0, 0, 0, 0);
-    return d;
-  });
-}
+const STATUS_LABEL: Record<string, string> = {
+  pending: "Очікує підтвердження",
+  confirmed: "Підтверджено",
+  completed: "Проведено",
+  cancelled: "Скасовано",
+  done: "Проведено",
+};
 
 function fmtBookingDate(iso: string): string {
   const d = new Date(iso);
@@ -33,9 +33,43 @@ function fmtBookingDate(iso: string): string {
   return `${WEEKDAYS[d.getDay()]} ${d.getDate()}.${String(d.getMonth() + 1).padStart(2, "0")} · ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  pending: "Очікує підтвердження", confirmed: "Підтверджено", cancelled: "Скасовано", done: "Проведено",
-};
+function fmtSlotDay(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "Дата";
+  return `${WEEKDAYS[d.getDay()]}, ${d.getDate()}.${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function fmtSlotTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function slotDayKey(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+function groupSlots(slots: BookingSlotDoc[]): Array<{ key: string; label: string; slots: BookingSlotDoc[] }> {
+  const map = new Map<string, BookingSlotDoc[]>();
+  for (const slot of slots) {
+    const key = slotDayKey(slot.startsAt);
+    map.set(key, [...(map.get(key) ?? []), slot]);
+  }
+  return Array.from(map.entries()).map(([key, rows]) => ({
+    key,
+    label: fmtSlotDay(rows[0]?.startsAt ?? key),
+    slots: rows,
+  }));
+}
+
+function statusColor(status: string, colors: ReturnType<typeof useTheme>["colors"]) {
+  if (status === "confirmed") return colors.success;
+  if (status === "completed") return colors.red;
+  if (status === "cancelled") return colors.textTertiary;
+  return colors.warning;
+}
 
 export default function BookingScreen() {
   const { colors } = useTheme();
@@ -44,13 +78,14 @@ export default function BookingScreen() {
 
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [bookings, setBookings] = useState<BookingDoc[]>([]);
+  const [slots, setSlots] = useState<BookingSlotDoc[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingSlots, setLoadingSlots] = useState(false);
   const [selInstructor, setSelInstructor] = useState<Instructor | null>(null);
-  const [selDay, setSelDay] = useState<Date | null>(null);
-  const [selTime, setSelTime] = useState<string | null>(null);
+  const [selSlot, setSelSlot] = useState<BookingSlotDoc | null>(null);
   const [booking, setBooking] = useState(false);
 
-  const days = next7Days();
+  const slotGroups = groupSlots(slots);
 
   async function reloadBookings() {
     if (!user?.id) return;
@@ -59,33 +94,78 @@ export default function BookingScreen() {
   }
 
   useEffect(() => {
-    if (isGuest) { setLoading(false); return; }
+    if (isGuest) {
+      setLoading(false);
+      return;
+    }
     Promise.all([getInstructors(), user?.id ? getMyBookings(user.id) : Promise.resolve([])])
-      .then(([ins, bk]) => { setInstructors(ins); setBookings(bk); })
+      .then(([ins, bk]) => {
+        setInstructors(ins);
+        setBookings(bk);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [user?.id]);
+  }, [isGuest, user?.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSelSlot(null);
+    if (!selInstructor) {
+      setSlots([]);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setLoadingSlots(true);
+    getAvailableBookingSlots(selInstructor.id)
+      .then((rows) => {
+        if (!cancelled) setSlots(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setSlots([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingSlots(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selInstructor?.id]);
 
   async function handleBook() {
-    if (!user?.id || !selInstructor || !selDay || !selTime) return;
+    if (!user?.id || !selInstructor || !selSlot) return;
     setBooking(true);
     try {
-      const [hh, mm] = selTime.split(":").map(Number);
-      const startsAt = new Date(selDay.getFullYear(), selDay.getMonth(), selDay.getDate(), hh, mm).toISOString();
-      await createBooking({
+      const bookingId = await createBooking({
         studentId: user.id,
         studentName: user.name,
         studentPhone: user.phone,
         instructorId: selInstructor.id,
         instructorName: selInstructor.name,
-        instructorUserId: selInstructor.accountUserId,
-        startsAt,
+        instructorUserId: selInstructor.accountUserId ?? selSlot.instructorUserId,
+        slotId: selSlot.id,
+        startsAt: selSlot.startsAt,
+        endsAt: selSlot.endsAt,
+        branchId: selSlot.branchId,
+        carLabel: selSlot.carLabel,
       });
-      setSelInstructor(null); setSelDay(null); setSelTime(null);
+      await scheduleLocalNotification({
+        id: `booking-created-${bookingId}`,
+        title: "Запит на практику відправлено",
+        body: `${selInstructor.name}: ${fmtBookingDate(selSlot.startsAt)}. Очікуємо підтвердження.`,
+        data: { type: "booking", bookingId, status: "pending" },
+      }).catch(() => {});
+      void syncEngagementNotifications(user.id).catch(() => {});
+
+      setSelInstructor(null);
+      setSelSlot(null);
+      setSlots([]);
       await reloadBookings();
-      Alert.alert("Записано!", "Інструктор підтвердить заняття. Деталі — в чаті «Інструктор».");
+      Alert.alert("Записано!", "Інструктор підтвердить заняття. Ми нагадаємо перед виїздом.");
     } catch {
-      Alert.alert("Помилка", "Не вдалось записатись. Спробуй ще раз.");
+      Alert.alert("Слот уже недоступний", "Оберіть інший час або спробуйте оновити розклад.");
     } finally {
       setBooking(false);
     }
@@ -93,14 +173,13 @@ export default function BookingScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top"]}>
-      {/* Header */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: spacing.md, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.bgCard }}>
         <Pressable hitSlop={12} onPress={() => router.back()}>
           <Text style={{ color: colors.red, fontSize: 24, fontWeight: "600" }}>‹</Text>
         </Pressable>
         <View style={{ flex: 1 }}>
           <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "900" }}>Запис на практику</Text>
-          <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 1 }}>Оберіть інструктора, дату й час</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 1 }}>Оберіть інструктора та вільний слот</Text>
         </View>
       </View>
 
@@ -116,7 +195,6 @@ export default function BookingScreen() {
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color={colors.red} /></View>
       ) : (
         <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: 48 }}>
-          {/* My bookings */}
           {bookings.length > 0 ? (
             <View style={{ gap: 8 }}>
               <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase" }}>Мої заняття</Text>
@@ -126,14 +204,14 @@ export default function BookingScreen() {
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: colors.textPrimary, fontWeight: "800", fontSize: 14 }}>{b.instructorName}</Text>
                     <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>{fmtBookingDate(b.startsAt)}</Text>
+                    {b.carLabel ? <Text style={{ color: colors.textTertiary, fontSize: 11, marginTop: 2 }}>{b.carLabel}</Text> : null}
                   </View>
-                  <Text style={{ color: b.status === "confirmed" ? colors.success : colors.textTertiary, fontSize: 11, fontWeight: "700" }}>{STATUS_LABEL[b.status] ?? b.status}</Text>
+                  <Text style={{ color: statusColor(b.status, colors), fontSize: 11, fontWeight: "800", maxWidth: 104, textAlign: "right" }}>{STATUS_LABEL[b.status] ?? b.status}</Text>
                 </View>
               ))}
             </View>
           ) : null}
 
-          {/* Instructors */}
           <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase" }}>Оберіть інструктора</Text>
           {instructors.length === 0 ? (
             <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, padding: 20, alignItems: "center" }}>
@@ -148,7 +226,7 @@ export default function BookingScreen() {
             return (
               <Pressable
                 key={ins.id}
-                onPress={() => { setSelInstructor(selected ? null : ins); setSelDay(null); setSelTime(null); }}
+                onPress={() => setSelInstructor(selected ? null : ins)}
                 style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1.5, borderColor: selected ? colors.red : colors.border, padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }}
               >
                 <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center" }}>
@@ -164,49 +242,53 @@ export default function BookingScreen() {
             );
           })}
 
-          {/* Date + time pickers (after instructor selected) */}
           {selInstructor ? (
             <>
-              <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase", marginTop: 4 }}>Дата</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={{ flexDirection: "row", gap: 8 }}>
-                  {days.map((d) => {
-                    const sel = selDay?.getTime() === d.getTime();
-                    return (
-                      <Pressable key={d.toISOString()} onPress={() => setSelDay(d)}
-                        style={{ width: 56, paddingVertical: 10, borderRadius: radii.md, alignItems: "center", backgroundColor: sel ? colors.red : colors.bgCard, borderWidth: 1.5, borderColor: sel ? colors.red : colors.border }}>
-                        <Text style={{ fontSize: 11, fontWeight: "700", color: sel ? "rgba(255,255,255,0.8)" : colors.textTertiary }}>{WEEKDAYS[d.getDay()]}</Text>
-                        <Text style={{ fontSize: 18, fontWeight: "900", color: sel ? "#fff" : colors.textPrimary, marginTop: 2 }}>{d.getDate()}</Text>
-                      </Pressable>
-                    );
-                  })}
+              <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase", marginTop: 4 }}>Вільні слоти</Text>
+              {loadingSlots ? (
+                <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, padding: 18, alignItems: "center" }}>
+                  <ActivityIndicator color={colors.red} />
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 10 }}>Оновлюємо розклад інструктора…</Text>
                 </View>
-              </ScrollView>
-
-              {selDay ? (
-                <>
-                  <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase", marginTop: 4 }}>Час</Text>
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                    {TIME_SLOTS.map((t) => {
-                      const sel = selTime === t;
-                      return (
-                        <Pressable key={t} onPress={() => setSelTime(t)}
-                          style={{ paddingHorizontal: 18, paddingVertical: 11, borderRadius: radii.full, backgroundColor: sel ? colors.red : colors.bgCard, borderWidth: 1.5, borderColor: sel ? colors.red : colors.border }}>
-                          <Text style={{ fontSize: 14, fontWeight: "800", color: sel ? "#fff" : colors.textPrimary }}>{t}</Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </>
-              ) : null}
+              ) : slots.length === 0 ? (
+                <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, padding: 20 }}>
+                  <Text style={{ color: colors.textPrimary, fontWeight: "900", fontSize: 15 }}>Вільних слотів поки немає</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 6, lineHeight: 19 }}>
+                    Розклад підтягнеться, коли менеджер відкриє доступний час для цього інструктора.
+                  </Text>
+                </View>
+              ) : (
+                <View style={{ gap: 12 }}>
+                  {slotGroups.map((group) => (
+                    <View key={group.key} style={{ gap: 8 }}>
+                      <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "800" }}>{group.label}</Text>
+                      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                        {group.slots.map((slot) => {
+                          const selected = selSlot?.id === slot.id;
+                          return (
+                            <Pressable
+                              key={slot.id}
+                              onPress={() => setSelSlot(slot)}
+                              style={{ minWidth: 96, paddingHorizontal: 14, paddingVertical: 11, borderRadius: radii.md, backgroundColor: selected ? colors.red : colors.bgCard, borderWidth: 1.5, borderColor: selected ? colors.red : colors.border }}
+                            >
+                              <Text style={{ fontSize: 15, fontWeight: "900", color: selected ? "#fff" : colors.textPrimary }}>{fmtSlotTime(slot.startsAt)}</Text>
+                              {slot.carLabel ? <Text style={{ color: selected ? "rgba(255,255,255,0.82)" : colors.textTertiary, fontSize: 11, marginTop: 2 }}>{slot.carLabel}</Text> : null}
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
 
               <Pressable
                 onPress={handleBook}
-                disabled={!selDay || !selTime || booking}
-                style={{ backgroundColor: !selDay || !selTime ? colors.bgElevated : colors.red, borderRadius: radii.md, paddingVertical: 16, alignItems: "center", marginTop: 8 }}
+                disabled={!selSlot || booking}
+                style={{ backgroundColor: !selSlot ? colors.bgElevated : colors.red, borderRadius: radii.md, paddingVertical: 16, alignItems: "center", marginTop: 8 }}
               >
                 {booking ? <ActivityIndicator color="#fff" /> : (
-                  <Text style={{ color: !selDay || !selTime ? colors.textTertiary : "#fff", fontWeight: "800", fontSize: 16 }}>
+                  <Text style={{ color: !selSlot ? colors.textTertiary : "#fff", fontWeight: "800", fontSize: 16 }}>
                     Записатись на заняття
                   </Text>
                 )}

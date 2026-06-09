@@ -84,6 +84,100 @@ service cloud.firestore {
         );
     }
 
+    function validBookingStatus(status) {
+      return status in ["pending", "confirmed", "completed", "cancelled"];
+    }
+
+    function validBookingCreateShape() {
+      return request.resource.data.keys().hasAll([
+          "studentId",
+          "studentName",
+          "instructorId",
+          "instructorName",
+          "slotId",
+          "startsAt",
+          "status",
+          "createdAt"
+        ])
+        && request.resource.data.keys().hasOnly([
+          "studentId",
+          "studentName",
+          "studentPhone",
+          "instructorId",
+          "instructorName",
+          "instructorUserId",
+          "slotId",
+          "startsAt",
+          "endsAt",
+          "branchId",
+          "carLabel",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ])
+        && request.resource.data.studentId is string
+        && request.resource.data.studentName is string
+        && request.resource.data.instructorId is string
+        && request.resource.data.instructorName is string
+        && request.resource.data.slotId is string
+        && request.resource.data.startsAt is string
+        && validBookingStatus(request.resource.data.status);
+    }
+
+    function createsOwnBooking() {
+      return signedIn()
+        && request.resource.data.studentId == uid()
+        && request.resource.data.status == "pending"
+        && validBookingCreateShape();
+    }
+
+    function studentCancelsOwnBooking() {
+      return keepsOwnResource()
+        && request.resource.data.status == "cancelled"
+        && resource.data.status in ["pending", "confirmed"]
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "status",
+          "updatedAt",
+          "cancelledAt"
+        ]);
+    }
+
+    function instructorMovesBookingForward() {
+      return linkedInstructorOwnsBooking()
+        && request.resource.data.studentId == resource.data.studentId
+        && request.resource.data.instructorId == resource.data.instructorId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "status",
+          "updatedAt",
+          "confirmedAt",
+          "completedAt"
+        ])
+        && (
+          (resource.data.status == "pending" && request.resource.data.status == "confirmed")
+          || (resource.data.status == "confirmed" && request.resource.data.status == "completed")
+        );
+    }
+
+    function slotBookedWithOwnBooking(slotId) {
+      return signedIn()
+        && resource.data.status in ["open", "available"]
+        && request.resource.data.status == "booked"
+        && request.resource.data.bookedBy == uid()
+        && request.resource.data.bookingId is string
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "status",
+          "bookedBy",
+          "bookingId",
+          "updatedAt"
+        ])
+        && existsAfter(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId))
+        && getAfter(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.studentId == uid()
+        && getAfter(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.slotId == slotId
+        && getAfter(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.instructorId == resource.data.instructorId
+        && getAfter(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.startsAt == resource.data.startsAt
+        && getAfter(/databases/$(database)/documents/bookings/$(request.resource.data.bookingId)).data.status == "pending";
+    }
+
     function validPublicLeadCreate() {
       return request.resource.data.keys().hasAll(["name", "phone", "city", "category", "source", "status", "consentAccepted", "createdAt"])
         && request.resource.data.consentAccepted == true
@@ -107,9 +201,15 @@ service cloud.firestore {
 
     match /bookings/{bookingId} {
       allow read: if staff() || ownsResource() || linkedInstructorOwnsBooking();
-      allow update: if staff() || keepsOwnResource();
-      allow create: if staff() || createsOwnResource();
+      allow update: if staff() || studentCancelsOwnBooking() || instructorMovesBookingForward();
+      allow create: if staff() || createsOwnBooking();
       allow delete: if staff();
+    }
+
+    match /bookingSlots/{slotId} {
+      allow read: if signedIn();
+      allow create, delete: if staff();
+      allow update: if staff() || slotBookedWithOwnBooking(slotId);
     }
 
     match /payments/{paymentId} {

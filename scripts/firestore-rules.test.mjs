@@ -38,6 +38,48 @@ async function seedFirestore() {
       history: [{ type: "earn", amount: 1, reason: "seed", createdAt: "2026-06-08T00:00:00.000Z" }],
       updatedAt: "2026-06-08T00:00:00.000Z",
     });
+    await db.doc("instructors/instructor-1").set({
+      name: "Instructor One",
+      accountUserId: "instructor-a",
+      active: true,
+    });
+    await db.doc("bookingSlots/slot-open").set({
+      instructorId: "instructor-1",
+      instructorUserId: "instructor-a",
+      startsAt: "2026-06-18T09:00:00.000Z",
+      status: "open",
+    });
+    await db.doc("bookingSlots/slot-open-2").set({
+      instructorId: "instructor-1",
+      instructorUserId: "instructor-a",
+      startsAt: "2026-06-18T12:00:00.000Z",
+      status: "open",
+    });
+    await db.doc("bookings/booking-pending").set({
+      studentId: "user-a",
+      studentName: "Student A",
+      instructorId: "instructor-1",
+      instructorName: "Instructor One",
+      instructorUserId: "instructor-a",
+      slotId: "seed-slot-pending",
+      startsAt: "2026-06-19T09:00:00.000Z",
+      status: "pending",
+      createdAt: "2026-06-08T00:00:00.000Z",
+      updatedAt: "2026-06-08T00:00:00.000Z",
+    });
+    await db.doc("bookings/booking-confirmed").set({
+      studentId: "user-a",
+      studentName: "Student A",
+      instructorId: "instructor-1",
+      instructorName: "Instructor One",
+      instructorUserId: "instructor-a",
+      slotId: "seed-slot-confirmed",
+      startsAt: "2026-06-20T09:00:00.000Z",
+      status: "confirmed",
+      createdAt: "2026-06-08T00:00:00.000Z",
+      updatedAt: "2026-06-08T00:00:00.000Z",
+      confirmedAt: "2026-06-08T01:00:00.000Z",
+    });
   });
 }
 
@@ -50,6 +92,7 @@ async function run() {
   const other = testEnv.authenticatedContext("user-b").firestore();
   const admin = testEnv.authenticatedContext("admin-a", { role: "admin" }).firestore();
   const manager = testEnv.authenticatedContext("manager-a", { role: "manager" }).firestore();
+  const instructor = testEnv.authenticatedContext("instructor-a").firestore();
   const anon = testEnv.unauthenticatedContext().firestore();
 
   // userProfiles.pushToken: the app may write only the current user's device token.
@@ -120,12 +163,71 @@ async function run() {
     updatedAt: "2026-06-08T00:00:00.000Z",
   }));
 
+  // bookings: students book only real slots; instructors own the forward status flow.
+  await assertSucceeds(owner.doc("bookingSlots/slot-open").get());
+  await assertFails(anon.doc("bookingSlots/slot-open").get());
+  const bookingBatch = owner.batch();
+  bookingBatch.set(owner.doc("bookings/booking-from-slot"), {
+    studentId: "user-a",
+    studentName: "Student A",
+    instructorId: "instructor-1",
+    instructorName: "Instructor One",
+    instructorUserId: "instructor-a",
+    slotId: "slot-open",
+    startsAt: "2026-06-18T09:00:00.000Z",
+    status: "pending",
+    createdAt: "2026-06-08T04:00:00.000Z",
+    updatedAt: "2026-06-08T04:00:00.000Z",
+  });
+  bookingBatch.update(owner.doc("bookingSlots/slot-open"), {
+    status: "booked",
+    bookedBy: "user-a",
+    bookingId: "booking-from-slot",
+    updatedAt: "2026-06-08T04:00:00.000Z",
+  });
+  await assertSucceeds(bookingBatch.commit());
+  await assertFails(owner.doc("bookings/booking-without-slot").set({
+    studentId: "user-a",
+    studentName: "Student A",
+    instructorId: "instructor-1",
+    instructorName: "Instructor One",
+    startsAt: "2026-06-18T10:00:00.000Z",
+    status: "pending",
+    createdAt: "2026-06-08T04:00:00.000Z",
+  }));
+  await assertFails(owner.doc("bookingSlots/slot-open-2").update({
+    status: "booked",
+    bookedBy: "user-a",
+    bookingId: "missing-booking",
+    updatedAt: "2026-06-08T04:05:00.000Z",
+  }));
+  await assertFails(owner.doc("bookings/booking-pending").update({
+    status: "confirmed",
+    updatedAt: "2026-06-08T05:00:00.000Z",
+    confirmedAt: "2026-06-08T05:00:00.000Z",
+  }));
+  await assertSucceeds(instructor.doc("bookings/booking-pending").update({
+    status: "confirmed",
+    updatedAt: "2026-06-08T05:00:00.000Z",
+    confirmedAt: "2026-06-08T05:00:00.000Z",
+  }));
+  await assertSucceeds(instructor.doc("bookings/booking-confirmed").update({
+    status: "completed",
+    updatedAt: "2026-06-08T06:00:00.000Z",
+    completedAt: "2026-06-08T06:00:00.000Z",
+  }));
+  await assertFails(other.doc("bookings/booking-confirmed").update({
+    status: "cancelled",
+    updatedAt: "2026-06-08T07:00:00.000Z",
+    cancelledAt: "2026-06-08T07:00:00.000Z",
+  }));
+
   assert.equal((await owner.doc("payments/pay-user-a").get()).data()?.status, "paid");
 }
 
 try {
   await run();
-  console.log("Firestore rules tests passed: userProfiles.pushToken/payments/userBonuses");
+  console.log("Firestore rules tests passed: userProfiles.pushToken/payments/userBonuses/bookings");
 } finally {
   await testEnv.cleanup();
 }

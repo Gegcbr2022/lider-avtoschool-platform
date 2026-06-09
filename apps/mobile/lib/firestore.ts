@@ -14,6 +14,7 @@ import {
   deleteDoc,
   onSnapshot,
   query,
+  runTransaction,
   orderBy,
   where,
   limit,
@@ -744,6 +745,24 @@ export async function getInstructors(): Promise<Instructor[]> {
   }
 }
 
+export type BookingStatus = "pending" | "confirmed" | "completed" | "cancelled";
+
+export type BookingSlotStatus = "open" | "available" | "booked" | "blocked";
+
+export type BookingSlotDoc = {
+  id: string;
+  instructorId: string;
+  instructorName?: string;
+  instructorUserId?: string;
+  startsAt: string;
+  endsAt?: string;
+  status: BookingSlotStatus;
+  branchId?: string;
+  carLabel?: string;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+};
+
 export type BookingDoc = {
   id: string;
   studentId: string;
@@ -752,10 +771,107 @@ export type BookingDoc = {
   instructorName: string;
   instructorUserId?: string;
   studentPhone?: string;
+  slotId?: string;
   startsAt: string; // ISO datetime
-  status: string;
+  endsAt?: string;
+  branchId?: string;
+  carLabel?: string;
+  status: BookingStatus;
   createdAt: Date | null;
+  updatedAt: Date | null;
+  confirmedAt: Date | null;
+  completedAt: Date | null;
+  cancelledAt: Date | null;
 };
+
+function normalizeBookingStatus(value: unknown): BookingStatus {
+  if (value === "confirmed" || value === "completed" || value === "cancelled") {
+    return value;
+  }
+  if (value === "done") {
+    return "completed";
+  }
+  return "pending";
+}
+
+function normalizeSlotStatus(value: unknown): BookingSlotStatus {
+  if (value === "available" || value === "booked" || value === "blocked") {
+    return value;
+  }
+  return "open";
+}
+
+function toIsoString(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+  const date = toDate(value);
+  return date?.toISOString() ?? "";
+}
+
+function bookingSlotFromDoc(id: string, data: DocumentData): BookingSlotDoc {
+  return {
+    id,
+    instructorId: String(data.instructorId ?? ""),
+    instructorName: data.instructorName ? String(data.instructorName) : undefined,
+    instructorUserId: data.instructorUserId ? String(data.instructorUserId) : undefined,
+    startsAt: toIsoString(data.startsAt),
+    endsAt: data.endsAt ? toIsoString(data.endsAt) : undefined,
+    status: normalizeSlotStatus(data.status),
+    branchId: data.branchId ? String(data.branchId) : undefined,
+    carLabel: data.carLabel ? String(data.carLabel) : undefined,
+    createdAt: toDate(data.createdAt),
+    updatedAt: toDate(data.updatedAt),
+  };
+}
+
+function bookingFromDoc(id: string, data: DocumentData): BookingDoc {
+  return {
+    id,
+    studentId: String(data.studentId ?? ""),
+    studentName: String(data.studentName ?? "Учень"),
+    instructorId: String(data.instructorId ?? ""),
+    instructorName: String(data.instructorName ?? "Інструктор"),
+    instructorUserId: data.instructorUserId ? String(data.instructorUserId) : undefined,
+    studentPhone: data.studentPhone ? String(data.studentPhone) : undefined,
+    slotId: data.slotId ? String(data.slotId) : undefined,
+    startsAt: toIsoString(data.startsAt),
+    endsAt: data.endsAt ? toIsoString(data.endsAt) : undefined,
+    branchId: data.branchId ? String(data.branchId) : undefined,
+    carLabel: data.carLabel ? String(data.carLabel) : undefined,
+    status: normalizeBookingStatus(data.status),
+    createdAt: toDate(data.createdAt),
+    updatedAt: toDate(data.updatedAt),
+    confirmedAt: toDate(data.confirmedAt),
+    completedAt: toDate(data.completedAt),
+    cancelledAt: toDate(data.cancelledAt),
+  };
+}
+
+export async function getAvailableBookingSlots(
+  instructorId: string,
+  daysAhead = 21,
+): Promise<BookingSlotDoc[]> {
+  try {
+    const now = Date.now();
+    const horizon = now + daysAhead * 24 * 60 * 60 * 1000;
+    const snap = await getDocs(
+      query(collection(db, "bookingSlots"), where("instructorId", "==", instructorId), limit(100)),
+    );
+
+    return snap.docs
+      .map((d) => bookingSlotFromDoc(d.id, d.data()))
+      .filter((slot) => slot.startsAt)
+      .filter((slot) => slot.status === "open" || slot.status === "available")
+      .filter((slot) => {
+        const time = Date.parse(slot.startsAt);
+        return Number.isFinite(time) && time >= now && time <= horizon;
+      })
+      .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  } catch {
+    return [];
+  }
+}
 
 export async function createBooking(params: {
   studentId: string;
@@ -764,14 +880,55 @@ export async function createBooking(params: {
   instructorName: string;
   instructorUserId?: string;
   studentPhone?: string;
+  slotId?: string;
   startsAt: string;
+  endsAt?: string;
+  branchId?: string;
+  carLabel?: string;
 }): Promise<string> {
-  const ref = await addDoc(collection(db, "bookings"), {
+  const bookingRef = doc(collection(db, "bookings"));
+  const payload = stripUndefined({
     ...params,
-    status: "pending",
+    status: "pending" satisfies BookingStatus,
     createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   });
-  return ref.id;
+
+  if (!params.slotId) {
+    await setDoc(bookingRef, payload);
+    return bookingRef.id;
+  }
+
+  const slotRef = doc(db, "bookingSlots", params.slotId);
+  await runTransaction(db, async (tx) => {
+    const slotSnap = await tx.get(slotRef);
+    if (!slotSnap.exists()) {
+      throw new Error("slot-not-found");
+    }
+    const slot = bookingSlotFromDoc(slotSnap.id, slotSnap.data());
+    if (slot.instructorId !== params.instructorId) {
+      throw new Error("slot-instructor-mismatch");
+    }
+    if (slot.startsAt && slot.startsAt !== params.startsAt) {
+      throw new Error("slot-time-mismatch");
+    }
+    if (slot.status !== "open" && slot.status !== "available") {
+      throw new Error("slot-unavailable");
+    }
+
+    tx.set(bookingRef, payload);
+    tx.update(
+      slotRef,
+      stripUndefined({
+        status: "booked",
+        bookedBy: params.studentId,
+        bookingId: bookingRef.id,
+        updatedAt: serverTimestamp(),
+      }),
+    );
+  });
+
+  return bookingRef.id;
 }
 
 export async function getMyBookings(studentId: string): Promise<BookingDoc[]> {
@@ -779,25 +936,22 @@ export async function getMyBookings(studentId: string): Promise<BookingDoc[]> {
     const snap = await getDocs(
       query(collection(db, "bookings"), where("studentId", "==", studentId), limit(50))
     );
-    const rows = snap.docs.map((d) => {
-      const data = d.data();
-      return {
-        id: d.id,
-        studentId: data.studentId ?? "",
-        studentName: data.studentName ?? "",
-        instructorId: data.instructorId ?? "",
-        instructorName: data.instructorName ?? "",
-        instructorUserId: data.instructorUserId,
-        studentPhone: data.studentPhone,
-        startsAt: data.startsAt ?? "",
-        status: data.status ?? "pending",
-        createdAt: toDate(data.createdAt),
-      };
-    });
+    const rows = snap.docs.map((d) => bookingFromDoc(d.id, d.data()));
     return rows.sort((a, b) => (a.startsAt < b.startsAt ? 1 : -1)); // soonest-newest, client-side
   } catch {
     return [];
   }
+}
+
+export async function updateBookingStatus(bookingId: string, status: BookingStatus) {
+  const patch = stripUndefined({
+    status,
+    updatedAt: serverTimestamp(),
+    confirmedAt: status === "confirmed" ? serverTimestamp() : undefined,
+    completedAt: status === "completed" ? serverTimestamp() : undefined,
+    cancelledAt: status === "cancelled" ? serverTimestamp() : undefined,
+  });
+  await updateDoc(doc(db, "bookings", bookingId), patch);
 }
 
 // Fetch bookings where the caller is the instructor. Supports both the new
@@ -825,21 +979,7 @@ export async function getInstructorBookings(instructorUserId: string): Promise<B
         seen.add(d.id);
         return true;
       })
-      .map((d) => {
-        const data = d.data();
-        return {
-          id: d.id,
-          studentId: data.studentId ?? "",
-          studentName: data.studentName ?? "",
-          instructorId: data.instructorId ?? "",
-          instructorName: data.instructorName ?? "",
-          instructorUserId: data.instructorUserId,
-          studentPhone: data.studentPhone,
-          startsAt: data.startsAt ?? "",
-          status: data.status ?? "pending",
-          createdAt: toDate(data.createdAt),
-        };
-      });
+      .map((d) => bookingFromDoc(d.id, d.data()));
     return rows.sort((a, b) => (a.startsAt < b.startsAt ? -1 : 1)); // chronological
   } catch {
     return [];

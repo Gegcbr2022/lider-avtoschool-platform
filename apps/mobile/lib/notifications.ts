@@ -449,7 +449,11 @@ export async function syncEngagementNotifications(userId: string): Promise<void>
 
   const bookings = await getMyBookings(userId).catch(() => []);
   const upcoming = bookings
-    .filter((booking) => booking.status !== "cancelled" && new Date(booking.startsAt).getTime() > Date.now())
+    .filter((booking) => (
+      booking.status !== "cancelled"
+      && booking.status !== "completed"
+      && new Date(booking.startsAt).getTime() > Date.now()
+    ))
     .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())
     .slice(0, 3);
 
