@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  Vibration,
   View,
 } from "react-native";
 import { router, useFocusEffect, type Href } from "expo-router";
@@ -27,15 +28,17 @@ import {
   EMPTY_STATS,
 } from "../../lib/firestore";
 
-// ─── ScalePressable — spring micro-interaction ─────────────────────────────────
+// ─── ScalePressable — spring micro-interaction + haptic ───────────────────────
 function ScalePressable({
   onPress,
   children,
   style,
+  haptic = false,
 }: {
   onPress: () => void;
   children: React.ReactNode;
   style?: object;
+  haptic?: boolean;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
 
@@ -57,7 +60,10 @@ function ScalePressable({
           bounciness: 4,
         }).start()
       }
-      onPress={onPress}
+      onPress={() => {
+        if (haptic) Vibration.vibrate(10);
+        onPress();
+      }}
     >
       <Animated.View style={[style, { transform: [{ scale }] }]}>
         {children}
@@ -263,12 +269,28 @@ function GuestHome() {
 // ─────────────────────────────────────────────────────────────────────────────
 // STUDENT HOME — E1 Monobank-UX hub
 // ─────────────────────────────────────────────────────────────────────────────
+// ─── Stagger animation hook ────────────────────────────────────────────────────
+function useStaggerAnim(count: number, delay = 60) {
+  const anims = useRef(Array.from({ length: count }, () => new Animated.Value(0))).current;
+  useEffect(() => {
+    Animated.stagger(
+      delay,
+      anims.map((a) =>
+        Animated.spring(a, { toValue: 1, useNativeDriver: true, speed: 14, bounciness: 6 })
+      )
+    ).start();
+  }, []);
+  return anims;
+}
+
 function StudentHome() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const [stats, setStats] = useState<UserStats>(EMPTY_STATS);
   const [bonus, setBonus] = useState<UserBonusDoc>(EMPTY_BONUS);
   const [refreshing, setRefreshing] = useState(false);
+  // 5 elements: hero card + 3 small action cards + hints card
+  const cardAnims = useStaggerAnim(5, 55);
 
   const load = async () => {
     if (!user?.id) return;
@@ -309,12 +331,39 @@ function StudentHome() {
   const category = user?.category ?? "B";
   const accuracyPct = stats.totalAnswered > 0 ? Math.round((stats.totalCorrect / stats.totalAnswered) * 100) : 0;
 
-  const QUICK_ACTIONS = [
-    { icon: "🎯", label: "Тренажер", route: "/(tabs)/tests" as Href },
-    { icon: "🤖", label: "Лідик", route: "/(tabs)/assistant" as Href },
-    { icon: "💬", label: "Чат", route: "/(tabs)/chat" as Href },
-    { icon: "🏆", label: "Клуб", route: "/(tabs)/club" as Href },
+  const SIDE_ACTIONS: {
+    icon: string; label: string; subtitle: string; route: Href; tint: string; tintSoft: string;
+  }[] = [
+    {
+      icon: "🤖",
+      label: "Лідик",
+      subtitle: "AI 24/7",
+      route: "/(tabs)/assistant" as Href,
+      tint: colors.info,
+      tintSoft: colors.infoSoft,
+    },
+    {
+      icon: "💬",
+      label: "Чат",
+      subtitle: "Підтримка",
+      route: "/(tabs)/chat" as Href,
+      tint: colors.success,
+      tintSoft: colors.successSoft,
+    },
+    {
+      icon: "🏆",
+      label: "Клуб",
+      subtitle: "Рейтинг",
+      route: "/(tabs)/club" as Href,
+      tint: colors.warning,
+      tintSoft: colors.warningSoft,
+    },
   ];
+
+  const heroProgress = stats.testsCompleted > 0 ? Math.min(100, stats.bestScorePct) : 0;
+  const heroHint = stats.testsCompleted === 0
+    ? "500 питань · офіційний іспит МВС"
+    : stageInfo.hint;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top"]}>
@@ -356,50 +405,151 @@ function StudentHome() {
           </View>
         </View>
 
-        {/* ── Quick actions row ─────────────────────────────────────────── */}
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          {QUICK_ACTIONS.map((action) => (
-            <ScalePressable key={action.label} onPress={() => router.push(action.route)} style={{ flex: 1, backgroundColor: colors.bgCard, borderRadius: radii.md, paddingVertical: 14, alignItems: "center", gap: 4, borderWidth: 1, borderColor: colors.border, ...shadows.card }}>
-              <Text style={{ fontSize: 24 }}>{action.icon}</Text>
-              <Text style={{ color: colors.textPrimary, fontSize: 11, fontWeight: "800" }}>{action.label}</Text>
-            </ScalePressable>
-          ))}
-        </View>
+        {/* ── Тренажёр ПДР — hero card ─────────────────────────────────────── */}
+        <Animated.View style={{
+          opacity: cardAnims[0],
+          transform: [{ scale: (cardAnims[0] as Animated.Value).interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }],
+        }}>
+          <ScalePressable
+            haptic
+            onPress={() => router.push("/(tabs)/tests")}
+            style={{
+              backgroundColor: colors.bgCard,
+              borderRadius: radii.lg,
+              padding: 18,
+              borderWidth: 1,
+              borderColor: colors.border,
+              ...shadows.card,
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ fontSize: 26 }}>🎯</Text>
+                </View>
+                <View>
+                  <Text style={{ color: colors.textPrimary, fontSize: 17, fontWeight: "900", letterSpacing: -0.3 }}>Тренажер ПДР</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "600", marginTop: 1 }}>
+                    {stats.testsCompleted > 0 ? `${stats.testsCompleted} тестів пройдено` : "500 питань · іспит МВС"}
+                  </Text>
+                </View>
+              </View>
+              <View style={{ alignItems: "flex-end" }}>
+                {stats.testsCompleted > 0 && (
+                  <View style={{ backgroundColor: colors.redSoft, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, marginBottom: 2 }}>
+                    <Text style={{ color: colors.red, fontSize: 13, fontWeight: "900" }}>{stats.bestScorePct}%</Text>
+                  </View>
+                )}
+                <Text style={{ color: colors.red, fontSize: 22, fontWeight: "900" }}>›</Text>
+              </View>
+            </View>
 
-        {/* ── Smart hints ───────────────────────────────────────────────── */}
-        <ScalePressable
-          onPress={() => router.push("/(tabs)/tests")}
-          style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.border, padding: 18, flexDirection: "row", alignItems: "center", gap: 14, ...shadows.card }}
-        >
-          <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: stageInfo.color + "18", alignItems: "center", justifyContent: "center" }}>
-            <Text style={{ fontSize: 26 }}>💡</Text>
+            <View style={{ marginBottom: 10 }}>
+              <View style={{ height: 7, borderRadius: 4, backgroundColor: colors.border, overflow: "hidden" }}>
+                <View style={{ width: `${heroProgress}%`, height: 7, backgroundColor: colors.red, borderRadius: 4 }} />
+              </View>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 5 }}>
+                <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "600" }}>
+                  {heroProgress > 0 ? "Найкращий результат" : "Почни перший тест"}
+                </Text>
+                {heroProgress > 0 && (
+                  <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: "700" }}>{heroProgress}%</Text>
+                )}
+              </View>
+            </View>
+
+            <View style={{ backgroundColor: colors.bgElevated, borderRadius: radii.md, padding: 10 }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "600", lineHeight: 17 }} numberOfLines={2}>
+                💡 {heroHint}
+              </Text>
+            </View>
+          </ScalePressable>
+        </Animated.View>
+
+        {/* ── 3 side actions ──────────────────────────────────────────────── */}
+        <Animated.View style={{
+          opacity: cardAnims[1],
+          transform: [{ scale: (cardAnims[1] as Animated.Value).interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }],
+        }}>
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            {SIDE_ACTIONS.map((action) => (
+              <ScalePressable
+                haptic
+                key={action.label}
+                onPress={() => router.push(action.route)}
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.bgCard,
+                  borderRadius: radii.lg,
+                  padding: 14,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  alignItems: "center",
+                  gap: 6,
+                  minHeight: 96,
+                  justifyContent: "center",
+                  ...shadows.card,
+                }}
+              >
+                <View style={{ width: 44, height: 44, borderRadius: 13, backgroundColor: action.tintSoft, alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ fontSize: 22 }}>{action.icon}</Text>
+                </View>
+                <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: "900", letterSpacing: -0.1, textAlign: "center" }}>{action.label}</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: "600" }}>{action.subtitle}</Text>
+              </ScalePressable>
+            ))}
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: stageInfo.color, fontSize: 10, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.8 }}>Що далі</Text>
-            <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "800", marginTop: 3, lineHeight: 20 }}>{stageInfo.hint}</Text>
-          </View>
-          <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
-        </ScalePressable>
+        </Animated.View>
+
+        {/* ── Що далі — smart hint ─────────────────────────────────────────── */}
+        <Animated.View style={{
+          opacity: cardAnims[2],
+          transform: [{ scale: (cardAnims[2] as Animated.Value).interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }],
+        }}>
+          <ScalePressable
+            onPress={() => router.push("/(tabs)/tests")}
+            style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.border, padding: 16, flexDirection: "row", alignItems: "center", gap: 12, ...shadows.card }}
+          >
+            <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: stageInfo.color + "18", alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ fontSize: 22 }}>🗓️</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: stageInfo.color, fontSize: 10, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.8 }}>Що далі</Text>
+              <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: "800", marginTop: 2, lineHeight: 19 }}>{stageInfo.hint}</Text>
+            </View>
+            <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
+          </ScalePressable>
+        </Animated.View>
 
         {/* ── Stats strip ───────────────────────────────────────────────── */}
         {stats.testsCompleted > 0 ? (
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            {[
-              { label: "Тестів", value: String(stats.testsCompleted), icon: "✅" },
-              { label: "Відповідей", value: String(stats.totalAnswered), icon: "📚" },
-              { label: "Найкращий", value: `${stats.bestScorePct}%`, icon: "🏆" },
-            ].map((s) => (
-              <View key={s.label} style={{ flex: 1, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 12, alignItems: "center", borderWidth: 1, borderColor: colors.border, gap: 3 }}>
-                <Text style={{ fontSize: 18 }}>{s.icon}</Text>
-                <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "900" }}>{s.value}</Text>
-                <Text style={{ color: colors.textTertiary, fontSize: 10, fontWeight: "700" }}>{s.label}</Text>
-              </View>
-            ))}
-          </View>
+          <Animated.View style={{
+            opacity: cardAnims[3],
+            transform: [{ scale: (cardAnims[3] as Animated.Value).interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] }) }],
+          }}>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {[
+                { label: "Тестів", value: String(stats.testsCompleted), icon: "✅" },
+                { label: "Відповідей", value: String(stats.totalAnswered), icon: "📚" },
+                { label: "Найкращий", value: `${stats.bestScorePct}%`, icon: "🏆" },
+              ].map((s) => (
+                <View key={s.label} style={{ flex: 1, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 12, alignItems: "center", borderWidth: 1, borderColor: colors.border, gap: 3 }}>
+                  <Text style={{ fontSize: 18 }}>{s.icon}</Text>
+                  <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "900" }}>{s.value}</Text>
+                  <Text style={{ color: colors.textTertiary, fontSize: 10, fontWeight: "700" }}>{s.label}</Text>
+                </View>
+              ))}
+            </View>
+          </Animated.View>
         ) : null}
 
         {/* ── Daily tip ─────────────────────────────────────────────────── */}
-        <DailyTip onPress={() => router.push("/(tabs)/tests")} />
+        <Animated.View style={{
+          opacity: cardAnims[4],
+          transform: [{ scale: (cardAnims[4] as Animated.Value).interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] }) }],
+        }}>
+          <DailyTip onPress={() => router.push("/(tabs)/tests")} />
+        </Animated.View>
 
         {/* ── Services ──────────────────────────────────────────────────── */}
         <Card style={{ borderRadius: radii.lg }}>
