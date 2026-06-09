@@ -68,7 +68,14 @@ export default function TabsLayout() {
       return;
     }
     return subscribeNotificationInbox((items) => {
-      setNotificationBadge(items.filter((item) => !item.readAt).length);
+      // Only actionable items drive the profile badge. Recurring engagement
+      // nudges (тест дня / серія) re-fire daily and aren't something the user
+      // "clears", so counting them produced a permanent phantom "1" badge.
+      setNotificationBadge(
+        items.filter(
+          (item) => !item.readAt && item.kind !== "daily-test" && item.kind !== "streak"
+        ).length
+      );
     });
   }, [mode, user?.isGuest]);
 
