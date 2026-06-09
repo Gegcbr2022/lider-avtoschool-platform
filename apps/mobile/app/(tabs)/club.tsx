@@ -941,11 +941,135 @@ function FeedView({ onBack }: { onBack: () => void }) {
 
 // ─── LEADERBOARD VIEW ────────────────────────────────────────────────────────
 
-function LeaderboardView({ currentUid, onBack }: { currentUid?: string; onBack: () => void }) {
+const LEADERBOARD_MIN_ACCURACY_ANSWERS = 20;
+
+type LeaderboardSortKey = "accuracy" | "answered" | "streak";
+type LeaderboardWindowKey = "week" | "month" | "all";
+type RankedLeaderboardEntry = {
+  entry: LeaderboardEntry;
+  rank: number;
+  isNovice: boolean;
+};
+
+const LEADERBOARD_SORT_OPTIONS: { key: LeaderboardSortKey; label: string }[] = [
+  { key: "accuracy", label: "Точність" },
+  { key: "answered", label: "Відповіді" },
+  { key: "streak", label: "Серія" },
+];
+
+const LEADERBOARD_WINDOW_OPTIONS: { key: LeaderboardWindowKey; label: string }[] = [
+  { key: "week", label: "Тиждень" },
+  { key: "month", label: "Місяць" },
+  { key: "all", label: "Всі" },
+];
+
+function estimateCorrectAnswers(entry: LeaderboardEntry): number {
+  return Math.round((entry.totalAnswered * entry.accuracyPct) / 100);
+}
+
+function getLeaderboardMetric(entry: LeaderboardEntry, sortBy: LeaderboardSortKey): string {
+  if (sortBy === "accuracy") return `${entry.accuracyPct}%`;
+  if (sortBy === "answered") return String(entry.totalAnswered);
+  return `${entry.streakDays}д`;
+}
+
+function getLeaderboardMetricLabel(sortBy: LeaderboardSortKey): string {
+  if (sortBy === "accuracy") return "точність";
+  if (sortBy === "answered") return "відповідей";
+  return "серія";
+}
+
+function sortByAnsweredThenAccuracy(a: LeaderboardEntry, b: LeaderboardEntry): number {
+  return b.totalAnswered - a.totalAnswered || b.accuracyPct - a.accuracyPct || b.streakDays - a.streakDays;
+}
+
+function compareLeaderboardEntries(sortBy: LeaderboardSortKey) {
+  return (a: LeaderboardEntry, b: LeaderboardEntry): number => {
+    if (sortBy === "accuracy") {
+      return b.accuracyPct - a.accuracyPct || sortByAnsweredThenAccuracy(a, b);
+    }
+    if (sortBy === "answered") {
+      return sortByAnsweredThenAccuracy(a, b);
+    }
+    return b.streakDays - a.streakDays || sortByAnsweredThenAccuracy(a, b);
+  };
+}
+
+function rankLeaderboardEntries(entries: LeaderboardEntry[], sortBy: LeaderboardSortKey): RankedLeaderboardEntry[] {
+  if (sortBy !== "accuracy") {
+    return [...entries].sort(compareLeaderboardEntries(sortBy)).map((entry, index) => ({
+      entry,
+      rank: index + 1,
+      isNovice: false,
+    }));
+  }
+
+  const eligible = entries
+    .filter((entry) => entry.totalAnswered >= LEADERBOARD_MIN_ACCURACY_ANSWERS)
+    .sort(compareLeaderboardEntries("accuracy"));
+  const novices = entries
+    .filter((entry) => entry.totalAnswered < LEADERBOARD_MIN_ACCURACY_ANSWERS)
+    .sort(sortByAnsweredThenAccuracy);
+
+  return [...eligible, ...novices].map((entry, index) => ({
+    entry,
+    rank: index + 1,
+    isNovice: entry.totalAnswered < LEADERBOARD_MIN_ACCURACY_ANSWERS,
+  }));
+}
+
+function getLeaderboardDelta(row: RankedLeaderboardEntry | undefined, rows: RankedLeaderboardEntry[], sortBy: LeaderboardSortKey): string {
+  if (!row) return "Пройди тест, щоб потрапити до рейтингу.";
+  if (row.isNovice) {
+    const left = Math.max(0, LEADERBOARD_MIN_ACCURACY_ANSWERS - row.entry.totalAnswered);
+    return left > 0 ? `+${left} відповідей до чесного заліку точності` : "Точність вже рахується у загальному заліку";
+  }
+
+  const prev = rows.find((candidate) => candidate.rank === row.rank - 1 && !candidate.isNovice);
+  if (!prev) return "Ти у верхівці. Тримай темп!";
+
+  const name = prev.entry.displayName || "учня";
+  if (sortBy === "accuracy") {
+    const delta = Math.max(1, prev.entry.accuracyPct - row.entry.accuracyPct + 1);
+    return `+${delta}% щоб обігнати ${name}`;
+  }
+  if (sortBy === "answered") {
+    const delta = Math.max(1, prev.entry.totalAnswered - row.entry.totalAnswered + 1);
+    return `+${delta} відповідей щоб обігнати ${name}`;
+  }
+  const delta = Math.max(1, prev.entry.streakDays - row.entry.streakDays + 1);
+  return `+${delta} дн. серії щоб обігнати ${name}`;
+}
+
+function getLidykLeaderboardMessage(row: RankedLeaderboardEntry | undefined, rows: RankedLeaderboardEntry[]): string {
+  if (!row) return "Пройди перший ПДР-тест, і я покажу твоє місце серед учнів.";
+  if (row.isNovice) {
+    const left = Math.max(0, LEADERBOARD_MIN_ACCURACY_ANSWERS - row.entry.totalAnswered);
+    return `Ще ${left} відповідей, і твоя точність піде у чесний залік. Без випадкових чемпіонів.`;
+  }
+  if (row.rank <= 10) return "Ти вже в топ-10. Один короткий тест сьогодні допоможе втримати позицію.";
+
+  const topTen = rows.find((candidate) => candidate.rank === 10 && !candidate.isNovice);
+  if (!topTen) return "Роби рівний темп: серія маленьких тестів сильніша за один марафон.";
+
+  const delta = Math.max(1, estimateCorrectAnswers(topTen.entry) - estimateCorrectAnswers(row.entry) + 1);
+  return `До топ-10 лишилось ${delta} правильних відповідей. Поїхали!`;
+}
+
+function LeaderboardView({
+  currentUid,
+  onBack,
+  onShareReferral,
+}: {
+  currentUid?: string;
+  onBack: () => void;
+  onShareReferral: () => void;
+}) {
   const { colors } = useTheme();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<"accuracy" | "answered" | "streak">("accuracy");
+  const [sortBy, setSortBy] = useState<LeaderboardSortKey>("accuracy");
+  const [timeWindow, setTimeWindow] = useState<LeaderboardWindowKey>("all");
 
   useEffect(() => {
     setLoading(true);
@@ -955,78 +1079,241 @@ function LeaderboardView({ currentUid, onBack }: { currentUid?: string; onBack: 
     }).catch(() => setLoading(false));
   }, []);
 
-  const sorted = [...entries].sort((a, b) => {
-    if (sortBy === "accuracy") return b.accuracyPct - a.accuracyPct;
-    if (sortBy === "answered") return b.totalAnswered - a.totalAnswered;
-    return b.streakDays - a.streakDays;
-  });
-
-  const MEDAL = ["🥇", "🥈", "🥉"];
+  // TODO: When Firestore stores weekly/monthly PDR aggregates, pass timeWindow
+  // into getLeaderboard. Until then all chips show the same real all-time data.
+  const ranked = useMemo(() => rankLeaderboardEntries(entries, sortBy), [entries, sortBy]);
+  const currentRow = ranked.find((row) => row.entry.uid === currentUid);
+  const podiumRows = ranked.filter((row) => !row.isNovice).slice(0, 3);
+  const podiumLayout = [podiumRows[1], podiumRows[0], podiumRows[2]].filter(Boolean) as RankedLeaderboardEntry[];
+  const podiumIds = new Set(podiumRows.map((row) => row.entry.uid));
+  const regularRows = ranked.filter((row) => !podiumIds.has(row.entry.uid) && !row.isNovice);
+  const noviceRows = ranked.filter((row) => row.isNovice);
+  const showSoloState = !loading && entries.length === 1;
+  const showEmptyState = !loading && entries.length === 0;
+  const soloIsMe = showSoloState && entries[0]?.uid === currentUid;
+  const stickyPlace = currentRow ? `#${currentRow.rank}` : "ще немає";
+  const stickyDelta = getLeaderboardDelta(currentRow, ranked, sortBy);
+  const lidykMessage = getLidykLeaderboardMessage(currentRow, ranked);
+  const metricLabel = getLeaderboardMetricLabel(sortBy);
+  const gold = "#F2C94C";
+  const goldSoft = "rgba(242, 201, 76, 0.14)";
 
   return (
     <View style={{ flex: 1 }}>
-      <SubHeader title="Рейтинг ПДР" subtitle="Топ учнів школи" onBack={onBack} />
+      <SubHeader title="Рейтинг ПДР" subtitle="Чесний залік учнів школи" onBack={onBack} />
 
-      {/* Sort chips */}
-      <View style={{ borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.bgCard }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: "row", gap: 8, paddingHorizontal: spacing.md, paddingVertical: 10 }}>
-          {([
-            { key: "accuracy", label: "Точність" },
-            { key: "answered", label: "Відповідей" },
-            { key: "streak", label: "Серія" },
-          ] as const).map((opt) => (
+      <View style={{ borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.bgCard, paddingHorizontal: spacing.md, paddingTop: 10, paddingBottom: 10, gap: 10 }}>
+        <View style={{ flexDirection: "row", borderRadius: 999, padding: 3, backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border }}>
+          {LEADERBOARD_WINDOW_OPTIONS.map((opt) => (
+            <TouchableOpacity
+              key={opt.key}
+              onPress={() => setTimeWindow(opt.key)}
+              style={{ flex: 1, borderRadius: 999, paddingVertical: 8, alignItems: "center", backgroundColor: timeWindow === opt.key ? colors.red : "transparent" }}
+            >
+              <Text style={{ fontSize: 12, fontWeight: "900", color: timeWindow === opt.key ? "#fff" : colors.textSecondary }}>{opt.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: "row", gap: 8 }}>
+          {LEADERBOARD_SORT_OPTIONS.map((opt) => (
             <TouchableOpacity
               key={opt.key}
               onPress={() => setSortBy(opt.key)}
-              style={{ borderRadius: 999, borderWidth: 1.5, paddingHorizontal: 14, paddingVertical: 8, borderColor: sortBy === opt.key ? colors.warning : colors.border, backgroundColor: sortBy === opt.key ? colors.warningSoft : colors.bg }}
+              style={{ borderRadius: 999, borderWidth: 1.5, paddingHorizontal: 14, paddingVertical: 8, borderColor: sortBy === opt.key ? colors.red : colors.border, backgroundColor: sortBy === opt.key ? colors.redSoft : colors.bg }}
             >
-              <Text style={{ fontSize: 13, fontWeight: "700", color: sortBy === opt.key ? colors.warning : colors.textSecondary }}>{opt.label}</Text>
+              <Text style={{ fontSize: 13, fontWeight: "800", color: sortBy === opt.key ? colors.red : colors.textSecondary }}>{opt.label}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
+        {timeWindow !== "all" ? (
+          <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "700" }}>
+            Періоди в підготовці: зараз показуємо реальні дані за весь час.
+          </Text>
+        ) : null}
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: spacing.md, paddingBottom: 120, gap: 10 }}>
+      <ScrollView contentContainerStyle={{ padding: spacing.md, paddingBottom: ranked.length > 1 ? 150 : 120, gap: spacing.md }}>
         {loading ? (
           <ActivityIndicator color={colors.red} style={{ marginTop: 40 }} />
-        ) : sorted.length === 0 ? (
-          <View style={{ alignItems: "center", marginTop: 60, gap: 12 }}>
-            <Text style={{ fontSize: 44 }}>🏆</Text>
-            <Text style={{ color: colors.textSecondary, fontSize: 15, textAlign: "center" }}>Рейтинг порожній. Пройди 5+ питань щоб потрапити до таблиці!</Text>
-          </View>
-        ) : (
-          sorted.map((entry, index) => {
-            const isMe = entry.uid === currentUid;
-            const medal = MEDAL[index] ?? `${index + 1}`;
-            const mainValue = sortBy === "accuracy" ? `${entry.accuracyPct}%` : sortBy === "answered" ? String(entry.totalAnswered) : `${entry.streakDays}д`;
-            const mainLabel = sortBy === "accuracy" ? "точність" : sortBy === "answered" ? "відповідей" : "серія";
-            return (
-              <View
-                key={entry.uid}
-                style={{ backgroundColor: isMe ? colors.warningSoft : colors.bgCard, borderRadius: radii.md, borderWidth: isMe ? 2 : 1, borderColor: isMe ? colors.warning : colors.border, padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }}
-              >
-                <Text style={{ fontSize: index < 3 ? 26 : 16, fontWeight: "900", width: 34, textAlign: "center", color: index < 3 ? colors.warning : colors.textTertiary }}>{medal}</Text>
-                <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: isMe ? colors.warningSoft : colors.bgElevated, alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ fontSize: 22 }}>{entry.avatarEmoji ?? "🚗"}</Text>
+        ) : showEmptyState || showSoloState ? (
+          <View style={{ alignItems: "center", marginTop: 44, gap: 14 }}>
+            <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.red + "33" }}>
+              <Text style={{ fontSize: 34 }}>🏁</Text>
+            </View>
+            <Text style={{ color: colors.textPrimary, fontSize: 20, fontWeight: "900", textAlign: "center" }}>
+              {showSoloState ? (soloIsMe ? "Ти поки єдиний у рейтингу" : "У рейтингу поки один учасник") : "Рейтинг поки порожній"}
+            </Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 21, textAlign: "center", maxWidth: 290 }}>
+              Запроси друзів, проходьте ПДР-тести разом і змагайтесь без випадкових чемпіонів.
+            </Text>
+            {showSoloState ? (
+              <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
+                <View style={{ borderRadius: 14, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, paddingVertical: 10, alignItems: "center" }}>
+                  <Text style={{ color: colors.textPrimary, fontSize: 20, fontWeight: "900" }}>{entries[0].totalAnswered}</Text>
+                  <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800" }}>відповідей</Text>
                 </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "900" }} numberOfLines={1}>{entry.displayName}</Text>
-                    {isMe ? <Text style={{ color: colors.warning, fontSize: 11, fontWeight: "900" }}>ВИ</Text> : null}
-                  </View>
-                  <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
-                    {[entry.city, entry.licenseCategory ? `кат. ${entry.licenseCategory}` : null].filter(Boolean).join(" · ")}
-                  </Text>
-                </View>
-                <View style={{ alignItems: "flex-end" }}>
-                  <Text style={{ color: index < 3 ? colors.warning : colors.textPrimary, fontSize: 20, fontWeight: "900" }}>{mainValue}</Text>
-                  <Text style={{ color: colors.textTertiary, fontSize: 11 }}>{mainLabel}</Text>
+                <View style={{ borderRadius: 14, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, paddingVertical: 10, alignItems: "center" }}>
+                  <Text style={{ color: colors.textPrimary, fontSize: 20, fontWeight: "900" }}>{entries[0].accuracyPct}%</Text>
+                  <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800" }}>точність</Text>
                 </View>
               </View>
-            );
-          })
+            ) : null}
+            <PrimaryButton onPress={onShareReferral} style={{ marginTop: 4 }}>
+              Запросити друзів
+            </PrimaryButton>
+            <MascotMessage
+              emoji="🚗"
+              title="Лідик"
+              message="Перший справжній суперник з'явиться швидше, якщо кинути запрошення просто зараз."
+              tone="error"
+            />
+          </View>
+        ) : (
+          <>
+            <MascotMessage emoji="🏎️" title="Лідик тримає темп" message={lidykMessage} tone="error" />
+
+            {podiumLayout.length > 0 ? (
+              <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8, minHeight: 188 }}>
+                {podiumLayout.map((row) => {
+                  const isFirst = row.rank === 1;
+                  const isMe = row.entry.uid === currentUid;
+                  const medal = row.rank === 1 ? "🥇" : row.rank === 2 ? "🥈" : "🥉";
+                  return (
+                    <View
+                      key={row.entry.uid}
+                      style={{
+                        flex: 1,
+                        minHeight: isFirst ? 176 : 146,
+                        borderRadius: 22,
+                        padding: 12,
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        backgroundColor: isFirst ? goldSoft : colors.bgCard,
+                        borderWidth: isMe || isFirst ? 2 : 1,
+                        borderColor: isMe ? colors.red : isFirst ? gold : colors.border,
+                        marginBottom: isFirst ? 0 : 12,
+                      }}
+                    >
+                      <Text style={{ fontSize: isFirst ? 28 : 23 }}>{medal}</Text>
+                      <View style={{ width: isFirst ? 58 : 48, height: isFirst ? 58 : 48, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: isMe ? colors.redSoft : colors.bgElevated, borderWidth: 1, borderColor: isFirst ? gold : colors.border }}>
+                        <Text style={{ fontSize: isFirst ? 29 : 23 }}>{row.entry.avatarEmoji ?? "🚗"}</Text>
+                      </View>
+                      <View style={{ alignItems: "center", width: "100%" }}>
+                        <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: "900", textAlign: "center" }} numberOfLines={1}>
+                          {row.entry.displayName}
+                        </Text>
+                        {isMe ? <Text style={{ color: colors.red, fontSize: 10, fontWeight: "900", marginTop: 2 }}>ВИ</Text> : null}
+                      </View>
+                      <View style={{ alignItems: "center" }}>
+                        <Text style={{ color: isFirst ? gold : colors.red, fontSize: isFirst ? 26 : 21, fontWeight: "900" }}>
+                          {getLeaderboardMetric(row.entry, sortBy)}
+                        </Text>
+                        <Text style={{ color: colors.textTertiary, fontSize: 10, fontWeight: "800" }}>{metricLabel}</Text>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : (
+              <View style={{ borderRadius: radii.md, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, padding: 16, gap: 6 }}>
+                <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "900" }}>Залік точності ще формується</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 20 }}>
+                  Для подіуму потрібно щонайменше {LEADERBOARD_MIN_ACCURACY_ANSWERS} відповідей. Нижче — ліга «Новачки».
+                </Text>
+              </View>
+            )}
+
+            {regularRows.length > 0 ? (
+              <View style={{ gap: 8 }}>
+                <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "900", textTransform: "uppercase" }}>Місця 4+</Text>
+                {regularRows.map((row) => {
+                  const isMe = row.entry.uid === currentUid;
+                  return (
+                    <View
+                      key={row.entry.uid}
+                      style={{ backgroundColor: isMe ? colors.redSoft : colors.bgCard, borderRadius: radii.sm, borderWidth: isMe ? 2 : 1, borderColor: isMe ? colors.red : colors.border, padding: 12, flexDirection: "row", alignItems: "center", gap: 10 }}
+                    >
+                      <Text style={{ fontSize: 15, fontWeight: "900", width: 32, textAlign: "center", color: isMe ? colors.red : colors.textTertiary }}>#{row.rank}</Text>
+                      <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.bgElevated, alignItems: "center", justifyContent: "center" }}>
+                        <Text style={{ fontSize: 20 }}>{row.entry.avatarEmoji ?? "🚗"}</Text>
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                          <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "900", flexShrink: 1 }} numberOfLines={1}>{row.entry.displayName}</Text>
+                          {isMe ? <Text style={{ color: colors.red, fontSize: 10, fontWeight: "900" }}>ВИ</Text> : null}
+                        </View>
+                        <Text style={{ color: colors.textTertiary, fontSize: 11, marginTop: 2 }} numberOfLines={1}>
+                          {[row.entry.city, row.entry.licenseCategory ? `кат. ${row.entry.licenseCategory}` : null].filter(Boolean).join(" · ") || `${row.entry.totalAnswered} відповідей`}
+                        </Text>
+                      </View>
+                      <View style={{ alignItems: "flex-end" }}>
+                        <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "900" }}>{getLeaderboardMetric(row.entry, sortBy)}</Text>
+                        <Text style={{ color: colors.textTertiary, fontSize: 10, fontWeight: "800" }}>{metricLabel}</Text>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : null}
+
+            {noviceRows.length > 0 ? (
+              <View style={{ gap: 8 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                  <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "900", textTransform: "uppercase" }}>Ліга Новачки</Text>
+                  <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800" }}>до {LEADERBOARD_MIN_ACCURACY_ANSWERS} відповідей</Text>
+                </View>
+                {noviceRows.map((row) => {
+                  const isMe = row.entry.uid === currentUid;
+                  const left = Math.max(0, LEADERBOARD_MIN_ACCURACY_ANSWERS - row.entry.totalAnswered);
+                  return (
+                    <View
+                      key={row.entry.uid}
+                      style={{ backgroundColor: isMe ? colors.redSoft : colors.bgCard, borderRadius: radii.sm, borderWidth: isMe ? 2 : 1, borderColor: isMe ? colors.red : colors.border, padding: 12, flexDirection: "row", alignItems: "center", gap: 10 }}
+                    >
+                      <Text style={{ fontSize: 15, fontWeight: "900", width: 32, textAlign: "center", color: colors.textTertiary }}>#{row.rank}</Text>
+                      <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.bgElevated, alignItems: "center", justifyContent: "center" }}>
+                        <Text style={{ fontSize: 20 }}>{row.entry.avatarEmoji ?? "🚗"}</Text>
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                          <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "900", flexShrink: 1 }} numberOfLines={1}>{row.entry.displayName}</Text>
+                          {isMe ? <Text style={{ color: colors.red, fontSize: 10, fontWeight: "900" }}>ВИ</Text> : null}
+                        </View>
+                        <Text style={{ color: colors.textTertiary, fontSize: 11, marginTop: 2 }}>
+                          +{left} відповідей до заліку точності
+                        </Text>
+                      </View>
+                      <View style={{ alignItems: "flex-end" }}>
+                        <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "900" }}>{row.entry.totalAnswered}</Text>
+                        <Text style={{ color: colors.textTertiary, fontSize: 10, fontWeight: "800" }}>відповідей</Text>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : null}
+          </>
         )}
       </ScrollView>
+
+      {!loading && !showEmptyState && !showSoloState ? (
+        <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: spacing.md, paddingTop: 10, paddingBottom: 14, backgroundColor: colors.bg, borderTopWidth: 1, borderTopColor: colors.border }}>
+          <View style={{ borderRadius: radii.md, backgroundColor: colors.bgCard, borderWidth: 1.5, borderColor: colors.red, padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ fontSize: 20 }}>🎯</Text>
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "900" }}>Ваше місце: {stickyPlace}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "700", marginTop: 2 }} numberOfLines={1}>
+                {stickyDelta}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={onShareReferral} style={{ borderRadius: 999, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: colors.red }}>
+              <Text style={{ color: "#fff", fontSize: 12, fontWeight: "900" }}>Друзі</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -1217,7 +1504,7 @@ export default function ClubTab() {
   );
   if (view === "leaderboard") return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <LeaderboardView currentUid={user?.id} onBack={() => setView("main")} />
+      <LeaderboardView currentUid={user?.id} onBack={() => setView("main")} onShareReferral={handleReferral} />
     </SafeAreaView>
   );
 
