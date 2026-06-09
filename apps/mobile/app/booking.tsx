@@ -16,6 +16,7 @@ import {
 } from "../lib/firestore";
 import { scheduleLocalNotification, syncEngagementNotifications } from "../lib/notifications";
 import { useTheme, radii, spacing } from "../lib/theme";
+import { crashError, crashLog } from "../lib/crashlytics";
 
 const WEEKDAYS = ["Нд", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
 
@@ -163,8 +164,10 @@ export default function BookingScreen() {
       setSelSlot(null);
       setSlots([]);
       await reloadBookings();
+      crashLog(`booking:created instructor=${selInstructor.id} slot=${selSlot.id}`);
       Alert.alert("Записано!", "Інструктор підтвердить заняття. Ми нагадаємо перед виїздом.");
-    } catch {
+    } catch (e) {
+      crashError(e, "booking:create");
       Alert.alert("Слот уже недоступний", "Оберіть інший час або спробуйте оновити розклад.");
     } finally {
       setBooking(false);

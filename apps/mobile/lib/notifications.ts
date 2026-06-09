@@ -11,6 +11,7 @@ import notifee, {
 } from "@notifee/react-native";
 import { Platform } from "react-native";
 import { getMyBookings, getUserStats, upsertUserProfile, type BookingDoc } from "./firestore";
+import { crashError, crashLog } from "./crashlytics";
 
 export type NotificationPermissionStatus = "granted" | "denied" | "undetermined";
 
@@ -244,8 +245,10 @@ export async function registerPushToken(userId: string): Promise<string | null> 
     const pushToken = await messaging().getToken();
     if (!pushToken) return null;
     await upsertUserProfile(userId, { pushToken });
+    crashLog("push:token_registered");
     return pushToken;
-  } catch {
+  } catch (e) {
+    crashError(e, "push:register_token");
     return null;
   }
 }
@@ -273,7 +276,9 @@ export function setupNotificationListeners(
   unsubscribers.push(
     messaging().onNotificationOpenedApp((message) => {
       const data = normalizeData(message.data);
-      onResponse?.(responseFromData(data));
+      const response = responseFromData(data);
+      crashLog(`push:opened kind=${response.kind}`);
+      onResponse?.(response);
     })
   );
 

@@ -45,6 +45,7 @@ import {
 import { uploadChatFile, uploadChatImage } from "../../lib/storage";
 import { useTheme, radii, spacing } from "../../lib/theme";
 import { useNetworkStatus } from "../../lib/useNetwork";
+import { crashError, crashLog } from "../../lib/crashlytics";
 
 function formatTime(d: Date | null): string {
   if (!d) return "";
@@ -298,12 +299,14 @@ function Conversation({
     setSending(true);
     try {
       const messageId = await sendMessage(conversationId, { senderId: user.id, senderName: user.name, senderRole: user.role, senderPhone: user.phone, text });
+      crashLog(`chat:message_sent type=${chat.type}`);
       void notifyChat({
         conversationId, messageId, userId: user.id, userName: user.name, text,
         conversationType: chat.type, userPhone: user.phone, userEmail: user.email,
         userCity: user.city, userCategory: user.category,
       });
-    } catch {
+    } catch (e) {
+      crashError(e, "chat:send_message");
       setError("Повідомлення не надіслано. Спробуй ще раз.");
       setInput(text);
     } finally {

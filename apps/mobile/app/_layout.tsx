@@ -41,6 +41,7 @@ import { API_BASE } from "../lib/api";
 import { ThemeProvider, darkColors as colors, radii, spacing } from "../lib/theme";
 import { configureGoogleSignIn, signInWithGoogle as googleSignIn, signOutFromGoogle } from "../lib/googleAuth";
 import { getUserProfile, upsertUserProfile } from "../lib/firestore";
+import { crashAttr, crashError, crashLog, crashSetUser } from "../lib/crashlytics";
 
 // ─── Avatar emoji pool ────────────────────────────────────────────────────────
 const AVATAR_EMOJIS = ["🚗", "🏎️", "🚦", "🛞", "🏁", "🚘", "🧭", "⭐", "🔥", "😎", "🚙", "🛣️"];
@@ -150,8 +151,10 @@ export default function RootLayout() {
         setUser(appUser);
         setMode(fbUser.isAnonymous ? "guest" : "authenticated");
         if (!fbUser.isAnonymous) {
+          crashSetUser(fbUser.uid);
           void getUserProfile(fbUser.uid).then((profile) => {
             const role = (profile?.role ?? "student") as UserRole;
+            crashAttr("user_role", role);
             setUser({
               ...appUser,
               name: profile?.name || appUser.name,
@@ -221,8 +224,10 @@ export default function RootLayout() {
   const signIn = useCallback(async (email: string, password: string): Promise<boolean> => {
     try {
       await signInWithEmailAndPassword(firebaseAuth, email, password);
+      crashLog("auth:signin_success");
       return true;
-    } catch {
+    } catch (e) {
+      crashError(e, "auth:signin");
       return false;
     }
   }, []);
@@ -232,6 +237,7 @@ export default function RootLayout() {
       const cred = await createUserWithEmailAndPassword(firebaseAuth, data.email, data.password);
       await updateProfile(cred.user, { displayName: data.name });
       sendEmailVerification(cred.user).catch(() => {});
+      crashLog("auth:signup_success");
       fetch(`${API_BASE}/leads`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -247,13 +253,17 @@ export default function RootLayout() {
         }),
       }).catch(() => {});
       return true;
-    } catch {
+    } catch (e) {
+      crashError(e, "auth:signup");
       return false;
     }
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
-    return await googleSignIn();
+    const result = await googleSignIn();
+    if (result.success) crashLog("auth:google_success");
+    else if (result.error) crashError(new Error(result.error), "auth:google");
+    return result;
   }, []);
 
   const forgotPassword = useCallback(async (email: string): Promise<{ sent: boolean; error?: string }> => {
@@ -284,7 +294,9 @@ export default function RootLayout() {
     try {
       await signOutFromGoogle();
       await firebaseSignOut(firebaseAuth);
-    } catch {
+      crashLog("auth:signout");
+    } catch (e) {
+      crashError(e, "auth:signout");
       setUser(null);
       setMode("unauthenticated");
       router.replace("/onboarding");

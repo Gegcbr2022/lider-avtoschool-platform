@@ -17,6 +17,7 @@ import { askLidyk } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { useTheme, radii, spacing } from "../../lib/theme";
 import { useNetworkStatus } from "../../lib/useNetwork";
+import { crashError, crashLog } from "../../lib/crashlytics";
 
 type Message = { role: "user" | "assistant"; text: string; fallback?: boolean; ts: number };
 type MascotState = "idle" | "thinking" | "happy" | "sad" | "offline";
@@ -89,24 +90,24 @@ export default function AssistantTab() {
       const res = await askLidyk(q, user);
 
       if (res.mode === "openai") {
-        // Full success — OpenAI answered
+        crashLog("ai:lidyk_success");
         setMessages((prev) => [...prev, { role: "assistant", text: res.answer, ts: Date.now() }]);
         setMascotState("happy");
       } else if (res.mode === "local-fallback") {
-        // No OpenAI key — using local answers
+        crashLog("ai:lidyk_local_fallback");
         setMessages((prev) => [...prev, { role: "assistant", text: res.answer, fallback: true, ts: Date.now() }]);
         setMascotState("offline");
       } else if (res.mode === "guard") {
-        // Off-topic question blocked
         setMessages((prev) => [...prev, { role: "assistant", text: res.answer, ts: Date.now() }]);
         setMascotState("idle");
       } else {
-        // openai-fallback or unknown — API returned fallback
+        crashLog(`ai:lidyk_fallback mode=${res.mode}`);
         setMessages((prev) => [...prev, { role: "assistant", text: res.answer, fallback: true, ts: Date.now() }]);
         setMascotState("sad");
       }
     } catch (err: unknown) {
       const isTimeout = err instanceof Error && err.name === "AbortError";
+      crashError(err instanceof Error ? err : new Error(String(err)), isTimeout ? "ai:lidyk_timeout" : "ai:lidyk_error");
       setMessages((prev) => [
         ...prev,
         {
