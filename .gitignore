@@ -54,6 +54,17 @@ QUICK_CAROUSEL_TEST.ps1
 *.log
 gradle_build.log
 
+# QA / design artifacts in repo root (Opus/Sonnet review captures)
+/qa_*.png
+/bp-*.png
+/hero-*.png
+/360-hero*.png
+/full-page.png
+
 # Dev tooling / Gemini artifacts
 .agents/
+.playwright-mcp/
 firebase.json.bak
+
+# Strategy knowledge base (lives in C:\AI_Brain, not vendored into app repo)
+apps/AI_Brain/
