@@ -2,8 +2,9 @@ import cors from "cors";
 import { randomUUID } from "crypto";
 import express from "express";
 import { getApps, initializeApp } from "firebase-admin/app";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, type DocumentSnapshot } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
+import { onDocumentCreated, onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { onRequest } from "firebase-functions/v2/https";
 import nodemailer from "nodemailer";
 import {
@@ -45,6 +46,18 @@ type EmailNotificationResult = {
   reason?: string;
   messageId?: string;
   error?: string;
+};
+
+type BookingStatus = "pending" | "confirmed" | "completed" | "cancelled";
+
+type BookingRecord = {
+  id: string;
+  studentId: string;
+  studentName: string;
+  instructorName: string;
+  instructorUserId?: string;
+  startsAt: string;
+  status: BookingStatus;
 };
 
 app.use(
@@ -1627,6 +1640,77 @@ function compactRecord<T extends Record<string, unknown>>(record: T) {
   return Object.fromEntries(Object.entries(record).filter(([, value]) => value !== undefined));
 }
 
+function normalizeBookingStatus(value: unknown): BookingStatus {
+  if (value === "confirmed" || value === "completed" || value === "cancelled") {
+    return value;
+  }
+  return "pending";
+}
+
+function bookingFromSnapshot(snapshot: DocumentSnapshot | undefined, bookingId: string): BookingRecord | null {
+  if (!snapshot?.exists) return null;
+  const data = snapshot.data() ?? {};
+  const studentId = typeof data.studentId === "string" ? data.studentId : "";
+  const instructorUserId = typeof data.instructorUserId === "string" ? data.instructorUserId : undefined;
+  const startsAt = typeof data.startsAt === "string" ? data.startsAt : "";
+  if (!studentId || !startsAt) return null;
+  return {
+    id: bookingId,
+    studentId,
+    studentName: typeof data.studentName === "string" && data.studentName.trim() ? data.studentName.trim() : "Учень",
+    instructorName: typeof data.instructorName === "string" && data.instructorName.trim() ? data.instructorName.trim() : "Інструктор",
+    instructorUserId,
+    startsAt,
+    status: normalizeBookingStatus(data.status),
+  };
+}
+
+function formatBookingPushTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleString("uk-UA", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Kyiv",
+  });
+}
+
+async function sendBookingCreatedPush(booking: BookingRecord) {
+  if (!booking.instructorUserId) return;
+  await sendFCMPush(
+    booking.instructorUserId,
+    "Новий запит на практику",
+    `${booking.studentName}: ${formatBookingPushTime(booking.startsAt)}`,
+    {
+      bookingId: booking.id,
+      role: "instructor",
+      status: "pending",
+      type: "booking",
+    }
+  );
+}
+
+async function sendBookingStatusPush(booking: BookingRecord) {
+  if (booking.status === "pending") return;
+  const titleByStatus: Record<Exclude<BookingStatus, "pending">, string> = {
+    confirmed: "Заняття підтверджено",
+    completed: "Заняття завершено",
+    cancelled: "Заняття скасовано",
+  };
+  await sendFCMPush(
+    booking.studentId,
+    titleByStatus[booking.status],
+    `${booking.instructorName}: ${formatBookingPushTime(booking.startsAt)}`,
+    {
+      bookingId: booking.id,
+      status: booking.status,
+      type: "booking",
+    }
+  );
+}
+
 function escapeHtml(value: string) {
   return value
     .replace(/&/g, "&amp;")
@@ -1642,4 +1726,31 @@ export const api = onRequest(
     maxInstances: 10
   },
   app
+);
+
+export const onBookingCreated = onDocumentCreated(
+  {
+    document: "bookings/{bookingId}",
+    region: "europe-west1",
+    maxInstances: 10,
+  },
+  async (event) => {
+    const booking = bookingFromSnapshot(event.data, event.params.bookingId);
+    if (!booking) return;
+    await sendBookingCreatedPush(booking);
+  }
+);
+
+export const onBookingStatusChanged = onDocumentUpdated(
+  {
+    document: "bookings/{bookingId}",
+    region: "europe-west1",
+    maxInstances: 10,
+  },
+  async (event) => {
+    const before = bookingFromSnapshot(event.data?.before, event.params.bookingId);
+    const after = bookingFromSnapshot(event.data?.after, event.params.bookingId);
+    if (!before || !after || before.status === after.status) return;
+    await sendBookingStatusPush(after);
+  }
 );
