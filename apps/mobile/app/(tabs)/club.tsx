@@ -1703,15 +1703,15 @@ export default function ClubTab() {
 
           {/* Leaderboard — visible to all */}
           <Pressable onPress={() => setView("leaderboard")}>
-            <View style={{ backgroundColor: "#f59e0b18", borderRadius: radii.md, borderWidth: 1, borderColor: "#f59e0b44", padding: 16, ...shadows.card, flexDirection: "row", alignItems: "center", gap: 14 }}>
-              <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: "#f59e0b22", alignItems: "center", justifyContent: "center" }}>
+            <View style={{ backgroundColor: colors.warningSoft, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, padding: 16, ...shadows.card, flexDirection: "row", alignItems: "center", gap: 14 }}>
+              <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: colors.warningSoft, alignItems: "center", justifyContent: "center" }}>
                 <Text style={{ fontSize: 26 }}>🏆</Text>
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 16, fontWeight: "900", color: colors.textPrimary }}>Рейтинг ПДР</Text>
                 <Text style={{ marginTop: 3, fontSize: 13, color: colors.textSecondary }}>Топ учнів за точністю відповідей</Text>
               </View>
-              <Text style={{ fontSize: 20, color: "#f59e0b", fontWeight: "900" }}>›</Text>
+              <Text style={{ fontSize: 20, color: colors.warning, fontWeight: "900" }}>›</Text>
             </View>
           </Pressable>
 
