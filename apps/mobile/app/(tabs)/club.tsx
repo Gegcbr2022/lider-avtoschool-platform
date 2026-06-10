@@ -1070,6 +1070,7 @@ function LeaderboardView({
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<LeaderboardSortKey>("accuracy");
   const [timeWindow, setTimeWindow] = useState<LeaderboardWindowKey>("all");
+  const rowAnims = useRef<Animated.Value[]>([]);
 
   useEffect(() => {
     setLoading(true);
@@ -1078,6 +1079,19 @@ function LeaderboardView({
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
+
+  // Stagger rows in after data loads
+  useEffect(() => {
+    if (loading) return;
+    const total = Math.min(30, 2 + entries.length);
+    rowAnims.current = Array.from({ length: total }, () => new Animated.Value(0));
+    Animated.stagger(
+      40,
+      rowAnims.current.map((a) =>
+        Animated.spring(a, { toValue: 1, useNativeDriver: true, speed: 18, bounciness: 3 })
+      )
+    ).start();
+  }, [loading]);
 
   // TODO: When Firestore stores weekly/monthly PDR aggregates, pass timeWindow
   // into getLeaderboard. Until then all chips show the same real all-time data.
@@ -1097,6 +1111,15 @@ function LeaderboardView({
   const metricLabel = getLeaderboardMetricLabel(sortBy);
   const gold = "#F2C94C";
   const goldSoft = "rgba(242, 201, 76, 0.14)";
+
+  const ra = (idx: number): object => {
+    const a = rowAnims.current[idx];
+    if (!a) return {};
+    return {
+      opacity: a,
+      transform: [{ translateY: (a as Animated.Value).interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) }],
+    };
+  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -1167,128 +1190,134 @@ function LeaderboardView({
           </View>
         ) : (
           <>
-            <MascotMessage emoji="🏎️" title="Лідик тримає темп" message={lidykMessage} tone="error" />
+            <Animated.View style={ra(0)}>
+              <MascotMessage emoji="🏎️" title="Лідик тримає темп" message={lidykMessage} tone="error" />
+            </Animated.View>
 
-            {podiumLayout.length > 0 ? (
-              <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8, minHeight: 188 }}>
-                {podiumLayout.map((row) => {
-                  const isFirst = row.rank === 1;
-                  const isMe = row.entry.uid === currentUid;
-                  const medal = row.rank === 1 ? "🥇" : row.rank === 2 ? "🥈" : "🥉";
-                  return (
-                    <View
-                      key={row.entry.uid}
-                      style={{
-                        flex: 1,
-                        minHeight: isFirst ? 176 : 146,
-                        borderRadius: 22,
-                        padding: 12,
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        backgroundColor: isFirst ? goldSoft : colors.bgCard,
-                        borderWidth: isMe || isFirst ? 2 : 1,
-                        borderColor: isMe ? colors.red : isFirst ? gold : colors.border,
-                        marginBottom: isFirst ? 0 : 12,
-                      }}
-                    >
-                      <Text style={{ fontSize: isFirst ? 28 : 23 }}>{medal}</Text>
-                      <View style={{ width: isFirst ? 58 : 48, height: isFirst ? 58 : 48, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: isMe ? colors.redSoft : colors.bgElevated, borderWidth: 1, borderColor: isFirst ? gold : colors.border }}>
-                        <Text style={{ fontSize: isFirst ? 29 : 23 }}>{row.entry.avatarEmoji ?? "🚗"}</Text>
+            <Animated.View style={ra(1)}>
+                    {podiumLayout.length > 0 ? (
+                      <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8, minHeight: 188 }}>
+                        {podiumLayout.map((row) => {
+                          const isFirst = row.rank === 1;
+                          const isMe = row.entry.uid === currentUid;
+                          const medal = row.rank === 1 ? "🥇" : row.rank === 2 ? "🥈" : "🥉";
+                          return (
+                            <View
+                              key={row.entry.uid}
+                              style={{
+                                flex: 1,
+                                minHeight: isFirst ? 176 : 146,
+                                borderRadius: 22,
+                                padding: 12,
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                backgroundColor: isFirst ? goldSoft : colors.bgCard,
+                                borderWidth: isMe || isFirst ? 2 : 1,
+                                borderColor: isMe ? colors.red : isFirst ? gold : colors.border,
+                                marginBottom: isFirst ? 0 : 12,
+                              }}
+                            >
+                              <Text style={{ fontSize: isFirst ? 28 : 23 }}>{medal}</Text>
+                              <View style={{ width: isFirst ? 58 : 48, height: isFirst ? 58 : 48, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: isMe ? colors.redSoft : colors.bgElevated, borderWidth: 1, borderColor: isFirst ? gold : colors.border }}>
+                                <Text style={{ fontSize: isFirst ? 29 : 23 }}>{row.entry.avatarEmoji ?? "🚗"}</Text>
+                              </View>
+                              <View style={{ alignItems: "center", width: "100%", marginTop: 4 }}>
+                                <Text style={{ color: colors.textPrimary, fontSize: isFirst ? 14 : 12, fontWeight: "900", textAlign: "center", letterSpacing: -0.2 }} numberOfLines={1}>
+                                  {row.entry.displayName}
+                                </Text>
+                                {isMe ? <Text style={{ color: colors.red, fontSize: 10, fontWeight: "900", marginTop: 2, letterSpacing: 0.5 }}>ВИ</Text> : null}
+                              </View>
+                              <View style={{ alignItems: "center", marginTop: 6 }}>
+                                <Text style={{ color: isFirst ? gold : colors.red, fontSize: isFirst ? 28 : 22, fontWeight: "900", letterSpacing: -1 }}>
+                                  {getLeaderboardMetric(row.entry, sortBy)}
+                                </Text>
+                                <Text style={{ color: isFirst ? "rgba(242, 201, 76, 0.8)" : colors.textTertiary, fontSize: 10, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.5, marginTop: -2 }}>{metricLabel}</Text>
+                              </View>
+                            </View>
+                          );
+                        })}
                       </View>
-                      <View style={{ alignItems: "center", width: "100%", marginTop: 4 }}>
-                        <Text style={{ color: colors.textPrimary, fontSize: isFirst ? 14 : 12, fontWeight: "900", textAlign: "center", letterSpacing: -0.2 }} numberOfLines={1}>
-                          {row.entry.displayName}
+                    ) : (
+                      <View style={{ borderRadius: radii.md, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, padding: 16, gap: 6 }}>
+                        <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "900" }}>Залік точності ще формується</Text>
+                        <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 20 }}>
+                          Для подіуму потрібно щонайменше {LEADERBOARD_MIN_ACCURACY_ANSWERS} відповідей. Нижче — ліга «Новачки».
                         </Text>
-                        {isMe ? <Text style={{ color: colors.red, fontSize: 10, fontWeight: "900", marginTop: 2, letterSpacing: 0.5 }}>ВИ</Text> : null}
                       </View>
-                      <View style={{ alignItems: "center", marginTop: 6 }}>
-                        <Text style={{ color: isFirst ? gold : colors.red, fontSize: isFirst ? 28 : 22, fontWeight: "900", letterSpacing: -1 }}>
-                          {getLeaderboardMetric(row.entry, sortBy)}
-                        </Text>
-                        <Text style={{ color: isFirst ? "rgba(242, 201, 76, 0.8)" : colors.textTertiary, fontSize: 10, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.5, marginTop: -2 }}>{metricLabel}</Text>
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-            ) : (
-              <View style={{ borderRadius: radii.md, backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, padding: 16, gap: 6 }}>
-                <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "900" }}>Залік точності ще формується</Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 20 }}>
-                  Для подіуму потрібно щонайменше {LEADERBOARD_MIN_ACCURACY_ANSWERS} відповідей. Нижче — ліга «Новачки».
-                </Text>
-              </View>
-            )}
+                    )}
+                  </Animated.View>
 
-            {regularRows.length > 0 ? (
-              <View style={{ gap: 8 }}>
-                <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "900", textTransform: "uppercase" }}>Місця 4+</Text>
-                {regularRows.map((row) => {
-                  const isMe = row.entry.uid === currentUid;
-                  return (
-                    <View
-                      key={row.entry.uid}
-                      style={{ backgroundColor: isMe ? colors.redSoft : colors.bgCard, borderRadius: radii.sm, borderWidth: isMe ? 2 : 1, borderColor: isMe ? colors.red : colors.border, padding: 12, flexDirection: "row", alignItems: "center", gap: 10 }}
-                    >
-                      <Text style={{ fontSize: 15, fontWeight: "900", width: 32, textAlign: "center", color: isMe ? colors.red : colors.textTertiary }}>#{row.rank}</Text>
-                      <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.bgElevated, alignItems: "center", justifyContent: "center" }}>
-                        <Text style={{ fontSize: 20 }}>{row.entry.avatarEmoji ?? "🚗"}</Text>
-                      </View>
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                          <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "900", flexShrink: 1 }} numberOfLines={1}>{row.entry.displayName}</Text>
-                          {isMe ? <Text style={{ color: colors.red, fontSize: 10, fontWeight: "900" }}>ВИ</Text> : null}
-                        </View>
-                        <Text style={{ color: colors.textTertiary, fontSize: 11, marginTop: 2 }} numberOfLines={1}>
-                          {[row.entry.city, row.entry.licenseCategory ? `кат. ${row.entry.licenseCategory}` : null].filter(Boolean).join(" · ") || `${row.entry.totalAnswered} відповідей`}
-                        </Text>
-                      </View>
-                      <View style={{ alignItems: "flex-end" }}>
-                        <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "900" }}>{getLeaderboardMetric(row.entry, sortBy)}</Text>
-                        <Text style={{ color: colors.textTertiary, fontSize: 10, fontWeight: "800" }}>{metricLabel}</Text>
-                      </View>
+                  {regularRows.length > 0 ? (
+                    <View style={{ gap: 8 }}>
+                      <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "900", textTransform: "uppercase" }}>Місця 4+</Text>
+                      {regularRows.map((row, idx) => {
+                        const isMe = row.entry.uid === currentUid;
+                        return (
+                          <Animated.View key={row.entry.uid} style={ra(2 + idx)}>
+                            <View
+                              style={{ backgroundColor: isMe ? colors.redSoft : colors.bgCard, borderRadius: radii.sm, borderWidth: isMe ? 2 : 1, borderColor: isMe ? colors.red : colors.border, padding: 12, flexDirection: "row", alignItems: "center", gap: 10 }}
+                            >
+                              <Text style={{ fontSize: 15, fontWeight: "900", width: 32, textAlign: "center", color: isMe ? colors.red : colors.textTertiary }}>#{row.rank}</Text>
+                              <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.bgElevated, alignItems: "center", justifyContent: "center" }}>
+                                <Text style={{ fontSize: 20 }}>{row.entry.avatarEmoji ?? "🚗"}</Text>
+                              </View>
+                              <View style={{ flex: 1, minWidth: 0 }}>
+                                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                                  <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "900", flexShrink: 1 }} numberOfLines={1}>{row.entry.displayName}</Text>
+                                  {isMe ? <Text style={{ color: colors.red, fontSize: 10, fontWeight: "900" }}>ВИ</Text> : null}
+                                </View>
+                                <Text style={{ color: colors.textTertiary, fontSize: 11, marginTop: 2 }} numberOfLines={1}>
+                                  {[row.entry.city, row.entry.licenseCategory ? `кат. ${row.entry.licenseCategory}` : null].filter(Boolean).join(" · ") || `${row.entry.totalAnswered} відповідей`}
+                                </Text>
+                              </View>
+                              <View style={{ alignItems: "flex-end" }}>
+                                <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "900" }}>{getLeaderboardMetric(row.entry, sortBy)}</Text>
+                                <Text style={{ color: colors.textTertiary, fontSize: 10, fontWeight: "800" }}>{metricLabel}</Text>
+                              </View>
+                            </View>
+                          </Animated.View>
+                        );
+                      })}
                     </View>
-                  );
-                })}
-              </View>
-            ) : null}
+                  ) : null}
 
-            {noviceRows.length > 0 ? (
-              <View style={{ gap: 8 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                  <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "900", textTransform: "uppercase" }}>Ліга Новачки</Text>
-                  <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800" }}>до {LEADERBOARD_MIN_ACCURACY_ANSWERS} відповідей</Text>
-                </View>
-                {noviceRows.map((row) => {
-                  const isMe = row.entry.uid === currentUid;
-                  const left = Math.max(0, LEADERBOARD_MIN_ACCURACY_ANSWERS - row.entry.totalAnswered);
-                  return (
-                    <View
-                      key={row.entry.uid}
-                      style={{ backgroundColor: isMe ? colors.redSoft : colors.bgCard, borderRadius: radii.sm, borderWidth: isMe ? 2 : 1, borderColor: isMe ? colors.red : colors.border, padding: 12, flexDirection: "row", alignItems: "center", gap: 10 }}
-                    >
-                      <Text style={{ fontSize: 15, fontWeight: "900", width: 32, textAlign: "center", color: colors.textTertiary }}>#{row.rank}</Text>
-                      <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.bgElevated, alignItems: "center", justifyContent: "center" }}>
-                        <Text style={{ fontSize: 20 }}>{row.entry.avatarEmoji ?? "🚗"}</Text>
+                  {noviceRows.length > 0 ? (
+                    <View style={{ gap: 8 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                        <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "900", textTransform: "uppercase" }}>Ліга Новачки</Text>
+                        <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800" }}>до {LEADERBOARD_MIN_ACCURACY_ANSWERS} відповідей</Text>
                       </View>
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                          <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "900", flexShrink: 1 }} numberOfLines={1}>{row.entry.displayName}</Text>
-                          {isMe ? <Text style={{ color: colors.red, fontSize: 10, fontWeight: "900" }}>ВИ</Text> : null}
-                        </View>
-                        <Text style={{ color: colors.textTertiary, fontSize: 11, marginTop: 2 }}>
-                          +{left} відповідей до заліку точності
-                        </Text>
-                      </View>
-                      <View style={{ alignItems: "flex-end" }}>
-                        <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "900" }}>{row.entry.totalAnswered}</Text>
-                        <Text style={{ color: colors.textTertiary, fontSize: 10, fontWeight: "800" }}>відповідей</Text>
-                      </View>
+                      {noviceRows.map((row, idx) => {
+                        const isMe = row.entry.uid === currentUid;
+                        const left = Math.max(0, LEADERBOARD_MIN_ACCURACY_ANSWERS - row.entry.totalAnswered);
+                        return (
+                          <Animated.View key={row.entry.uid} style={ra(2 + regularRows.length + idx)}>
+                            <View
+                              style={{ backgroundColor: isMe ? colors.redSoft : colors.bgCard, borderRadius: radii.sm, borderWidth: isMe ? 2 : 1, borderColor: isMe ? colors.red : colors.border, padding: 12, flexDirection: "row", alignItems: "center", gap: 10 }}
+                            >
+                              <Text style={{ fontSize: 15, fontWeight: "900", width: 32, textAlign: "center", color: colors.textTertiary }}>#{row.rank}</Text>
+                              <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.bgElevated, alignItems: "center", justifyContent: "center" }}>
+                                <Text style={{ fontSize: 20 }}>{row.entry.avatarEmoji ?? "🚗"}</Text>
+                              </View>
+                              <View style={{ flex: 1, minWidth: 0 }}>
+                                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                                  <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "900", flexShrink: 1 }} numberOfLines={1}>{row.entry.displayName}</Text>
+                                  {isMe ? <Text style={{ color: colors.red, fontSize: 10, fontWeight: "900" }}>ВИ</Text> : null}
+                                </View>
+                                <Text style={{ color: colors.textTertiary, fontSize: 11, marginTop: 2 }}>
+                                  +{left} відповідей до заліку точності
+                                </Text>
+                              </View>
+                              <View style={{ alignItems: "flex-end" }}>
+                                <Text style={{ color: colors.textPrimary, fontSize: 18, fontWeight: "900" }}>{row.entry.totalAnswered}</Text>
+                                <Text style={{ color: colors.textTertiary, fontSize: 10, fontWeight: "800" }}>відповідей</Text>
+                              </View>
+                            </View>
+                          </Animated.View>
+                        );
+                      })}
                     </View>
-                  );
-                })}
-              </View>
-            ) : null}
+                  ) : null}
           </>
         )}
       </ScrollView>
@@ -1409,13 +1438,11 @@ function AwardsView({ awards, onBack }: { awards: Award[]; onBack: () => void })
         ) : null}
 
         {filtered.length === 0 ? (
-          <View style={{ alignItems: "center", paddingVertical: 40, gap: 12 }}>
-            <Image source={MASCOT} style={{ width: 80, height: 80, opacity: 0.4 }} resizeMode="contain" />
-            <Text style={{ fontSize: 16, fontWeight: "800", color: colors.textSecondary }}>Нічого в цій категорії</Text>
-            <Text style={{ fontSize: 13, color: colors.textTertiary, textAlign: "center", lineHeight: 20 }}>
-              Продовжуй навчання — нагороди з'являться
-            </Text>
-          </View>
+          <EmptyState
+            emoji="🏅"
+            title="Нагороди ще попереду"
+            detail="Пройди більше тестів і навчальних модулів — перші нагороди не за горами."
+          />
         ) : null}
       </ScrollView>
     </View>

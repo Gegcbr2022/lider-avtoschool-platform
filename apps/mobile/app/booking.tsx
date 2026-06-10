@@ -16,7 +16,8 @@ import {
 } from "../lib/firestore";
 import { scheduleLocalNotification, syncEngagementNotifications } from "../lib/notifications";
 import { useTheme, radii, spacing } from "../lib/theme";
-import { crashError, crashLog } from "../lib/crashlytics"; import { EmptyState } from "../components/mobile-ui";
+import { crashError, crashLog } from "../lib/crashlytics";
+import { EmptyState } from "../components/mobile-ui";
 
 const WEEKDAYS = ["Нд", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
 
@@ -217,13 +218,13 @@ export default function BookingScreen() {
 
           <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase" }}>Оберіть інструктора</Text>
           {instructors.length === 0 ? (
-            <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, padding: 20, alignItems: "center" }}>
-              <Text style={{ fontSize: 36, marginBottom: 8 }}>🧑‍🏫</Text>
-              <Text style={{ color: colors.textPrimary, fontWeight: "800", fontSize: 15, textAlign: "center" }}>Інструкторів ще не додано</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 13, textAlign: "center", marginTop: 6, lineHeight: 19 }}>
-                Зверніться до менеджера для запису на практику.
-              </Text>
-            </View>
+            <EmptyState
+              emoji="🧑‍🏫"
+              title="Інструкторів ще не додано"
+              detail="Розклад з'явиться після того, як менеджер відкриє запис. Напишіть нам — і ми зареєструємо вас вручну."
+              action="Написати в чат"
+              onAction={() => router.push("/(tabs)/chat" as Parameters<typeof router.push>[0])}
+            />
           ) : instructors.map((ins) => {
             const selected = selInstructor?.id === ins.id;
             return (

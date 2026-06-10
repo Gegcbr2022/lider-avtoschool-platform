@@ -119,7 +119,7 @@ const PDR_CATEGORIES = [
   { icon: "↩️", name: "Маневр", label: "Маневри", desc: "Повороти, перестроювання, причепи і габарити", color: "warning" },
   { icon: "🅿️", name: "Стоянка", label: "Паркування", desc: "Стоянка, зупинка, місця заборони", color: "info" },
   { icon: "🚶", name: "Пішоходи", label: "Пішоходи", desc: "Переходи, пріоритет і безпечний проїзд", color: "success" },
-  { icon: "🏙️", name: "Місто", label: "Міський рух", desc: "Особливості руху у місті", color: "textPrimary" },
+  { icon: "🏙️", name: "Місто", label: "Міський рух", desc: "Особливості руху у місті", color: "muted" },
 ];
 
 // ─── Mini-games definition ────────────────────────────────────────────────────
@@ -1771,7 +1771,7 @@ export default function TestsTab() {
                   <View style={{ marginTop: 9, gap: 5 }}>
                     <ProgressBar value={topicPercent} color={(colors as any)[cat.color]} height={5} />
                     <Text style={{ fontSize: 11, color: colors.textTertiary, fontWeight: "700" }}>
-                      {topicProgress ? `${topicPercent}% · ${topicProgress.correct}/${topicProgress.seen}` : "Ще не тренувалась"}
+                      {topicProgress ? `${topicPercent}% · ${topicProgress.correct}/${topicProgress.seen}` : "Ще не розпочато"}
                     </Text>
                   </View>
                 </View>

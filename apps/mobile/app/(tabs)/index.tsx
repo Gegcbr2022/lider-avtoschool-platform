@@ -467,8 +467,16 @@ function StudentHome() {
                 </View>
               </View>
               <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 5 }}>
-                <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "600" }}>
-                  {heroProgress > 0 ? "Слабкі теми: проходь тести для аналізу" : "Почни перший тест"}
+                <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "600" }} numberOfLines={1}>
+                  {heroProgress === 0
+                    ? "500 питань · офіційний іспит МВС"
+                    : heroProgress < 50
+                    ? "Нижче 50% — зосередься на знаках"
+                    : heroProgress < 70
+                    ? "До іспиту потрібно ≥70%"
+                    : heroProgress < 85
+                    ? "Відшліфуй теми нижче 80% для впевненості"
+                    : "Готовий до іспиту 🎯"}
                 </Text>
                 {heroProgress > 0 && (
                   <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: "700" }}>{heroProgress}%</Text>
@@ -599,16 +607,12 @@ function formatDateTime(iso: string): string {
   }
 }
 
-function statusLabel(status: string): { label: string; color: string } {
+function statusLabel(status: string, colors: ReturnType<typeof useTheme>["colors"]): { label: string; color: string } {
   switch (status) {
-    case "confirmed":
-      return { label: "Підтверджено", color: "#22c55e" };
-    case "cancelled":
-      return { label: "Скасовано", color: "#ef4444" };
-    case "completed":
-      return { label: "Завершено", color: "#6b7280" };
-    default:
-      return { label: "Очікується", color: "#f59e0b" };
+    case "confirmed":  return { label: "Підтверджено", color: colors.success };
+    case "cancelled":  return { label: "Скасовано",    color: colors.red };
+    case "completed":  return { label: "Завершено",    color: colors.textTertiary };
+    default:           return { label: "Очікується",   color: colors.warning };
   }
 }
 
@@ -725,7 +729,7 @@ function InstructorHome({ name }: { name: string }) {
           </View>
         ) : (
           upcoming.map((b) => {
-            const st = statusLabel(b.status);
+            const st = statusLabel(b.status, colors);
             return (
               <View key={b.id} style={s.bookingCard}>
                 <View style={s.bookingRow}>
