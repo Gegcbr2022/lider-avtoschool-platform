@@ -451,72 +451,59 @@ function StudentHome() {
           </View>
         </Animated.View>
 
-        {/* ── Великі Action Cards ──────────────────────────────────── */}
+        {/* ── Action Cards ──────────────────────────────────────────── */}
         <Animated.View style={{
           opacity: cardAnims[1],
           transform: [{ scale: (cardAnims[1] as Animated.Value).interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }],
         }}>
           <View style={{ gap: 10 }}>
-            {/* Ряд 1 */}
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <ScalePressable
-                haptic
-                onPress={() => router.push("/(tabs)/tests")}
-                style={{ flex: 1, backgroundColor: colors.bgCard, borderRadius: radii.lg, padding: 16, borderWidth: 1, borderColor: colors.border, ...shadows.card, minHeight: 120, justifyContent: "space-between" }}
-              >
-                <View style={{ width: 42, height: 42, borderRadius: radii.md, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ fontSize: 22 }}>🎯</Text>
-                </View>
-                <View style={{ marginTop: 12 }}>
-                  <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "900" }}>Тренажер ПДР</Text>
-                  <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "500", marginTop: 4 }}>
-                    {stats.testsCompleted > 0 ? `Пройдено ${stats.testsCompleted} тестів` : "Всі офіційні питання"}
-                  </Text>
-                </View>
-              </ScalePressable>
-              <ScalePressable
-                haptic
-                onPress={() => router.push("/(tabs)/learning")}
-                style={{ flex: 1, backgroundColor: colors.bgCard, borderRadius: radii.lg, padding: 16, borderWidth: 1, borderColor: colors.border, ...shadows.card, minHeight: 120, justifyContent: "space-between" }}
-              >
-                <View style={{ width: 42, height: 42, borderRadius: radii.md, backgroundColor: colors.successSoft, alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ fontSize: 22 }}>📚</Text>
-                </View>
-                <View style={{ marginTop: 12 }}>
-                  <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "900" }}>Навчання</Text>
-                  <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "500", marginTop: 4 }}>Твій план до іспиту</Text>
-                </View>
-              </ScalePressable>
-            </View>
-            
-            {/* Ряд 2 */}
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <ScalePressable
-                haptic
-                onPress={() => router.push("/(tabs)/assistant")}
-                style={{ flex: 1, backgroundColor: colors.bgCard, borderRadius: radii.lg, padding: 16, borderWidth: 1, borderColor: colors.border, ...shadows.card, minHeight: 120, justifyContent: "space-between" }}
-              >
-                <View style={{ width: 42, height: 42, borderRadius: radii.md, backgroundColor: colors.infoSoft, alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ fontSize: 22 }}>💬</Text>
-                </View>
-                <View style={{ marginTop: 12 }}>
-                  <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "900" }}>Лідик чат</Text>
-                  <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "500", marginTop: 4 }}>Пояснить будь-яке правило</Text>
-                </View>
-              </ScalePressable>
-              <ScalePressable
-                haptic
-                onPress={() => router.push("/(tabs)/club")}
-                style={{ flex: 1, backgroundColor: colors.bgCard, borderRadius: radii.lg, padding: 16, borderWidth: 1, borderColor: colors.border, ...shadows.card, minHeight: 120, justifyContent: "space-between" }}
-              >
-                <View style={{ width: 42, height: 42, borderRadius: radii.md, backgroundColor: colors.warningSoft, alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ fontSize: 22 }}>🏆</Text>
-                </View>
-                <View style={{ marginTop: 12 }}>
-                  <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "900" }}>Клуб</Text>
-                  <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "500", marginTop: 4 }}>Рейтинг та спільнота</Text>
-                </View>
-              </ScalePressable>
+            {/* Тренажер — широка featured-рядок */}
+            <ScalePressable
+              haptic
+              onPress={() => router.push("/(tabs)/tests")}
+              style={{
+                backgroundColor: colors.bgCard,
+                borderRadius: radii.lg,
+                padding: 16,
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderLeftWidth: 3,
+                borderLeftColor: colors.red,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 14,
+                ...shadows.card,
+              }}
+            >
+              <View style={{ width: 46, height: 46, borderRadius: radii.md, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ fontSize: 24 }}>🎯</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "900" }}>Тренажер ПДР</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "500", marginTop: 2 }}>
+                  {stats.testsCompleted > 0 ? `Пройдено ${stats.testsCompleted} тестів` : "Всі офіційні питання ПДР"}
+                </Text>
+              </View>
+              <Text style={{ color: colors.red, fontSize: 22, fontWeight: "300" }}>›</Text>
+            </ScalePressable>
+
+            {/* 3 компактних чипи */}
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {([
+                { icon: "📚", label: "Навчання",  route: "/(tabs)/learning",  bg: colors.successSoft,  border: colors.success },
+                { icon: "🤖", label: "Лідик",     route: "/(tabs)/assistant", bg: colors.infoSoft,     border: colors.info },
+                { icon: "🏆", label: "Клуб",      route: "/(tabs)/club",      bg: colors.warningSoft,  border: colors.warning },
+              ] as const).map((a) => (
+                <ScalePressable
+                  key={a.label}
+                  haptic
+                  onPress={() => router.push(a.route as Href)}
+                  style={{ flex: 1, backgroundColor: a.bg, borderRadius: radii.lg, borderWidth: 1.5, borderColor: a.border + "60", paddingVertical: 14, paddingHorizontal: 8, alignItems: "center", gap: 6 }}
+                >
+                  <Text style={{ fontSize: 26 }}>{a.icon}</Text>
+                  <Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "800", textAlign: "center" }}>{a.label}</Text>
+                </ScalePressable>
+              ))}
             </View>
           </View>
         </Animated.View>
