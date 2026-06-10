@@ -16,7 +16,7 @@ import {
 } from "../lib/firestore";
 import { scheduleLocalNotification, syncEngagementNotifications } from "../lib/notifications";
 import { useTheme, radii, spacing } from "../lib/theme";
-import { crashError, crashLog } from "../lib/crashlytics";
+import { crashError, crashLog } from "../lib/crashlytics"; import { EmptyState } from "../components/mobile-ui";
 
 const WEEKDAYS = ["Нд", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
 

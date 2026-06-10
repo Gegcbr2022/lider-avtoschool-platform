@@ -8,7 +8,7 @@ import * as ImagePicker from "expo-image-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import {
-  Card, Label, MascotMessage, Pill, PrimaryButton, ProgressBar,
+  Card, Label, MascotMessage, Pill, PrimaryButton, ProgressBar, EmptyState,
 } from "../../components/mobile-ui";
 import { askLidyk } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
@@ -871,13 +871,13 @@ function FeedView({ onBack }: { onBack: () => void }) {
 
         {/* Posts */}
         {!loading && posts.length === 0 ? (
-          <View style={{ alignItems: "center", paddingVertical: 40, gap: 12 }}>
-            <Text style={{ fontSize: 48 }}>📝</Text>
-            <Text style={{ fontSize: 16, fontWeight: "800", color: colors.textSecondary }}>Стрічка поки порожня</Text>
-            <Text style={{ fontSize: 13, color: colors.textTertiary, textAlign: "center" }}>
-              Будь першим, хто поділиться досвідом з іншими учнями!
-            </Text>
-          </View>
+          <EmptyState
+            emoji="📸"
+            title="Стрічка клубу чекає"
+            detail="Стань першим, хто поділиться досвідом водіння чи цікавим питанням з іншими учнями."
+            action="Написати допис"
+            onAction={() => setShowCompose(true)}
+          />
         ) : null}
 
         {posts.map(post => {
@@ -1103,6 +1103,7 @@ function LeaderboardView({
       <SubHeader title="Рейтинг ПДР" subtitle="Чесний залік учнів школи" onBack={onBack} />
 
       <View style={{ borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.bgCard, paddingHorizontal: spacing.md, paddingTop: 10, paddingBottom: 10, gap: 10 }}>
+        {/* Тимчасово приховано до бекенд-реалізації
         <View style={{ flexDirection: "row", borderRadius: 999, padding: 3, backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border }}>
           {LEADERBOARD_WINDOW_OPTIONS.map((opt) => (
             <TouchableOpacity
@@ -1114,6 +1115,7 @@ function LeaderboardView({
             </TouchableOpacity>
           ))}
         </View>
+        */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: "row", gap: 8 }}>
           {LEADERBOARD_SORT_OPTIONS.map((opt) => (
             <TouchableOpacity
@@ -1125,11 +1127,6 @@ function LeaderboardView({
             </TouchableOpacity>
           ))}
         </ScrollView>
-        {timeWindow !== "all" ? (
-          <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "700" }}>
-            Періоди в підготовці: зараз показуємо реальні дані за весь час.
-          </Text>
-        ) : null}
       </View>
 
       <ScrollView contentContainerStyle={{ padding: spacing.md, paddingBottom: ranked.length > 1 ? 150 : 120, gap: spacing.md }}>
@@ -1198,17 +1195,17 @@ function LeaderboardView({
                       <View style={{ width: isFirst ? 58 : 48, height: isFirst ? 58 : 48, borderRadius: 999, alignItems: "center", justifyContent: "center", backgroundColor: isMe ? colors.redSoft : colors.bgElevated, borderWidth: 1, borderColor: isFirst ? gold : colors.border }}>
                         <Text style={{ fontSize: isFirst ? 29 : 23 }}>{row.entry.avatarEmoji ?? "🚗"}</Text>
                       </View>
-                      <View style={{ alignItems: "center", width: "100%" }}>
-                        <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: "900", textAlign: "center" }} numberOfLines={1}>
+                      <View style={{ alignItems: "center", width: "100%", marginTop: 4 }}>
+                        <Text style={{ color: colors.textPrimary, fontSize: isFirst ? 14 : 12, fontWeight: "900", textAlign: "center", letterSpacing: -0.2 }} numberOfLines={1}>
                           {row.entry.displayName}
                         </Text>
-                        {isMe ? <Text style={{ color: colors.red, fontSize: 10, fontWeight: "900", marginTop: 2 }}>ВИ</Text> : null}
+                        {isMe ? <Text style={{ color: colors.red, fontSize: 10, fontWeight: "900", marginTop: 2, letterSpacing: 0.5 }}>ВИ</Text> : null}
                       </View>
-                      <View style={{ alignItems: "center" }}>
-                        <Text style={{ color: isFirst ? gold : colors.red, fontSize: isFirst ? 26 : 21, fontWeight: "900" }}>
+                      <View style={{ alignItems: "center", marginTop: 6 }}>
+                        <Text style={{ color: isFirst ? gold : colors.red, fontSize: isFirst ? 28 : 22, fontWeight: "900", letterSpacing: -1 }}>
                           {getLeaderboardMetric(row.entry, sortBy)}
                         </Text>
-                        <Text style={{ color: colors.textTertiary, fontSize: 10, fontWeight: "800" }}>{metricLabel}</Text>
+                        <Text style={{ color: isFirst ? "rgba(242, 201, 76, 0.8)" : colors.textTertiary, fontSize: 10, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.5, marginTop: -2 }}>{metricLabel}</Text>
                       </View>
                     </View>
                   );

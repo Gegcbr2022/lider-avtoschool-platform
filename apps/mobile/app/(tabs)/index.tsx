@@ -330,6 +330,15 @@ function StudentHome() {
   const firstName = name.split(" ")[0];
   const category = user?.category ?? "B";
   const accuracyPct = stats.totalAnswered > 0 ? Math.round((stats.totalCorrect / stats.totalAnswered) * 100) : 0;
+  
+  // Розрахунок днів до іспиту
+  const examDateStr = (user as any)?.examDate;
+  let daysToExam = null;
+  if (examDateStr) {
+    const msDiff = new Date(examDateStr).getTime() - new Date().getTime();
+    const days = Math.ceil(msDiff / 86400000);
+    if (days >= 0) daysToExam = days;
+  }
 
   const SIDE_ACTIONS: {
     icon: string; label: string; subtitle: string; route: Href; tint: string; tintSoft: string;
@@ -381,7 +390,14 @@ function StudentHome() {
             <View>
               <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 10, fontWeight: "900", letterSpacing: 1.4, textTransform: "uppercase" }}>Картка учня</Text>
               <Text style={{ color: "#fff", fontSize: 26, fontWeight: "900", marginTop: 4, letterSpacing: -0.5 }}>{firstName}</Text>
-              <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 13, marginTop: 2 }}>Категорія {category} · Автошкола Лідер</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
+                <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 13 }}>Категорія {category} · Лідер</Text>
+                {daysToExam !== null && (
+                  <View style={{ backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
+                    <Text style={{ color: "#fff", fontSize: 10, fontWeight: "900" }}>До іспиту {daysToExam} {daysToExam === 1 ? "день" : [2, 3, 4].includes(daysToExam % 10) && ![12, 13, 14].includes(daysToExam % 100) ? "дні" : "днів"}</Text>
+                  </View>
+                )}
+              </View>
             </View>
             <View style={{ alignItems: "flex-end" }}>
               <View style={{ backgroundColor: "rgba(255,255,255,0.18)", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6 }}>
@@ -445,12 +461,14 @@ function StudentHome() {
             </View>
 
             <View style={{ marginBottom: 10 }}>
-              <View style={{ height: 7, borderRadius: 4, backgroundColor: colors.border, overflow: "hidden" }}>
-                <View style={{ width: `${heroProgress}%`, height: 7, backgroundColor: colors.red, borderRadius: 4 }} />
+              <View style={{ height: 8, borderRadius: 4, backgroundColor: colors.border, overflow: "hidden", ...shadows.card }}>
+                <View style={{ width: `${heroProgress}%`, height: "100%", backgroundColor: colors.red, borderRadius: 4, position: "relative" }}>
+                  <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: "40%", backgroundColor: "rgba(255,255,255,0.2)" }} />
+                </View>
               </View>
               <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 5 }}>
                 <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "600" }}>
-                  {heroProgress > 0 ? "Найкращий результат" : "Почни перший тест"}
+                  {heroProgress > 0 ? "Слабкі теми: проходь тести для аналізу" : "Почни перший тест"}
                 </Text>
                 {heroProgress > 0 && (
                   <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: "700" }}>{heroProgress}%</Text>

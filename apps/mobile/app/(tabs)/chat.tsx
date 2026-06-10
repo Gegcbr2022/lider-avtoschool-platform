@@ -46,6 +46,7 @@ import { uploadChatFile, uploadChatImage } from "../../lib/storage";
 import { useTheme, radii, spacing } from "../../lib/theme";
 import { useNetworkStatus } from "../../lib/useNetwork";
 import { crashError, crashLog } from "../../lib/crashlytics";
+import { EmptyState } from "../../components/mobile-ui";
 
 function formatTime(d: Date | null): string {
   if (!d) return "";
@@ -681,11 +682,12 @@ function Conversation({
           })}
 
           {!loading && messages.length === 0 && !error ? (
-            <View style={{ alignItems: "center", paddingVertical: 24 }}>
-              <Text style={{ fontSize: 40, marginBottom: 8 }}>{chat.emoji}</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: "center" }}>
-                Постав перше питання нижче.{"\n"}Відповідь прийде сюди та push-сповіщенням.
-              </Text>
+            <View style={{ paddingTop: 30 }}>
+              <EmptyState
+                emoji={chat.emoji}
+                title="Немає повідомлень"
+                detail="Постав перше питання нижче. Відповідь прийде сюди та push-сповіщенням."
+              />
             </View>
           ) : null}
         </ScrollView>
@@ -765,12 +767,12 @@ function InstructorChatTab() {
           <ActivityIndicator color={colors.red} />
         </View>
       ) : convs.length === 0 ? (
-        <View style={s.center}>
-          <Text style={{ fontSize: 56, marginBottom: 16 }}>💬</Text>
-          <Text style={s.gateTitle}>Немає чатів</Text>
-          <Text style={s.gateSub}>
-            Учні, які записались до вас на практику,{"\n"}з'являться тут автоматично.
-          </Text>
+        <View style={{ paddingTop: 60, paddingHorizontal: spacing.md }}>
+          <EmptyState
+            emoji="💬"
+            title="Немає активних чатів"
+            detail="Учні, які записалися до вас на практику, з'являться тут автоматично."
+          />
         </View>
       ) : (
         <ScrollView style={{ flex: 1 }}>

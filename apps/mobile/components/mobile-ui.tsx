@@ -485,15 +485,23 @@ export function MascotMessage({
   message: string;
   tone?: "neutral" | "success" | "warning" | "error";
 }) {
-  const { colors: tc } = useTheme();
+  const { colors: tc, resolvedTheme } = useTheme();
+  
+  // Чистий колір для MascotMessage
+  const errorBg = resolvedTheme === "light" ? "#FFF2F2" : "rgba(229, 29, 29, 0.12)";
+  const warningBg = resolvedTheme === "light" ? "#FFFBEB" : tc.warningSoft;
+  const successBg = resolvedTheme === "light" ? "#F0FDF4" : tc.successSoft;
+
   const bg =
-    tone === "success" ? tc.successSoft :
-    tone === "warning" ? tc.warningSoft :
-    tone === "error"   ? tc.redSoft :
+    tone === "success" ? successBg :
+    tone === "warning" ? warningBg :
+    tone === "error"   ? errorBg :
     tc.bgCard;
 
+  const borderColor = tone === "error" ? (resolvedTheme === "light" ? "#FECACA" : "rgba(229, 29, 29, 0.3)") : tc.border;
+
   return (
-    <View style={[styles.mascotMsg, { backgroundColor: bg, borderColor: tc.border }, shadows.card]}>
+    <View style={[styles.mascotMsg, { backgroundColor: bg, borderColor: borderColor }, shadows.card]}>
       <Text style={styles.mascotMsgEmoji}>{emoji}</Text>
       <View style={styles.mascotMsgText}>
         <Text style={[styles.mascotMsgTitle, { color: tc.textPrimary }]}>{title}</Text>

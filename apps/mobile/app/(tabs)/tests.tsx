@@ -109,17 +109,17 @@ function buildProtocol(payload: QuizFinishPayload) {
 
 // ─── PDR categories for the menu ─────────────────────────────────────────────
 const PDR_CATEGORIES = [
-  { icon: "🎯", name: "Знаки", label: "Дорожні знаки", desc: "Попереджувальні, заборонні, інформаційні", color: "#e63946" },
-  { icon: "↔️", name: "Пріоритет", label: "Пріоритет", desc: "Хто має перевагу у типових ситуаціях", color: "#ffb703" },
-  { icon: "🛣️", name: "Швидкість", label: "Швидкість", desc: "Обмеження та контроль швидкості", color: "#2a9d8f" },
-  { icon: "🚦", name: "Перехрестя", label: "Перехрестя", desc: "Регульовані та нерегульовані", color: "#f4a261" },
-  { icon: "🛑", name: "Зупинка", label: "Стоянка і зупинка", desc: "Де можна і де заборонено", color: "#e76f51" },
-  { icon: "📏", name: "Розмітка", label: "Розмітка", desc: "Горизонтальна та вертикальна", color: "#457b9d" },
-  { icon: "🛡️", name: "Безпека", label: "Безпека руху", desc: "Дистанція, обгін, маневри", color: "#6a4c93" },
-  { icon: "↩️", name: "Маневр", label: "Маневри", desc: "Повороти, перестроювання, причепи і габарити", color: "#7c3aed" },
-  { icon: "🅿️", name: "Стоянка", label: "Паркування", desc: "Стоянка, зупинка, місця заборони", color: "#118ab2" },
-  { icon: "🚶", name: "Пішоходи", label: "Пішоходи", desc: "Переходи, пріоритет і безпечний проїзд", color: "#06d6a0" },
-  { icon: "🏙️", name: "Місто", label: "Міський рух", desc: "Особливості руху у місті", color: "#1d3557" },
+  { icon: "🎯", name: "Знаки", label: "Дорожні знаки", desc: "Попереджувальні, заборонні, інформаційні", color: "red" },
+  { icon: "↔️", name: "Пріоритет", label: "Пріоритет", desc: "Хто має перевагу у типових ситуаціях", color: "warning" },
+  { icon: "🛣️", name: "Швидкість", label: "Швидкість", desc: "Обмеження та контроль швидкості", color: "info" },
+  { icon: "🚦", name: "Перехрестя", label: "Перехрестя", desc: "Регульовані та нерегульовані", color: "yellow" },
+  { icon: "🛑", name: "Зупинка", label: "Стоянка і зупинка", desc: "Де можна і де заборонено", color: "red" },
+  { icon: "📏", name: "Розмітка", label: "Розмітка", desc: "Горизонтальна та вертикальна", color: "info" },
+  { icon: "🛡️", name: "Безпека", label: "Безпека руху", desc: "Дистанція, обгін, маневри", color: "success" },
+  { icon: "↩️", name: "Маневр", label: "Маневри", desc: "Повороти, перестроювання, причепи і габарити", color: "warning" },
+  { icon: "🅿️", name: "Стоянка", label: "Паркування", desc: "Стоянка, зупинка, місця заборони", color: "info" },
+  { icon: "🚶", name: "Пішоходи", label: "Пішоходи", desc: "Переходи, пріоритет і безпечний проїзд", color: "success" },
+  { icon: "🏙️", name: "Місто", label: "Міський рух", desc: "Особливості руху у місті", color: "textPrimary" },
 ];
 
 // ─── Mini-games definition ────────────────────────────────────────────────────
@@ -137,13 +137,13 @@ const MINI_GAMES = [
 ];
 
 const RIGHTS_CATEGORIES: Array<{ code: string; label: string; value: DrivingLicenseCategory; accent: string }> = [
-  { code: "A", label: "Мото", value: "A", accent: "#f59e0b" },
-  { code: "A1", label: "Легкі мото", value: "A1", accent: "#fb923c" },
-  { code: "B", label: "Легкове авто", value: "B", accent: "#e63946" },
-  { code: "C", label: "Вантажне", value: "C", accent: "#2a9d8f" },
-  { code: "D", label: "Автобус", value: "D", accent: "#457b9d" },
-  { code: "BE", label: "Причеп B", value: "BE", accent: "#8b5cf6" },
-  { code: "CE", label: "Причеп C", value: "CE", accent: "#6a4c93" },
+  { code: "A", label: "Мото", value: "A", accent: "warning" },
+  { code: "A1", label: "Легкі мото", value: "A1", accent: "warning" },
+  { code: "B", label: "Легкове авто", value: "B", accent: "red" },
+  { code: "C", label: "Вантажне", value: "C", accent: "info" },
+  { code: "D", label: "Автобус", value: "D", accent: "info" },
+  { code: "BE", label: "Причеп B", value: "BE", accent: "success" },
+  { code: "CE", label: "Причеп C", value: "CE", accent: "success" },
 ];
 
 function PdrVisual({ question }: { question: PDRQuestion }) {
@@ -1762,21 +1762,21 @@ export default function TestsTab() {
                 key={cat.name} onPress={() => topicCount ? startCategoryTest(cat.name) : startExam()}
                 style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.border }}
               >
-                <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: cat.color + "18", alignItems: "center", justifyContent: "center" }}>
+                <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: (colors as any)[cat.color] + "18", alignItems: "center", justifyContent: "center" }}>
                   <Text style={{ fontSize: 24 }}>{cat.icon}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 16, fontWeight: "800", color: colors.textPrimary }}>{cat.label}</Text>
                   <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>{cat.desc}</Text>
                   <View style={{ marginTop: 9, gap: 5 }}>
-                    <ProgressBar value={topicPercent} color={cat.color} height={5} />
+                    <ProgressBar value={topicPercent} color={(colors as any)[cat.color]} height={5} />
                     <Text style={{ fontSize: 11, color: colors.textTertiary, fontWeight: "700" }}>
                       {topicProgress ? `${topicPercent}% · ${topicProgress.correct}/${topicProgress.seen}` : "Ще не тренувалась"}
                     </Text>
                   </View>
                 </View>
                 <View style={{ alignItems: "flex-end", gap: 4 }}>
-                  <Text style={{ fontSize: 10, fontWeight: "800", color: cat.color, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  <Text style={{ fontSize: 10, fontWeight: "800", color: (colors as any)[cat.color], textTransform: "uppercase", letterSpacing: 0.5 }}>
                     {topicCount ? `${Math.min(10, topicCount)} питань` : "мікс"}
                   </Text>
                   <Text style={{ fontSize: 18, color: colors.textTertiary }}>›</Text>
@@ -1951,12 +1951,12 @@ export default function TestsTab() {
                   flexGrow: 1,
                   borderRadius: radii.md,
                   padding: 12,
-                  backgroundColor: selected ? cat.accent + "18" : colors.bgCard,
+                  backgroundColor: selected ? (colors as any)[cat.accent] + "18" : colors.bgCard,
                   borderWidth: 1,
-                  borderColor: selected ? cat.accent : colors.border,
+                  borderColor: selected ? (colors as any)[cat.accent] : colors.border,
                 }}
               >
-                <Text style={{ color: selected ? cat.accent : colors.textPrimary, fontWeight: "900", fontSize: 15 }}>{cat.code}</Text>
+                <Text style={{ color: selected ? (colors as any)[cat.accent] : colors.textPrimary, fontWeight: "900", fontSize: 15 }}>{cat.code}</Text>
                 <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "700", marginTop: 2 }}>
                   {cat.label} · {count} питань
                 </Text>
