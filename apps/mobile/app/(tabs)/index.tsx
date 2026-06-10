@@ -487,21 +487,27 @@ function StudentHome() {
               <Text style={{ color: colors.red, fontSize: 22, fontWeight: "300" }}>›</Text>
             </ScalePressable>
 
-            {/* 3 компактних чипи */}
-            <View style={{ flexDirection: "row", gap: 8 }}>
+            {/* 3 рядки в згрупованій картці */}
+            <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.border, overflow: "hidden", ...shadows.card }}>
               {([
-                { icon: "📚", label: "Навчання",  route: "/(tabs)/learning",  bg: colors.successSoft,  border: colors.success },
-                { icon: "🤖", label: "Лідик",     route: "/(tabs)/assistant", bg: colors.infoSoft,     border: colors.info },
-                { icon: "🏆", label: "Клуб",      route: "/(tabs)/club",      bg: colors.warningSoft,  border: colors.warning },
-              ] as const).map((a) => (
+                { icon: "📚", label: "Навчання",  sub: "Твій план до іспиту", route: "/(tabs)/learning",  iconBg: colors.successSoft,  iconColor: colors.success },
+                { icon: "🤖", label: "Лідик",     sub: "AI-помічник 24/7",    route: "/(tabs)/assistant", iconBg: colors.infoSoft,     iconColor: colors.info },
+                { icon: "🏆", label: "Клуб",      sub: "Рейтинг та спільнота",route: "/(tabs)/club",      iconBg: colors.warningSoft,  iconColor: colors.warning },
+              ] as const).map((a, i) => (
                 <ScalePressable
                   key={a.label}
                   haptic
                   onPress={() => router.push(a.route as Href)}
-                  style={{ flex: 1, backgroundColor: a.bg, borderRadius: radii.lg, borderWidth: 1.5, borderColor: a.border + "60", paddingVertical: 14, paddingHorizontal: 8, alignItems: "center", gap: 6 }}
+                  style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 13, paddingHorizontal: 16, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: colors.border }}
                 >
-                  <Text style={{ fontSize: 26 }}>{a.icon}</Text>
-                  <Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "800", textAlign: "center" }}>{a.label}</Text>
+                  <View style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: a.iconBg, alignItems: "center", justifyContent: "center" }}>
+                    <Text style={{ fontSize: 20 }}>{a.icon}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "800" }}>{a.label}</Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "500", marginTop: 1 }}>{a.sub}</Text>
+                  </View>
+                  <Text style={{ color: colors.textTertiary, fontSize: 20, fontWeight: "300" }}>›</Text>
                 </ScalePressable>
               ))}
             </View>
