@@ -47,7 +47,8 @@ export function LidikGuide({ text, actionText, onAction, style, variant = "defau
         </View>
       </View>
       <View style={[styles.bubble, { backgroundColor: colors.bgElevated, borderColor: colors.border }]}>
-        <View style={[styles.bubbleTriangle, { borderRightColor: colors.bgElevated, borderTopColor: colors.bgElevated }]} />
+        <View style={[styles.bubbleTriangleBorder, { borderRightColor: colors.border }]} />
+        <View style={[styles.bubbleTriangleFill, { borderRightColor: colors.bgElevated }]} />
         <Text style={[styles.text, { color: colors.textPrimary }]}>{text}</Text>
         {actionText && onAction && (
           <Pressable onPress={onAction} style={[styles.actionButton, { backgroundColor: colors.info }]}>
@@ -74,6 +75,11 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+    elevation: 2,
   },
   avatar: {
     fontSize: 24,
@@ -86,19 +92,29 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     position: "relative",
   },
-  bubbleTriangle: {
+  bubbleTriangleBorder: {
     position: "absolute",
-    left: -6,
-    top: 12,
-    width: 10,
-    height: 10,
-    borderLeftWidth: 6,
-    borderRightWidth: 6,
+    left: -11,
+    top: 11,
+    width: 0,
+    height: 0,
+    borderTopWidth: 8,
+    borderBottomWidth: 8,
+    borderRightWidth: 11,
+    borderTopColor: "transparent",
+    borderBottomColor: "transparent",
+  },
+  bubbleTriangleFill: {
+    position: "absolute",
+    left: -9,
+    top: 13,
+    width: 0,
+    height: 0,
     borderTopWidth: 6,
     borderBottomWidth: 6,
-    borderLeftColor: "transparent",
+    borderRightWidth: 9,
+    borderTopColor: "transparent",
     borderBottomColor: "transparent",
-    transform: [{ rotate: "45deg" }],
   },
   text: {
     fontSize: 14,

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Image,
   KeyboardAvoidingView,
   Modal,
@@ -665,6 +666,8 @@ function QuizScreen({
   const [opponentScore, setOpponentScore] = useState(0);
   const startedAt = useRef(Date.now());
   const finishedRef = useRef(false);
+  const opponentPulseAnim = useRef(new Animated.Value(1)).current;
+  const opponentPulseLoopRef = useRef<ReturnType<typeof Animated.loop> | null>(null);
 
   useEffect(() => {
     loadAppSettings().then(settings => setVisualHints(settings.visualHints)).catch(() => {});
@@ -681,6 +684,26 @@ function QuizScreen({
     }, 1000);
     return () => clearInterval(interval);
   }, [meta.mode, questions.length]);
+
+  useEffect(() => {
+    if (meta.mode !== "duel") return;
+    const fraction = opponentScore / questions.length;
+    const shouldPulse = fraction > 0.5;
+    if (shouldPulse) {
+      opponentPulseLoopRef.current?.stop();
+      opponentPulseLoopRef.current = Animated.loop(
+        Animated.sequence([
+          Animated.timing(opponentPulseAnim, { toValue: 0.45, duration: 550, useNativeDriver: true }),
+          Animated.timing(opponentPulseAnim, { toValue: 1, duration: 550, useNativeDriver: true }),
+        ])
+      );
+      opponentPulseLoopRef.current.start();
+    } else {
+      opponentPulseLoopRef.current?.stop();
+      opponentPulseAnim.setValue(1);
+    }
+    return () => { opponentPulseLoopRef.current?.stop(); };
+  }, [Math.floor(opponentScore)]);
 
   function finishQuiz(timedOut = false, finalAnswers = answers) {
     if (finishedRef.current) return;
@@ -789,10 +812,12 @@ function QuizScreen({
         {meta.mode === "duel" && (
           <View style={{ marginTop: 4 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
-              <Text style={{ fontSize: 10, color: colors.textTertiary, fontWeight: "800", textTransform: "uppercase" }}>Суперник</Text>
+              <Animated.View style={{ opacity: opponentPulseAnim }}>
+                <Text style={{ fontSize: 10, color: colors.info, fontWeight: "900", textTransform: "uppercase" }}>⚔️ Знавець правил</Text>
+              </Animated.View>
               <Text style={{ fontSize: 10, color: colors.textTertiary, fontWeight: "800" }}>{Math.floor(opponentScore)} / {questions.length}</Text>
             </View>
-            <ProgressBar value={(opponentScore / questions.length) * 100} color={colors.warning} height={4} />
+            <ProgressBar value={(opponentScore / questions.length) * 100} color={colors.info} height={4} />
           </View>
         )}
       </View>
@@ -920,7 +945,7 @@ function ResultStorySheet({
   const { colors } = useTheme();
   const { user } = useAuth();
   const wrong = Math.max(0, total - correct);
-  const previewAccent = passed ? colors.success : "#f59e0b";
+  const previewAccent = passed ? colors.success : colors.warning;
   const previewBackground = "#111827";
   const [text, setText] = useState(
     `Мій результат у ПДР-тренажері Лідер: ${correct}/${total} (${percent}%). ${passed ? "Лідик каже: можна йти до складніших білетів." : "Лідик вже підготував мені план повторення."}`
@@ -1143,12 +1168,37 @@ function ResultScreen({ result, onRestart, onBack, onMistakes }: {
         />
       ) : null}
       <ScrollView contentContainerStyle={{ padding: spacing.xl, gap: spacing.lg, alignItems: "center", paddingTop: 60 }}>
-        <Text style={{ fontSize: 64 }}>{passed ? "🏆" : "📚"}</Text>
-        <Text style={{ color: colors.textPrimary, fontSize: 32, fontWeight: "900", textAlign: "center" }}>
-          {result.mode === "duel" 
-            ? (passed ? "Перемога у дуелі!" : "Суперник був швидшим") 
-            : (passed ? "Молодець!" : "Потренуйся ще!")}
-        </Text>
+        {result.mode === "duel" ? (
+          <View style={{ alignItems: "center", gap: 10 }}>
+            <View style={{
+              width: 92, height: 92, borderRadius: 46,
+              backgroundColor: passed ? colors.warningSoft : colors.infoSoft,
+              alignItems: "center", justifyContent: "center",
+              borderWidth: 2,
+              borderColor: passed ? colors.warning + "55" : colors.info + "55",
+            }}>
+              <Text style={{ fontSize: 48 }}>{passed ? "🏆" : "⚔️"}</Text>
+            </View>
+            <View style={{
+              paddingHorizontal: 18, paddingVertical: 5, borderRadius: 999,
+              backgroundColor: passed ? colors.warning : colors.info,
+            }}>
+              <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900", textTransform: "uppercase", letterSpacing: 1.5 }}>
+                {passed ? "ПЕРЕМОГА" : "РЕВАНШ"}
+              </Text>
+            </View>
+            <Text style={{ color: colors.textPrimary, fontSize: 28, fontWeight: "900", textAlign: "center" }}>
+              {passed ? "Ти переміг знавця правил!" : "Суперник виявився швидшим"}
+            </Text>
+          </View>
+        ) : (
+          <>
+            <Text style={{ fontSize: 64 }}>{passed ? "🏆" : "📚"}</Text>
+            <Text style={{ color: colors.textPrimary, fontSize: 32, fontWeight: "900", textAlign: "center" }}>
+              {passed ? "Молодець!" : "Потренуйся ще!"}
+            </Text>
+          </>
+        )}
         <View style={{ backgroundColor: passed ? colors.successSoft : colors.warningSoft, borderRadius: radii.lg, padding: spacing.xl, alignItems: "center", gap: spacing.sm, width: "100%", borderWidth: 1, borderColor: passed ? colors.success + "44" : colors.warning + "44" }}>
           <Text style={{ color: passed ? colors.success : colors.warning, fontSize: 56, fontWeight: "900" }}>{percent}%</Text>
           <Text style={{ color: colors.textPrimary, fontSize: 20, fontWeight: "700" }}>{correct} / {total} правильних</Text>
@@ -1289,7 +1339,7 @@ function SignScannerSheet({ visible, onClose }: { visible: boolean; onClose: () 
         >
           <View style={{ width: 44, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginBottom: 18 }} />
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 18 }}>
-            <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: "#1d4ed818", alignItems: "center", justifyContent: "center" }}>
+            <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: colors.infoSoft, alignItems: "center", justifyContent: "center" }}>
               <Text style={{ fontSize: 26 }}>📷</Text>
             </View>
             <View style={{ flex: 1 }}>

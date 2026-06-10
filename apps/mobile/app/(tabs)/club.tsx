@@ -1071,6 +1071,9 @@ function LeaderboardView({
   const [sortBy, setSortBy] = useState<LeaderboardSortKey>("accuracy");
   const [timeWindow, setTimeWindow] = useState<LeaderboardWindowKey>("all");
   const rowAnims = useRef<Animated.Value[]>([]);
+  const [segWidth, setSegWidth] = useState(0);
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const segInitialized = useRef(false);
 
   // Stagger rows in after data loads
   useEffect(() => {
@@ -1084,6 +1087,18 @@ function LeaderboardView({
       )
     ).start();
   }, [loading]);
+
+  useEffect(() => {
+    if (segWidth <= 0) return;
+    const index = LEADERBOARD_WINDOW_OPTIONS.findIndex((o) => o.key === timeWindow);
+    const target = (segWidth / LEADERBOARD_WINDOW_OPTIONS.length) * index;
+    if (!segInitialized.current) {
+      slideAnim.setValue(target);
+      segInitialized.current = true;
+      return;
+    }
+    Animated.spring(slideAnim, { toValue: target, useNativeDriver: true, damping: 20, stiffness: 300 }).start();
+  }, [timeWindow, segWidth]);
 
   // TODO: When Firestore stores weekly/monthly PDR aggregates, pass timeWindow
   // into getLeaderboard. Until then all chips show the same real all-time data.
@@ -1127,12 +1142,29 @@ function LeaderboardView({
       <SubHeader title="Рейтинг ПДР" subtitle="Чесний залік учнів школи" onBack={onBack} />
 
       <View style={{ borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.bgCard, paddingHorizontal: spacing.md, paddingTop: 10, paddingBottom: 10, gap: 10 }}>
-        <View style={{ flexDirection: "row", borderRadius: 999, padding: 3, backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border }}>
+        <View
+          onLayout={(e) => setSegWidth(e.nativeEvent.layout.width - 6)}
+          style={{ flexDirection: "row", borderRadius: 999, padding: 3, backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border }}
+        >
+          {segWidth > 0 ? (
+            <Animated.View
+              style={{
+                position: "absolute",
+                left: 3,
+                top: 3,
+                bottom: 3,
+                width: segWidth / LEADERBOARD_WINDOW_OPTIONS.length,
+                borderRadius: 999,
+                backgroundColor: colors.red,
+                transform: [{ translateX: slideAnim }],
+              }}
+            />
+          ) : null}
           {LEADERBOARD_WINDOW_OPTIONS.map((opt) => (
             <TouchableOpacity
               key={opt.key}
               onPress={() => setTimeWindow(opt.key)}
-              style={{ flex: 1, borderRadius: 999, paddingVertical: 8, alignItems: "center", backgroundColor: timeWindow === opt.key ? colors.red : "transparent" }}
+              style={{ flex: 1, borderRadius: 999, paddingVertical: 8, alignItems: "center" }}
             >
               <Text style={{ fontSize: 12, fontWeight: "900", color: timeWindow === opt.key ? "#fff" : colors.textSecondary }}>{opt.label}</Text>
             </TouchableOpacity>
