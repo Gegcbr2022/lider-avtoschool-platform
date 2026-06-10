@@ -635,6 +635,7 @@ export default function ProfileTab() {
     useCallback(() => {
       if (!user?.id || isGuest) return;
       getUserStats(user.id).then(setStats).catch(() => {});
+      markAllNotificationsRead().catch(() => {});
     }, [user?.id, isGuest])
   );
 
@@ -789,27 +790,42 @@ export default function ProfileTab() {
         </View>
       ) : null}
 
-      {/* Main navigation menu */}
-      <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.border, overflow: "hidden" }}>
-        {!isGuest ? (
-          <>
+      {/* Main navigation menu — grouped sections */}
+
+      {/* Акаунт */}
+      {!isGuest ? (
+        <View style={{ gap: 6 }}>
+          <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase", paddingLeft: 4 }}>Акаунт</Text>
+          <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.border, overflow: "hidden" }}>
             <NavItem icon="👤" title="Особиста інформація" subtitle={localName || "Ім'я, телефон, місто, категорія"} onPress={() => setActiveSheet("personal")} />
             <View style={{ height: 1, backgroundColor: colors.border, marginLeft: 70 }} />
             <NavItem icon="🪪" title="Документи" subtitle="Дані та фото для НАІС МВС" onPress={() => router.push("/documents" as Href)} />
-            <View style={{ height: 1, backgroundColor: colors.border, marginLeft: 70 }} />
-          </>
-        ) : null}
-        <NavItem icon="⚙️" title="Налаштування" subtitle="Тема оформлення" onPress={() => setActiveSheet("settings")} />
-        {!isGuest ? (
-          <>
-            <View style={{ height: 1, backgroundColor: colors.border, marginLeft: 70 }} />
-            <NavItem icon="🔔" title="Сповіщення" subtitle="Нагадування та push" onPress={() => setActiveSheet("notifications")} />
-            <View style={{ height: 1, backgroundColor: colors.border, marginLeft: 70 }} />
-            <NavItem icon="🔐" title="Безпека та вхід" subtitle="Пароль, вихід з акаунту" onPress={() => setActiveSheet("security")} />
-          </>
-        ) : null}
-        <View style={{ height: 1, backgroundColor: colors.border, marginLeft: 70 }} />
-        <NavItem icon="💬" title="Підтримка" subtitle="Email, умови, конфіденційність" onPress={() => setActiveSheet("support")} />
+          </View>
+        </View>
+      ) : null}
+
+      {/* Налаштування */}
+      <View style={{ gap: 6 }}>
+        <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase", paddingLeft: 4 }}>Налаштування</Text>
+        <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.border, overflow: "hidden" }}>
+          <NavItem icon="⚙️" title="Налаштування" subtitle="Тема оформлення та підказки" onPress={() => setActiveSheet("settings")} />
+          {!isGuest ? (
+            <>
+              <View style={{ height: 1, backgroundColor: colors.border, marginLeft: 70 }} />
+              <NavItem icon="🔔" title="Сповіщення" subtitle="Нагадування та push" onPress={() => setActiveSheet("notifications")} />
+              <View style={{ height: 1, backgroundColor: colors.border, marginLeft: 70 }} />
+              <NavItem icon="🔐" title="Безпека та вхід" subtitle="Пароль, вихід з акаунту" onPress={() => setActiveSheet("security")} />
+            </>
+          ) : null}
+        </View>
+      </View>
+
+      {/* Підтримка */}
+      <View style={{ gap: 6 }}>
+        <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase", paddingLeft: 4 }}>Підтримка</Text>
+        <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.border, overflow: "hidden" }}>
+          <NavItem icon="💬" title="Підтримка" subtitle="Email, умови, конфіденційність" onPress={() => setActiveSheet("support")} />
+        </View>
       </View>
 
       {/* Instructor section */}
