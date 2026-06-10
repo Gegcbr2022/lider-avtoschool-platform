@@ -149,6 +149,11 @@ export default function TabsLayout() {
           title: "Профіль",
           tabBarIcon: ({ focused }) => <TabIcon icon="👤" active={focused} badge={notificationBadge} />,
         }}
+        listeners={{
+          tabPress: () => {
+            setNotificationBadge(0);
+          },
+        }}
       />
 
       {/* Hidden routes — reachable via router.push, not shown in the tab bar.

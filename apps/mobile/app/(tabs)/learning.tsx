@@ -4,262 +4,132 @@ import { useState } from "react";
 import {
   Card,
   Label,
-  LidykBanner,
   Pill,
   Row,
   Screen,
-  SectionHeader,
 } from "../../components/mobile-ui";
+import { LidikGuide } from "../../components/lidik-guide";
 import { mobileServices } from "../../lib/mobile-data";
 import { PDR_QUESTIONS } from "../../lib/pdr-questions";
-import { useTheme, radii } from "../../lib/theme";
+import { useTheme, radii, shadows, spacing } from "../../lib/theme";
 import { useAuth } from "../../lib/auth";
-
-const PDR_CATEGORIES = [
-  { icon: "🎯", title: "Дорожні знаки", detail: "Попереджувальні, заборонні, інформаційні" },
-  { icon: "🚦", title: "Перехрестя", detail: "Пріоритет, світлофори, круговий рух" },
-  { icon: "🛡️", title: "Безпека руху", detail: "Дистанція, обгін, аварійні ситуації" },
-  { icon: "🅿️", title: "Паркування", detail: "Стоянка, зупинка, заборони" },
-];
-
-// Each tile points to a screen that actually exists and works.
-const HUB_TILES = [
-  { icon: "🎯", title: "Тренажер ПДР", sub: `${PDR_QUESTIONS.length} питань`, route: "/(tabs)/tests" as const, accent: true },
-  { icon: "🎓", title: "Екзамен", sub: "20 питань", route: "/(tabs)/tests" as const, accent: false },
-  { icon: "📖", title: "Уроки", sub: "Теорія та відео", route: "/lessons", accent: false },
-  { icon: "🚗", title: "Запитати Лідика", sub: "AI-помічник", route: "/(tabs)/assistant" as const, accent: false },
-];
 
 export default function LearningTab() {
   const { colors } = useTheme();
   const { mode } = useAuth();
   const isAuth = mode === "authenticated";
-  const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
-  const selectedProgram = mobileServices.find((service) => service.id === selectedProgramId);
-
+  
   return (
-    <>
-    <Modal visible={Boolean(selectedProgram)} animationType="slide" transparent onRequestClose={() => setSelectedProgramId(null)}>
-      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.58)", justifyContent: "flex-end" }}>
-        <Pressable style={{ flex: 1 }} onPress={() => setSelectedProgramId(null)} />
-        {selectedProgram ? (
-          <View style={{ maxHeight: "82%", backgroundColor: colors.bgSheet, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 22, borderTopWidth: 1, borderTopColor: colors.border }}>
-            <View style={{ width: 42, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginBottom: 18 }} />
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingBottom: 18 }}>
-              <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
-                <View style={{ width: 54, height: 54, borderRadius: 18, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ fontSize: 26 }}>{selectedProgram.retraining ? "🔁" : "🎓"}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: colors.textPrimary, fontSize: 22, fontWeight: "900", lineHeight: 28 }}>{selectedProgram.title}</Text>
-                  <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 19, marginTop: 4 }}>{selectedProgram.summary}</Text>
-                </View>
-              </View>
-
-              <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-                <Pill tone="red">від {selectedProgram.priceFrom.toLocaleString("uk-UA")} грн</Pill>
-                <Pill>{selectedProgram.duration}</Pill>
-                {"minimumAge" in selectedProgram && selectedProgram.minimumAge ? <Pill>{selectedProgram.minimumAge}</Pill> : null}
-              </View>
-
-              {"condition" in selectedProgram && selectedProgram.condition ? (
-                <View style={{ backgroundColor: colors.warningSoft, borderRadius: radii.md, padding: 12, borderWidth: 1, borderColor: colors.warning + "44" }}>
-                  <Text style={{ color: colors.warning, fontSize: 12, fontWeight: "800", lineHeight: 18 }}>{selectedProgram.condition}</Text>
-                </View>
-              ) : null}
-
-              <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 14, borderWidth: 1, borderColor: colors.border, gap: 10 }}>
-                <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "900" }}>Що входить</Text>
-                {selectedProgram.outcomes.map((outcome) => (
-                  <View key={outcome} style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
-                    <Text style={{ color: colors.red, fontSize: 14, fontWeight: "900" }}>✓</Text>
-                    <Text style={{ flex: 1, color: colors.textSecondary, fontSize: 13, lineHeight: 19 }}>{outcome}</Text>
-                  </View>
-                ))}
-              </View>
-
-              <View style={{ backgroundColor: colors.bgElevated, borderRadius: radii.md, padding: 14, borderWidth: 1, borderColor: colors.border, flexDirection: "row", gap: 10 }}>
-                <Text style={{ fontSize: 24 }}>🚗</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "900" }}>Лідик підкаже маршрут</Text>
-                  <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 18, marginTop: 2 }}>Можеш попросити пояснити різницю між категоріями або підібрати програму під твій досвід.</Text>
-                </View>
-              </View>
-
-              <View style={{ gap: 10 }}>
-                <Pressable
-                  onPress={() => {
-                    setSelectedProgramId(null);
-                    router.push((isAuth ? "/(tabs)/chat" : "/auth?mode=register") as Href);
-                  }}
-                  style={{ backgroundColor: colors.red, borderRadius: radii.md, paddingVertical: 15, alignItems: "center" }}
-                >
-                  <Text style={{ color: "#fff", fontSize: 15, fontWeight: "900" }}>{isAuth ? "Написати менеджеру" : "Записатися на програму"}</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => {
-                    setSelectedProgramId(null);
-                    router.push("/(tabs)/assistant");
-                  }}
-                  style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, paddingVertical: 14, alignItems: "center", borderWidth: 1, borderColor: colors.border }}
-                >
-                  <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "800" }}>Спитати Лідика про програму</Text>
-                </Pressable>
-              </View>
-            </ScrollView>
+    <Screen title="Навчання" subtitle="Твоя дорожня карта до посвідчення водія.">
+      
+      {/* ─── Hero Roadmap ────────────────────────────────────────────────────── */}
+      <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg, padding: 16, borderWidth: 1, borderColor: colors.border, ...shadows.card, marginBottom: 16 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: colors.success }} />
+            <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "800" }}>Теорія: вивчення</Text>
           </View>
-        ) : null}
-      </View>
-    </Modal>
-    <Screen title="Навчання" subtitle="Курс, уроки, тести ПДР та тренажери — все в одному місці.">
-
-      {/* ─── Мій курс ────────────────────────────────────────────────────── */}
-      {isAuth ? (
-        // Course not yet assigned — clean empty state instead of fake mock data
-        <View
-          style={{
-            backgroundColor: colors.bgCard,
-            borderRadius: radii.lg,
-            borderWidth: 1,
-            borderColor: colors.border,
-            padding: 20,
-          }}
-        >
-          <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 8 }}>
-            Мій курс
-          </Text>
-          <Text style={{ color: colors.textPrimary, fontSize: 17, fontWeight: "800" }}>
-            Курс ще не призначено
-          </Text>
-          <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 6, lineHeight: 20 }}>
-            Менеджер автошколи призначить курс після запису. Поки що тренуйся в ПДР Тренажері.
-          </Text>
-          <Pressable
-            onPress={() => router.push("/(tabs)/chat")}
-            style={{ marginTop: 14, backgroundColor: colors.redSoft, borderRadius: radii.sm, paddingVertical: 11, alignItems: "center", borderWidth: 1.5, borderColor: colors.red + "44" }}
-          >
-            <Text style={{ color: colors.red, fontWeight: "800", fontSize: 14 }}>Написати менеджеру →</Text>
-          </Pressable>
+          <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "700" }}>Крок 1 з 4</Text>
         </View>
-      ) : (
-        <Pressable onPress={() => router.push("/auth?mode=register")}>
-          <Card>
-            <Text style={{ fontSize: 16, fontWeight: "900", color: colors.textPrimary }}>📚 Мій курс</Text>
-            <Text style={{ marginTop: 6, fontSize: 14, color: colors.textSecondary, lineHeight: 20 }}>
-              Зареєструйся, щоб бачити прогрес курсу, уроки та оцінки.
-            </Text>
-            <Text style={{ marginTop: 10, fontSize: 14, fontWeight: "800", color: colors.red }}>Зареєструватись →</Text>
-          </Card>
-        </Pressable>
-      )}
 
-      {/* ─── Hub tiles ────────────────────────────────────────────────────── */}
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-        {HUB_TILES.map((tile) => (
-          <Pressable
-            key={tile.title}
-            onPress={() => (tile.route ? router.push(tile.route as Href) : undefined)}
-            disabled={!tile.route}
-            style={{
-              width: "47%",
-              flexGrow: 1,
-              backgroundColor: tile.accent ? colors.red : colors.bgCard,
-              borderRadius: radii.md,
-              padding: 16,
-              borderWidth: 1,
-              borderColor: tile.accent ? colors.red : colors.border,
-              opacity: tile.route ? 1 : 0.55,
-            }}
-          >
-            <Text style={{ fontSize: 26 }}>{tile.icon}</Text>
-            <Text style={{ color: tile.accent ? "#fff" : colors.textPrimary, fontWeight: "800", fontSize: 15, marginTop: 8 }}>
-              {tile.title}
-            </Text>
-            <Text style={{ color: tile.accent ? "rgba(255,255,255,0.8)" : colors.textSecondary, fontSize: 12, marginTop: 2 }}>
-              {tile.route ? tile.sub : "Незабаром"}
-            </Text>
-          </Pressable>
-        ))}
+        <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.border, overflow: "hidden", marginBottom: 16 }}>
+          <View style={{ width: "25%", height: "100%", backgroundColor: colors.red, borderRadius: 3 }} />
+        </View>
+
+        <LidikGuide 
+          variant="inline"
+          text="Почни з маленького кроку — 5 хвилин тренування вже дадуть результат."
+          style={{ marginBottom: 16 }}
+        />
+
+        <Pressable
+          onPress={() => router.push("/(tabs)/tests")}
+          style={{ backgroundColor: colors.red, borderRadius: radii.md, paddingVertical: 14, alignItems: "center" }}
+        >
+          <Text style={{ color: "#fff", fontSize: 15, fontWeight: "900" }}>Продовжити навчання</Text>
+        </Pressable>
+      </View>
+
+      <Text style={{ color: colors.textSecondary, fontSize: 14, fontWeight: "800", marginLeft: 4, marginBottom: 8 }}>Твій план</Text>
+      
+      <View style={{ gap: 10 }}>
+        <Pressable
+          onPress={() => router.push("/(tabs)/tests")}
+          style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg, padding: 16, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", gap: 14, ...shadows.card }}
+        >
+          <View style={{ width: 44, height: 44, borderRadius: radii.md, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ fontSize: 22 }}>🎯</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "800" }}>Тренування ПДР</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>Тести по темам та марафон</Text>
+          </View>
+          <Text style={{ color: colors.textTertiary, fontSize: 20 }}>›</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => router.push("/(tabs)/tests")}
+          style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg, padding: 16, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", gap: 14, ...shadows.card }}
+        >
+          <View style={{ width: 44, height: 44, borderRadius: radii.md, backgroundColor: colors.warningSoft, alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ fontSize: 22 }}>🔥</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "800" }}>Мої слабкі теми</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>Питання, де ти помилявся</Text>
+          </View>
+          <Text style={{ color: colors.textTertiary, fontSize: 20 }}>›</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => router.push("/(tabs)/tests")}
+          style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg, padding: 16, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", gap: 14, ...shadows.card }}
+        >
+          <View style={{ width: 44, height: 44, borderRadius: radii.md, backgroundColor: colors.successSoft, alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ fontSize: 22 }}>🎓</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "800" }}>Пробний іспит</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>20 питань за 20 хвилин</Text>
+          </View>
+          <Text style={{ color: colors.textTertiary, fontSize: 20 }}>›</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => router.push("/(tabs)/assistant")}
+          style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg, padding: 16, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", gap: 14, ...shadows.card }}
+        >
+          <View style={{ width: 44, height: 44, borderRadius: radii.md, backgroundColor: colors.infoSoft, alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ fontSize: 22 }}>🤖</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "800" }}>Поставити питання Лідику</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>AI-помічник 24/7</Text>
+          </View>
+          <Text style={{ color: colors.textTertiary, fontSize: 20 }}>›</Text>
+        </Pressable>
       </View>
 
       {/* ─── Практичне водіння ─────────────────────────────────────────────── */}
-      {isAuth ? (
-        <Pressable onPress={() => router.push("/booking" as Href)}>
-          <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, padding: 16, flexDirection: "row", alignItems: "center", gap: 14 }}>
-            <Text style={{ fontSize: 30 }}>🚗</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 16, fontWeight: "900", color: colors.textPrimary }}>Практичне водіння</Text>
-              <Text style={{ marginTop: 3, fontSize: 13, color: colors.textSecondary, lineHeight: 18 }}>Обери інструктора та запишись на заняття</Text>
-            </View>
-            <Text style={{ fontSize: 20, color: colors.textTertiary }}>›</Text>
-          </View>
-        </Pressable>
-      ) : null}
-
-      {/* ─── Сервісні центри МВС ───────────────────────────────────────────── */}
-      <Pressable onPress={() => router.push("/service-centers" as Href)}>
-        <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, padding: 16, flexDirection: "row", alignItems: "center", gap: 14 }}>
-          <Text style={{ fontSize: 30 }}>🏛️</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 16, fontWeight: "900", color: colors.textPrimary }}>Сервісні центри МВС</Text>
-            <Text style={{ marginTop: 3, fontSize: 13, color: colors.textSecondary, lineHeight: 18 }}>Де отримати права + маршрут на карті</Text>
-          </View>
-          <Text style={{ fontSize: 20, color: colors.textTertiary }}>›</Text>
-        </View>
-      </Pressable>
-
-      {/* ─── Тести ПДР за категоріями ─────────────────────────────────────── */}
-      <Card>
-        <SectionHeader title="Тести ПДР за категоріями" action="Всі теми" onAction={() => router.push("/(tabs)/tests")} />
-        <View style={{ gap: 10, marginTop: 12 }}>
-          {PDR_CATEGORIES.map((cat) => (
-            <Pressable
-              key={cat.title}
-              onPress={() => router.push("/(tabs)/tests")}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 12,
-                borderRadius: radii.md,
-                padding: 14,
-                backgroundColor: colors.bgElevated,
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            >
-              <Text style={{ fontSize: 24 }}>{cat.icon}</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.textPrimary, fontWeight: "800", fontSize: 15 }}>{cat.title}</Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2, lineHeight: 17 }}>{cat.detail}</Text>
+      {isAuth && (
+        <View style={{ marginTop: 16 }}>
+          <Text style={{ color: colors.textSecondary, fontSize: 14, fontWeight: "800", marginLeft: 4, marginBottom: 8 }}>Практика</Text>
+          <Pressable onPress={() => router.push("/booking" as Href)}>
+            <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.border, padding: 16, flexDirection: "row", alignItems: "center", gap: 14, ...shadows.card }}>
+              <View style={{ width: 44, height: 44, borderRadius: radii.md, backgroundColor: colors.bgElevated, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ fontSize: 22 }}>🚗</Text>
               </View>
-              <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
-            </Pressable>
-          ))}
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 16, fontWeight: "800", color: colors.textPrimary }}>Практичне водіння</Text>
+                <Text style={{ marginTop: 3, fontSize: 13, color: colors.textSecondary, lineHeight: 18 }}>Обери інструктора та запишись</Text>
+              </View>
+              <Text style={{ fontSize: 20, color: colors.textTertiary }}>›</Text>
+            </View>
+          </Pressable>
         </View>
-      </Card>
+      )}
 
-      {/* ─── Lidyk tip ────────────────────────────────────────────────────── */}
-      <LidykBanner
-        state="thinking"
-        message="Щоб краще запам'ятати ПДР — читай вголос і поясни правило уявному другові. Це підвищує засвоєння на 40%."
-        action="Запитати Лідика"
-        onAction={() => router.push("/(tabs)/assistant")}
-      />
-
-      {/* ─── Програми автошколи ───────────────────────────────────────────── */}
-      <Card>
-        <SectionHeader title="Програми автошколи" />
-        {mobileServices.slice(0, 5).map((service) => (
-          <Row
-            key={service.id}
-            title={service.title}
-            detail={`${service.duration} · від ${service.priceFrom.toLocaleString("uk-UA")} грн`}
-            right={<Pill tone="red">Записатись</Pill>}
-            onPress={() => setSelectedProgramId(service.id)}
-          />
-        ))}
-      </Card>
+      <View style={{ height: 40 }} />
     </Screen>
-    </>
   );
 }

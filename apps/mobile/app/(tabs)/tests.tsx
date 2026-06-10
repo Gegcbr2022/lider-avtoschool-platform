@@ -124,6 +124,7 @@ const PDR_CATEGORIES = [
 
 // ─── Mini-games definition ────────────────────────────────────────────────────
 const MINI_GAMES = [
+  { icon: "⚔️", category: "duel", label: "Дуель ПДР", desc: "Змагання 1 на 1 зі знавцем правил", difficulty: "Важкий", duration: "2–3 хв", benefit: "Перевірка під тиском" },
   { icon: "⚠️", category: "Знаки", label: "Знаки на швидкість", desc: "Швидко впізнавай знаки та їх вимоги", difficulty: "Легкий", duration: "2–4 хв", benefit: "Тренує реакцію та пам'ять" },
   { icon: "↔️", category: "Перехрестя", label: "Хто має перевагу?", desc: "Відпрацюй пріоритет у конфліктних точках", difficulty: "Середній", duration: "3–5 хв", benefit: "Найчастіша помилка на іспиті" },
   { icon: "🅿️", category: "Стоянка", label: "Паркування", desc: "Де можна стояти, зупинятися і чекати", difficulty: "Середній", duration: "3–5 хв", benefit: "Уникни штрафів у місті" },
@@ -661,12 +662,25 @@ function QuizScreen({
   const [showVisualScan, setShowVisualScan] = useState(false);
   const [visualHints, setVisualHints] = useState(true);
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(meta.mode === "exam" ? EXAM_DURATION_SECONDS : null);
+  const [opponentScore, setOpponentScore] = useState(0);
   const startedAt = useRef(Date.now());
   const finishedRef = useRef(false);
 
   useEffect(() => {
     loadAppSettings().then(settings => setVisualHints(settings.visualHints)).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (meta.mode !== "duel" || finishedRef.current) return;
+    const interval = setInterval(() => {
+      setOpponentScore(s => {
+        if (s >= questions.length) return questions.length;
+        // Simulate a smart opponent answering 1 question every 6 to 12 seconds
+        return s + (Math.random() * 0.15 + 0.05);
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [meta.mode, questions.length]);
 
   function finishQuiz(timedOut = false, finalAnswers = answers) {
     if (finishedRef.current) return;
@@ -772,6 +786,15 @@ function QuizScreen({
           </View>
         </View>
         <ProgressBar value={progress} color={colors.red} height={6} />
+        {meta.mode === "duel" && (
+          <View style={{ marginTop: 4 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
+              <Text style={{ fontSize: 10, color: colors.textTertiary, fontWeight: "800", textTransform: "uppercase" }}>Суперник</Text>
+              <Text style={{ fontSize: 10, color: colors.textTertiary, fontWeight: "800" }}>{Math.floor(opponentScore)} / {questions.length}</Text>
+            </View>
+            <ProgressBar value={(opponentScore / questions.length) * 100} color={colors.warning} height={4} />
+          </View>
+        )}
       </View>
 
       <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: 140 }}>
@@ -1122,7 +1145,9 @@ function ResultScreen({ result, onRestart, onBack, onMistakes }: {
       <ScrollView contentContainerStyle={{ padding: spacing.xl, gap: spacing.lg, alignItems: "center", paddingTop: 60 }}>
         <Text style={{ fontSize: 64 }}>{passed ? "🏆" : "📚"}</Text>
         <Text style={{ color: colors.textPrimary, fontSize: 32, fontWeight: "900", textAlign: "center" }}>
-          {passed ? "Молодець!" : "Потренуйся ще!"}
+          {result.mode === "duel" 
+            ? (passed ? "Перемога у дуелі!" : "Суперник був швидшим") 
+            : (passed ? "Молодець!" : "Потренуйся ще!")}
         </Text>
         <View style={{ backgroundColor: passed ? colors.successSoft : colors.warningSoft, borderRadius: radii.lg, padding: spacing.xl, alignItems: "center", gap: spacing.sm, width: "100%", borderWidth: 1, borderColor: passed ? colors.success + "44" : colors.warning + "44" }}>
           <Text style={{ color: passed ? colors.success : colors.warning, fontSize: 56, fontWeight: "900" }}>{percent}%</Text>
@@ -1617,6 +1642,11 @@ export default function TestsTab() {
   }, [licenseCategory, launchQuiz]);
 
   const startMiniQuiz = useCallback((category: string, count = 5) => {
+    if (category === "duel") {
+      const qs = getRandomQuestions(10, licenseCategory);
+      launchQuiz(qs, { mode: "duel", title: "Дуель ПДР", licenseCategory });
+      return;
+    }
     const qs = category === "exam" ? getRandomQuestions(count, licenseCategory) : getCategoryQuestions(category, count, licenseCategory);
     launchQuiz(qs.length ? qs : getRandomQuestions(count, licenseCategory), { mode: "mini", title: "Міні-тренування", licenseCategory, category: category === "exam" ? null : category });
   }, [licenseCategory, launchQuiz]);

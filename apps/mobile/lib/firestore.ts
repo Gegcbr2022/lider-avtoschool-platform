@@ -516,6 +516,22 @@ function localDayKey(d = new Date()): string {
   return `${y}-${m}-${day}`;
 }
 
+export function getWeekKey(d = new Date()): string {
+  const y = d.getFullYear();
+  const d_copy = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = d_copy.getUTCDay() || 7;
+  d_copy.setUTCDate(d_copy.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d_copy.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((d_copy.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return `${y}-W${String(weekNo).padStart(2, "0")}`;
+}
+
+export function getMonthKey(d = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
+}
+
 function wholeDaysBetween(from: string, to: string): number {
   const a = new Date(`${from}T00:00:00`);
   const b = new Date(`${to}T00:00:00`);
@@ -568,9 +584,21 @@ export async function recordTestCompletion(
     totalAnswered: prev.totalAnswered + params.total,
   };
 
+  const weekKey = getWeekKey();
+  const monthKey = getMonthKey();
+
   await setDoc(
     doc(db, "userProfiles", userId),
-    { ...next, updatedAt: serverTimestamp() },
+    { 
+      ...next, 
+      updatedAt: serverTimestamp(),
+      [`stats_${weekKey}`]: increment(params.total),
+      [`correct_${weekKey}`]: increment(params.correct),
+      [`stats_${monthKey}`]: increment(params.total),
+      [`correct_${monthKey}`]: increment(params.correct),
+      currentWeek: weekKey,
+      currentMonth: monthKey,
+    },
     { merge: true }
   );
   return next;
@@ -1406,16 +1434,35 @@ export type LeaderboardEntry = {
   streakDays: number;
 };
 
-export async function getLeaderboard(limitCount = 20): Promise<LeaderboardEntry[]> {
+export async function getLeaderboard(limitCount = 20, timeWindow: "all" | "week" | "month" = "all"): Promise<LeaderboardEntry[]> {
   try {
+    let orderByField = "totalAnswered";
+    const weekKey = getWeekKey();
+    const monthKey = getMonthKey();
+    
+    if (timeWindow === "week") {
+      orderByField = `stats_${weekKey}`;
+    } else if (timeWindow === "month") {
+      orderByField = `stats_${monthKey}`;
+    }
+
     const snap = await getDocs(
-      query(collection(db, "userProfiles"), orderBy("totalAnswered", "desc"), limit(limitCount))
+      query(collection(db, "userProfiles"), orderBy(orderByField, "desc"), limit(limitCount))
     );
     return snap.docs
       .map((d) => {
         const data = d.data();
-        const answered = (data.totalAnswered as number) ?? 0;
-        const correct = (data.totalCorrect as number) ?? 0;
+        let answered = (data.totalAnswered as number) ?? 0;
+        let correct = (data.totalCorrect as number) ?? 0;
+        
+        if (timeWindow === "week") {
+          answered = (data[`stats_${weekKey}`] as number) ?? 0;
+          correct = (data[`correct_${weekKey}`] as number) ?? 0;
+        } else if (timeWindow === "month") {
+          answered = (data[`stats_${monthKey}`] as number) ?? 0;
+          correct = (data[`correct_${monthKey}`] as number) ?? 0;
+        }
+
         return {
           uid: d.id,
           displayName: ((data.name as string | undefined)?.split(" ")[0]) ?? "Учень",
@@ -1428,7 +1475,7 @@ export async function getLeaderboard(limitCount = 20): Promise<LeaderboardEntry[
           streakDays: (data.streakDays as number) ?? 0,
         };
       })
-      .filter((e) => e.totalAnswered >= 5);
+      .filter((e) => e.totalAnswered > 0);
   } catch {
     return [];
   }

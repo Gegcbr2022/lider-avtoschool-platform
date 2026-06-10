@@ -379,8 +379,8 @@ function StudentHome() {
 
   const heroProgress = stats.testsCompleted > 0 ? Math.min(100, stats.bestScorePct) : 0;
   const heroHint = stats.testsCompleted === 0
-    ? "500 питань · офіційний іспит МВС"
-    : stageInfo.hint;
+    ? "Я Лідик! Давай пройдемо перший тест, щоб скласти твій план."
+    : `Твій прогрес ${heroProgress}%. ${stageInfo.hint}`;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top"]}>
@@ -389,209 +389,172 @@ function StudentHome() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.red} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Driver card (Monobank-style) ─────────────────────────────── */}
-        <View style={{ backgroundColor: colors.red, borderRadius: 24, padding: 22, overflow: "hidden", gap: 0, ...shadows.red }}>
-          <View style={{ position: "absolute", right: -30, top: -30, width: 160, height: 160, borderRadius: 80, backgroundColor: "rgba(255,255,255,0.1)" }} />
-          <View style={{ position: "absolute", right: 20, bottom: -50, width: 130, height: 130, borderRadius: 65, backgroundColor: "rgba(0,0,0,0.1)" }} />
-
-          <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" }}>
+        {/* ── Dashboard Hero ─────────────────────────────────────── */}
+        <View style={{ gap: spacing.sm }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" }}>
             <View>
-              <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 10, fontWeight: "900", letterSpacing: 1.4, textTransform: "uppercase" }}>Картка учня</Text>
-              <Text style={{ color: "#fff", fontSize: 26, fontWeight: "900", marginTop: 4, letterSpacing: -0.5 }}>{firstName}</Text>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
-                <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 13 }}>Категорія {category} · Лідер</Text>
-                {daysToExam !== null && (
-                  <View style={{ backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
-                    <Text style={{ color: "#fff", fontSize: 10, fontWeight: "900" }}>До іспиту {daysToExam} {daysToExam === 1 ? "день" : [2, 3, 4].includes(daysToExam % 10) && ![12, 13, 14].includes(daysToExam % 100) ? "дні" : "днів"}</Text>
-                  </View>
-                )}
-              </View>
+              <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                Привіт, {firstName}!
+              </Text>
+              <Text style={{ color: colors.textPrimary, fontSize: 28, fontWeight: "900", letterSpacing: -0.5, marginTop: 2 }}>
+                {stageInfo.label}
+              </Text>
             </View>
-            <View style={{ alignItems: "flex-end" }}>
-              <View style={{ backgroundColor: "rgba(255,255,255,0.18)", borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6 }}>
-                <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 9, fontWeight: "900", textTransform: "uppercase" }}>Балів</Text>
-                <Text style={{ color: "#fff", fontSize: 20, fontWeight: "900", textAlign: "right" }}>{bonus.balance}</Text>
+            {daysToExam !== null && (
+              <View style={{ backgroundColor: colors.redSoft, borderRadius: radii.md, paddingHorizontal: 10, paddingVertical: 6 }}>
+                <Text style={{ color: colors.red, fontSize: 11, fontWeight: "900" }}>До іспиту {daysToExam} дн.</Text>
               </View>
-            </View>
+            )}
           </View>
 
-          <View style={{ marginTop: 18, gap: 6 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 12, fontWeight: "700" }}>{stageInfo.label}</Text>
-              <Text style={{ color: "#fff", fontSize: 12, fontWeight: "900" }}>{accuracyPct > 0 ? `${accuracyPct}% точність` : "починай тестувати"}</Text>
+          <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg, padding: 16, borderWidth: 1, borderColor: colors.border, ...shadows.card, marginTop: 4 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+              <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: colors.infoSoft, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ fontSize: 26 }}>🤖</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "600", lineHeight: 20 }}>
+                  "{heroHint}"
+                </Text>
+              </View>
             </View>
-            <View style={{ height: 6, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.25)", overflow: "hidden" }}>
-              <View style={{ width: `${Math.min(100, accuracyPct)}%`, height: 6, backgroundColor: "#fff", borderRadius: 3 }} />
-            </View>
-            {stats.streakDays > 0 ? (
-              <Text style={{ color: "rgba(255,255,255,0.65)", fontSize: 11, fontWeight: "700" }}>🔥 {stats.streakDays} {stats.streakDays === 1 ? "день" : "днів"} серія · Рекорд {stats.bestStreak}</Text>
-            ) : null}
+            <ScalePressable
+              haptic
+              onPress={() => router.push("/(tabs)/tests")}
+              style={{ backgroundColor: colors.red, borderRadius: radii.md, paddingVertical: 14, alignItems: "center", marginTop: 16 }}
+            >
+              <Text style={{ color: "#fff", fontSize: 15, fontWeight: "900" }}>Продовжити навчання</Text>
+            </ScalePressable>
           </View>
         </View>
 
-        {/* ── Тренажёр ПДР — hero card ─────────────────────────────────────── */}
+        {/* ── Сьогодні для тебе ─────────────────────────────────────────── */}
         <Animated.View style={{
           opacity: cardAnims[0],
           transform: [{ scale: (cardAnims[0] as Animated.Value).interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }],
         }}>
-          <ScalePressable
-            haptic
-            onPress={() => router.push("/(tabs)/tests")}
-            style={{
-              backgroundColor: colors.bgCard,
-              borderRadius: radii.lg,
-              padding: 18,
-              borderWidth: 1,
-              borderColor: colors.border,
-              ...shadows.card,
-            }}
-          >
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ fontSize: 26 }}>🎯</Text>
-                </View>
-                <View>
-                  <Text style={{ color: colors.textPrimary, fontSize: 17, fontWeight: "900", letterSpacing: -0.3 }}>Тренажер ПДР</Text>
-                  <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "600", marginTop: 1 }}>
-                    {stats.testsCompleted > 0 ? `${stats.testsCompleted} тестів пройдено` : "500 питань · іспит МВС"}
-                  </Text>
-                </View>
+          <View style={{ gap: spacing.xs, marginTop: 4 }}>
+            <Text style={{ color: colors.textSecondary, fontSize: 14, fontWeight: "800", marginLeft: 4, marginBottom: 4 }}>Сьогодні для тебе</Text>
+            <ScalePressable
+              onPress={() => router.push("/(tabs)/tests")}
+              style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.border, padding: 16, flexDirection: "row", alignItems: "center", gap: 12, ...shadows.card }}
+            >
+              <View style={{ width: 44, height: 44, borderRadius: radii.md, backgroundColor: colors.warningSoft, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ fontSize: 22 }}>⚡</Text>
               </View>
-              <View style={{ alignItems: "flex-end" }}>
-                {stats.testsCompleted > 0 && (
-                  <View style={{ backgroundColor: colors.redSoft, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, marginBottom: 2 }}>
-                    <Text style={{ color: colors.red, fontSize: 13, fontWeight: "900" }}>{stats.bestScorePct}%</Text>
-                  </View>
-                )}
-                <Text style={{ color: colors.red, fontSize: 22, fontWeight: "900" }}>›</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "800" }}>Коротке тренування</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "500", marginTop: 2 }}>10 питань за 5 хвилин</Text>
               </View>
-            </View>
-
-            <View style={{ marginBottom: 10 }}>
-              <View style={{ height: 8, borderRadius: 4, backgroundColor: colors.border, overflow: "hidden", ...shadows.card }}>
-                <View style={{ width: `${heroProgress}%`, height: "100%", backgroundColor: colors.red, borderRadius: 4, position: "relative" }}>
-                  <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: "40%", backgroundColor: "rgba(255,255,255,0.2)" }} />
-                </View>
-              </View>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 5 }}>
-                <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "600" }} numberOfLines={1}>
-                  {heroProgress === 0
-                    ? "500 питань · офіційний іспит МВС"
-                    : heroProgress < 50
-                    ? "Нижче 50% — зосередься на знаках"
-                    : heroProgress < 70
-                    ? "До іспиту потрібно ≥70%"
-                    : heroProgress < 85
-                    ? "Відшліфуй теми нижче 80% для впевненості"
-                    : "Готовий до іспиту 🎯"}
-                </Text>
-                {heroProgress > 0 && (
-                  <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: "700" }}>{heroProgress}%</Text>
-                )}
-              </View>
-            </View>
-
-            <View style={{ backgroundColor: colors.bgElevated, borderRadius: radii.md, padding: 10 }}>
-              <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "600", lineHeight: 17 }} numberOfLines={2}>
-                💡 {heroHint}
-              </Text>
-            </View>
-          </ScalePressable>
+              <Text style={{ color: colors.textTertiary, fontSize: 20 }}>›</Text>
+            </ScalePressable>
+          </View>
         </Animated.View>
 
-        {/* ── 4 side actions (2×2 grid) ──────────────────────────────────── */}
+        {/* ── Великі Action Cards ──────────────────────────────────── */}
         <Animated.View style={{
           opacity: cardAnims[1],
           transform: [{ scale: (cardAnims[1] as Animated.Value).interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }],
         }}>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-            {SIDE_ACTIONS.map((action) => (
-              <View key={action.label} style={{ flex: 1, minWidth: "44%" }}>
-                <ScalePressable
-                  haptic
-                  onPress={() => router.push(action.route)}
-                  style={{
-                    backgroundColor: colors.bgCard,
-                    borderRadius: radii.lg,
-                    padding: 14,
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                    alignItems: "center",
-                    gap: 6,
-                    minHeight: 96,
-                    justifyContent: "center",
-                    ...shadows.card,
-                  }}
-                >
-                  <View style={{ width: 44, height: 44, borderRadius: 13, backgroundColor: action.tintSoft, alignItems: "center", justifyContent: "center" }}>
-                    <Text style={{ fontSize: 22 }}>{action.icon}</Text>
-                  </View>
-                  <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: "900", letterSpacing: -0.1, textAlign: "center" }}>{action.label}</Text>
-                  <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: "600" }}>{action.subtitle}</Text>
-                </ScalePressable>
-              </View>
-            ))}
+          <View style={{ gap: 10 }}>
+            {/* Ряд 1 */}
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <ScalePressable
+                haptic
+                onPress={() => router.push("/(tabs)/tests")}
+                style={{ flex: 1, backgroundColor: colors.bgCard, borderRadius: radii.lg, padding: 16, borderWidth: 1, borderColor: colors.border, ...shadows.card, minHeight: 120, justifyContent: "space-between" }}
+              >
+                <View style={{ width: 42, height: 42, borderRadius: radii.md, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ fontSize: 22 }}>🎯</Text>
+                </View>
+                <View style={{ marginTop: 12 }}>
+                  <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "900" }}>Тренажер ПДР</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "500", marginTop: 4 }}>
+                    {stats.testsCompleted > 0 ? `Пройдено ${stats.testsCompleted} тестів` : "Всі офіційні питання"}
+                  </Text>
+                </View>
+              </ScalePressable>
+              <ScalePressable
+                haptic
+                onPress={() => router.push("/(tabs)/learning")}
+                style={{ flex: 1, backgroundColor: colors.bgCard, borderRadius: radii.lg, padding: 16, borderWidth: 1, borderColor: colors.border, ...shadows.card, minHeight: 120, justifyContent: "space-between" }}
+              >
+                <View style={{ width: 42, height: 42, borderRadius: radii.md, backgroundColor: colors.successSoft, alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ fontSize: 22 }}>📚</Text>
+                </View>
+                <View style={{ marginTop: 12 }}>
+                  <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "900" }}>Навчання</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "500", marginTop: 4 }}>Твій план до іспиту</Text>
+                </View>
+              </ScalePressable>
+            </View>
+            
+            {/* Ряд 2 */}
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <ScalePressable
+                haptic
+                onPress={() => router.push("/(tabs)/assistant")}
+                style={{ flex: 1, backgroundColor: colors.bgCard, borderRadius: radii.lg, padding: 16, borderWidth: 1, borderColor: colors.border, ...shadows.card, minHeight: 120, justifyContent: "space-between" }}
+              >
+                <View style={{ width: 42, height: 42, borderRadius: radii.md, backgroundColor: colors.infoSoft, alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ fontSize: 22 }}>💬</Text>
+                </View>
+                <View style={{ marginTop: 12 }}>
+                  <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "900" }}>Лідик чат</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "500", marginTop: 4 }}>Пояснить будь-яке правило</Text>
+                </View>
+              </ScalePressable>
+              <ScalePressable
+                haptic
+                onPress={() => router.push("/(tabs)/club")}
+                style={{ flex: 1, backgroundColor: colors.bgCard, borderRadius: radii.lg, padding: 16, borderWidth: 1, borderColor: colors.border, ...shadows.card, minHeight: 120, justifyContent: "space-between" }}
+              >
+                <View style={{ width: 42, height: 42, borderRadius: radii.md, backgroundColor: colors.warningSoft, alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ fontSize: 22 }}>🏆</Text>
+                </View>
+                <View style={{ marginTop: 12 }}>
+                  <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "900" }}>Клуб</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: "500", marginTop: 4 }}>Рейтинг та спільнота</Text>
+                </View>
+              </ScalePressable>
+            </View>
           </View>
-        </Animated.View>
-
-        {/* ── Що далі — smart hint ─────────────────────────────────────────── */}
-        <Animated.View style={{
-          opacity: cardAnims[2],
-          transform: [{ scale: (cardAnims[2] as Animated.Value).interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }],
-        }}>
-          <ScalePressable
-            onPress={() => router.push("/(tabs)/tests")}
-            style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg, borderWidth: 1, borderColor: colors.border, padding: 16, flexDirection: "row", alignItems: "center", gap: 12, ...shadows.card }}
-          >
-            <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: stageInfo.color + "18", alignItems: "center", justifyContent: "center" }}>
-              <Text style={{ fontSize: 22 }}>🗓️</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: stageInfo.color, fontSize: 10, fontWeight: "900", textTransform: "uppercase", letterSpacing: 0.8 }}>Що далі</Text>
-              <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: "800", marginTop: 2, lineHeight: 19 }}>{stageInfo.hint}</Text>
-            </View>
-            <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
-          </ScalePressable>
         </Animated.View>
 
         {/* ── Stats strip ───────────────────────────────────────────────── */}
         {stats.testsCompleted > 0 ? (
           <Animated.View style={{
-            opacity: cardAnims[3],
-            transform: [{ scale: (cardAnims[3] as Animated.Value).interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] }) }],
+            opacity: cardAnims[2],
+            transform: [{ scale: (cardAnims[2] as Animated.Value).interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] }) }],
           }}>
             <View style={{ flexDirection: "row", gap: 8 }}>
               {[
                 { label: "Тестів", value: String(stats.testsCompleted), icon: "✅" },
-                { label: "Відповідей", value: String(stats.totalAnswered), icon: "📚" },
-                { label: "Найкращий", value: `${stats.bestScorePct}%`, icon: "🏆" },
+                { label: "Відповідей", value: String(stats.totalAnswered), icon: "🧠" },
+                { label: "Найкращий", value: `${stats.bestScorePct}%`, icon: "🔥" },
               ].map((s) => (
-                <View key={s.label} style={{ flex: 1, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 12, alignItems: "center", borderWidth: 1, borderColor: colors.border, gap: 3 }}>
+                <View key={s.label} style={{ flex: 1, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 12, alignItems: "center", borderWidth: 1, borderColor: colors.border, gap: 4 }}>
                   <Text style={{ fontSize: 18 }}>{s.icon}</Text>
                   <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "900" }}>{s.value}</Text>
-                  <Text style={{ color: colors.textTertiary, fontSize: 10, fontWeight: "700" }}>{s.label}</Text>
+                  <Text style={{ color: colors.textTertiary, fontSize: 10, fontWeight: "700", textTransform: "uppercase" }}>{s.label}</Text>
                 </View>
               ))}
             </View>
           </Animated.View>
         ) : null}
 
-        {/* ── Daily tip ─────────────────────────────────────────────────── */}
-        <Animated.View style={{
-          opacity: cardAnims[4],
-          transform: [{ scale: (cardAnims[4] as Animated.Value).interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] }) }],
-        }}>
-          <DailyTip onPress={() => router.push("/(tabs)/tests")} />
-        </Animated.View>
-
         {/* ── Services ──────────────────────────────────────────────────── */}
-        <Card style={{ borderRadius: radii.lg }}>
-          <Label>Сервіси</Label>
-          <Row title="Страховка" detail="ОСЦПВ онлайн" icon="🛡️" onPress={() => router.push("/insurance" as Href)} />
-          <Row title="Автоюрист" detail="Правова база" icon="⚖️" onPress={() => router.push("/lawyer" as Href)} />
-          <Row title="Сервісні центри" detail="Маршрути МВС" icon="🏛️" onPress={() => router.push("/service-centers" as Href)} />
-        </Card>
+        <Animated.View style={{
+          opacity: cardAnims[3],
+          transform: [{ scale: (cardAnims[3] as Animated.Value).interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] }) }],
+        }}>
+          <Card style={{ borderRadius: radii.lg }}>
+            <Label>Сервіси</Label>
+            <Row title="Практичне водіння" detail="Обери інструктора" icon="🚗" onPress={() => router.push("/booking" as Href)} />
+            <Row title="Страховка" detail="ОСЦПВ онлайн" icon="🛡️" onPress={() => router.push("/insurance" as Href)} />
+            <Row title="Сервісні центри" detail="Маршрути МВС" icon="🏛️" onPress={() => router.push("/service-centers" as Href)} />
+          </Card>
+        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );

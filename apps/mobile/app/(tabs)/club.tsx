@@ -1072,14 +1072,6 @@ function LeaderboardView({
   const [timeWindow, setTimeWindow] = useState<LeaderboardWindowKey>("all");
   const rowAnims = useRef<Animated.Value[]>([]);
 
-  useEffect(() => {
-    setLoading(true);
-    void getLeaderboard(30).then((data) => {
-      setEntries(data);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, []);
-
   // Stagger rows in after data loads
   useEffect(() => {
     if (loading) return;
@@ -1121,12 +1113,20 @@ function LeaderboardView({
     };
   };
 
+  // When timeWindow changes, we should reload the leaderboard
+  useEffect(() => {
+    setLoading(true);
+    void getLeaderboard(30, timeWindow).then((data) => {
+      setEntries(data);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [timeWindow]);
+
   return (
     <View style={{ flex: 1 }}>
       <SubHeader title="Рейтинг ПДР" subtitle="Чесний залік учнів школи" onBack={onBack} />
 
       <View style={{ borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.bgCard, paddingHorizontal: spacing.md, paddingTop: 10, paddingBottom: 10, gap: 10 }}>
-        {/* Тимчасово приховано до бекенд-реалізації
         <View style={{ flexDirection: "row", borderRadius: 999, padding: 3, backgroundColor: colors.bgElevated, borderWidth: 1, borderColor: colors.border }}>
           {LEADERBOARD_WINDOW_OPTIONS.map((opt) => (
             <TouchableOpacity
@@ -1138,7 +1138,6 @@ function LeaderboardView({
             </TouchableOpacity>
           ))}
         </View>
-        */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: "row", gap: 8 }}>
           {LEADERBOARD_SORT_OPTIONS.map((opt) => (
             <TouchableOpacity
@@ -1164,7 +1163,7 @@ function LeaderboardView({
               {showSoloState ? (soloIsMe ? "Ти поки єдиний у рейтингу" : "У рейтингу поки один учасник") : "Рейтинг поки порожній"}
             </Text>
             <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 21, textAlign: "center", maxWidth: 290 }}>
-              Запроси друзів, проходьте ПДР-тести разом і змагайтесь без випадкових чемпіонів.
+              Пройди тренування, щоб кинути виклик іншим учням автошколи і зайняти своє місце в топі.
             </Text>
             {showSoloState ? (
               <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
@@ -1178,13 +1177,13 @@ function LeaderboardView({
                 </View>
               </View>
             ) : null}
-            <PrimaryButton onPress={onShareReferral} style={{ marginTop: 4 }}>
-              Запросити друзів
+            <PrimaryButton onPress={() => router.push("/(tabs)/tests")} style={{ marginTop: 4, paddingHorizontal: 24 }}>
+              Перейти в Тренажер ПДР
             </PrimaryButton>
             <MascotMessage
-              emoji="🚗"
+              emoji="🤖"
               title="Лідик"
-              message="Перший справжній суперник з'явиться швидше, якщо кинути запрошення просто зараз."
+              message="Твій перший тест — це перший крок до чемпіонства. Почни з короткого тренування."
               tone="error"
             />
           </View>

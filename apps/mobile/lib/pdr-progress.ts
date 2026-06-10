@@ -5,7 +5,7 @@ const PROGRESS_PREFIX = "lider:pdr-progress:v1";
 const MARATHON_PREFIX = "lider:pdr-marathon:v1";
 const PENDING_SYNC_KEY = "lider:pdr-pending-sync:v1";
 
-export type PdrQuizMode = "exam" | "topic" | "mini" | "mistakes" | "marathon";
+export type PdrQuizMode = "exam" | "topic" | "mini" | "mistakes" | "marathon" | "duel";
 
 export type PdrMistakeRecord = {
   questionId: string;
