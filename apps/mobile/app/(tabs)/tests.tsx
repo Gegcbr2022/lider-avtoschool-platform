@@ -1193,9 +1193,11 @@ function ResultScreen({ result, onRestart, onBack, onMistakes }: {
           </View>
         ) : (
           <>
-            <Text style={{ fontSize: 64 }}>{passed ? "🏆" : "📚"}</Text>
+            <Text style={{ fontSize: 64 }}>
+              {percent === 100 ? "✨" : percent >= 90 ? "🌟" : passed ? "🏆" : percent >= 50 ? "📖" : "💪"}
+            </Text>
             <Text style={{ color: colors.textPrimary, fontSize: 32, fontWeight: "900", textAlign: "center" }}>
-              {passed ? "Молодець!" : "Потренуйся ще!"}
+              {percent === 100 ? "Бездоганно!" : percent >= 90 ? "Майже ідеально!" : passed ? "Ти молодець!" : percent >= 50 ? "Ще трошки!" : "Тренуймось далі!"}
             </Text>
           </>
         )}
@@ -1205,7 +1207,7 @@ function ResultScreen({ result, onRestart, onBack, onMistakes }: {
           <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: "center" }}>
             {result.mode === "exam"
               ? (passed ? "Екзамен складено за правилом МВС: максимум дві помилки." : "Для складання екзамену МВС потрібно не більше двох помилок.")
-              : (passed ? "Відмінний результат! Ти готовий до іспиту ПДР." : "Для тренувального заліку потрібно 75%+. Продовжуй тренуватись!")}
+              : (percent === 100 ? "Ідеальний результат! Із таким підходом іспит — не проблема." : percent >= 90 ? "Дуже сильно! Ти в топ-формі для іспиту ПДР." : passed ? "Залік! Ще кілька повторень — і впевнено здаш МВС." : percent >= 50 ? "Майже! Зосередься на слабких темах і спробуй ще раз." : "Не страшно — кожна помилка тебе вчить. Почни з роботи над помилками.")}
           </Text>
         </View>
         {result.mode === "exam" ? (
@@ -1250,7 +1252,7 @@ function ResultScreen({ result, onRestart, onBack, onMistakes }: {
             <View style={{ flex: 1 }}>
               <Text style={{ color: colors.red, fontWeight: "900", fontSize: 12, textTransform: "uppercase", letterSpacing: 0.8 }}>ЛІДИК</Text>
               <Text style={{ color: colors.textPrimary, fontSize: 14, lineHeight: 20, marginTop: 4 }}>
-                {passed ? "Чудово! Запиши результат. Покажи мені після реального іспиту 🎉" : "Не здавайся! Повтори слабкі теми — я підкажу де тренуватись 💪"}
+                {result.mode === "duel" ? (passed ? "Переміг у дуелі — тепер іди на реальний іспит! ⚔️🏆" : "Суперник виявився швидшим цього разу. Реванш? 💪") : percent >= 90 ? "Вражає! Із таким результатом іспит — вже формальність. Удачі на МВС 🎉" : passed ? "Гарна робота! Повторюй слабкі теми — і ти готовий до реального іспиту 🚗" : percent >= 50 ? "Близько! Пройди «Роботу над помилками» — я покажу де підтягнутись 💪" : "Кожен раз краще! Почни з «Роботи над помилками» — я допоможу скласти план 📚"}
               </Text>
             </View>
           </View>
@@ -2185,7 +2187,7 @@ export default function TestsTab() {
           onPress={() => setSubView("categories")}
           style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.border, ...shadows.card }}
         >
-          <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: "#457b9d" + "18", alignItems: "center", justifyContent: "center" }}>
+          <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: colors.infoSoft, alignItems: "center", justifyContent: "center" }}>
             <Text style={{ fontSize: 24 }}>📚</Text>
           </View>
           <View style={{ flex: 1 }}>
@@ -2202,7 +2204,7 @@ export default function TestsTab() {
           onPress={() => setSubView("minigames")}
           style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.border, ...shadows.card }}
         >
-          <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: "#f4a261" + "18", alignItems: "center", justifyContent: "center" }}>
+          <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: colors.warningSoft, alignItems: "center", justifyContent: "center" }}>
             <Text style={{ fontSize: 24 }}>🎮</Text>
           </View>
           <View style={{ flex: 1 }}>

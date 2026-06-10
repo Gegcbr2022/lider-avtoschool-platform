@@ -393,10 +393,15 @@ function NotificationsSheet({ visible, onClose }: { visible: boolean; onClose: (
           </View>
 
           {items.length === 0 ? (
-            <View style={{ padding: 18, alignItems: "center" }}>
-              <Text style={{ fontSize: 26 }}>📭</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: "700", marginTop: 8, textAlign: "center" }}>
-                Тут зʼявляться відповіді менеджера, нагадування про заняття та тест дня.
+            <View style={{ paddingHorizontal: 20, paddingVertical: 24, alignItems: "center", gap: 10 }}>
+              <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: colors.bgElevated, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ fontSize: 26 }}>🔔</Text>
+              </View>
+              <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "800", textAlign: "center" }}>
+                Поки тихо
+              </Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 19, textAlign: "center", maxWidth: 260 }}>
+                Тут зʼявляться нагадування про заняття, щоденний тест і відповіді від школи.
               </Text>
             </View>
           ) : (
