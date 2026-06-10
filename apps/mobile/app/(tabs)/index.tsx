@@ -367,6 +367,14 @@ function StudentHome() {
       tint: colors.warning,
       tintSoft: colors.warningSoft,
     },
+    {
+      icon: "🚗",
+      label: "Заняття",
+      subtitle: "Практика",
+      route: "/booking" as Href,
+      tint: colors.red,
+      tintSoft: colors.redSoft,
+    },
   ];
 
   const heroProgress = stats.testsCompleted > 0 ? Math.min(100, stats.bestScorePct) : 0;
@@ -492,37 +500,37 @@ function StudentHome() {
           </ScalePressable>
         </Animated.View>
 
-        {/* ── 3 side actions ──────────────────────────────────────────────── */}
+        {/* ── 4 side actions (2×2 grid) ──────────────────────────────────── */}
         <Animated.View style={{
           opacity: cardAnims[1],
           transform: [{ scale: (cardAnims[1] as Animated.Value).interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }],
         }}>
-          <View style={{ flexDirection: "row", gap: 10 }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
             {SIDE_ACTIONS.map((action) => (
-              <ScalePressable
-                haptic
-                key={action.label}
-                onPress={() => router.push(action.route)}
-                style={{
-                  flex: 1,
-                  backgroundColor: colors.bgCard,
-                  borderRadius: radii.lg,
-                  padding: 14,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  alignItems: "center",
-                  gap: 6,
-                  minHeight: 96,
-                  justifyContent: "center",
-                  ...shadows.card,
-                }}
-              >
-                <View style={{ width: 44, height: 44, borderRadius: 13, backgroundColor: action.tintSoft, alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ fontSize: 22 }}>{action.icon}</Text>
-                </View>
-                <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: "900", letterSpacing: -0.1, textAlign: "center" }}>{action.label}</Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: "600" }}>{action.subtitle}</Text>
-              </ScalePressable>
+              <View key={action.label} style={{ flex: 1, minWidth: "44%" }}>
+                <ScalePressable
+                  haptic
+                  onPress={() => router.push(action.route)}
+                  style={{
+                    backgroundColor: colors.bgCard,
+                    borderRadius: radii.lg,
+                    padding: 14,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    alignItems: "center",
+                    gap: 6,
+                    minHeight: 96,
+                    justifyContent: "center",
+                    ...shadows.card,
+                  }}
+                >
+                  <View style={{ width: 44, height: 44, borderRadius: 13, backgroundColor: action.tintSoft, alignItems: "center", justifyContent: "center" }}>
+                    <Text style={{ fontSize: 22 }}>{action.icon}</Text>
+                  </View>
+                  <Text style={{ color: colors.textPrimary, fontSize: 13, fontWeight: "900", letterSpacing: -0.1, textAlign: "center" }}>{action.label}</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: "600" }}>{action.subtitle}</Text>
+                </ScalePressable>
+              </View>
             ))}
           </View>
         </Animated.View>

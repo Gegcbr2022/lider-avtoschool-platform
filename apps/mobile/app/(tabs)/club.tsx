@@ -1703,7 +1703,7 @@ export default function ClubTab() {
 
           {/* Leaderboard — visible to all */}
           <Pressable onPress={() => setView("leaderboard")}>
-            <View style={{ backgroundColor: colors.warningSoft, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, padding: 16, ...shadows.card, flexDirection: "row", alignItems: "center", gap: 14 }}>
+            <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, padding: 16, ...shadows.card, flexDirection: "row", alignItems: "center", gap: 14 }}>
               <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: colors.warningSoft, alignItems: "center", justifyContent: "center" }}>
                 <Text style={{ fontSize: 26 }}>🏆</Text>
               </View>

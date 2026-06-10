@@ -2046,9 +2046,9 @@ export default function TestsTab() {
         {/* Sign scanner — killer feature E3 */}
         <Pressable
           onPress={() => setShowSignScanner(true)}
-          style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: "#1d4ed808", borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: "#1d4ed830", ...shadows.card }}
+          style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.border, ...shadows.card }}
         >
-          <View style={{ width: 54, height: 54, borderRadius: 16, backgroundColor: "#1d4ed818", alignItems: "center", justifyContent: "center" }}>
+          <View style={{ width: 54, height: 54, borderRadius: 16, backgroundColor: colors.infoSoft, alignItems: "center", justifyContent: "center" }}>
             <Text style={{ fontSize: 26 }}>📷</Text>
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
@@ -2057,7 +2057,7 @@ export default function TestsTab() {
               Сфотографуй знак — Лідик поясне за ПДР
             </Text>
           </View>
-          <Text style={{ color: "#1d4ed8", fontSize: 20, fontWeight: "900" }}>›</Text>
+          <Text style={{ color: colors.info, fontSize: 20, fontWeight: "900" }}>›</Text>
         </Pressable>
 
         {/* Швидкий старт */}
