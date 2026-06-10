@@ -1100,8 +1100,8 @@ function LeaderboardView({
     Animated.spring(slideAnim, { toValue: target, useNativeDriver: true, damping: 20, stiffness: 300 }).start();
   }, [timeWindow, segWidth]);
 
-  // TODO: When Firestore stores weekly/monthly PDR aggregates, pass timeWindow
-  // into getLeaderboard. Until then all chips show the same real all-time data.
+  // Weekly/monthly aggregates are written by recordTestCompletion (stats_<week>/<month>)
+  // and read here via getLeaderboard(timeWindow) in the effect below.
   const ranked = useMemo(() => rankLeaderboardEntries(entries, sortBy), [entries, sortBy]);
   const currentRow = ranked.find((row) => row.entry.uid === currentUid);
   const podiumRows = ranked.filter((row) => !row.isNovice).slice(0, 3);

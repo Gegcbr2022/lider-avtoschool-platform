@@ -60,10 +60,12 @@ gradle_build.log
 /hero-*.png
 /360-hero*.png
 /full-page.png
+apps/mobile/android/*.png
 
 # Dev tooling / Gemini artifacts
 .agents/
 .playwright-mcp/
+.pr_body.md
 firebase.json.bak
 
 # Strategy knowledge base (lives in C:\AI_Brain, not vendored into app repo)

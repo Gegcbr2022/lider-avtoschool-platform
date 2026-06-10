@@ -32,6 +32,10 @@ Mobile APK: `EXPO_NO_METRO_WORKSPACE_ROOT=1 NODE_ENV=production` + `cd apps/mobi
 - Источник истины mobile = APK+ADB. После изменений: typecheck + ADB-smoke + logcat без FATAL.
 - Сначала читать `docs/PROJECT_AUDIT_2026.md` и `docs/BUGS_AND_RISKS.md`; стратегия — `C:\AI_Brain\Projects\Lider\`.
 
-## Известное состояние (10.06.2026)
+## Известное состояние (11.06.2026, ветка opus/sprint-2-game-loop)
 Безопасность закрыта (2FA/бэкапы/rules). Push внедрён (notifee+FCM). Исправлено: фантомный бейдж «1»,
-сжатые карточки главной. Открыто: рейтинг-UX рерайт, App Check на устройствах, prod keystore, эквайринг, контент.
+сжатые карточки главной, **mock-прогресс в «Навчання» (теперь реальные `getUserStats`+coach-план)**.
+Готово на ветке: game loop ПДР (дуелі/марафон/екзамен/слабкі теми/AI-пояснення), агрегация рейтинга
+тиждень/місяць (`stats_<week/month>`), рерайт рейтинга (подіум+sticky), дашборд главной. typecheck exit 0.
+Открыто (владелец): App Check на устройствах, prod keystore, эквайринг, ротация утёкших ключей, контент.
+Открыто (агент → Sonnet): deep-link режимов в `tests.tsx` (B-16), `getContextualLidikTip()` (B-17).
