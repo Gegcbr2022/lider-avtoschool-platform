@@ -3,7 +3,7 @@
 // conversation. Backend mirrors each thread to a separate Telegram supergroup
 // topic named after the client. First message in topic = client card.
 // Manager/instructor reply in TG → FCM push → message appears here live.
-import { useEffect, useRef, useState, useCallback } from "react";
+import { Fragment, useEffect, useRef, useState, useCallback } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -14,6 +14,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -51,6 +52,21 @@ import { EmptyState } from "../../components/mobile-ui";
 function formatTime(d: Date | null): string {
   if (!d) return "";
   return d.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatDateLabel(d: Date | null): string {
+  if (!d) return "";
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  const dayKey = d.toDateString();
+  if (dayKey === today.toDateString()) return "Сьогодні";
+  if (dayKey === yesterday.toDateString()) return "Вчора";
+  return d.toLocaleDateString("uk-UA", { day: "numeric", month: "long" });
+}
+
+function sameCalendarDay(a: Date | null, b: Date | null): boolean {
+  return Boolean(a && b && a.toDateString() === b.toDateString());
 }
 
 function formatFileSize(bytes?: number): string {
@@ -104,7 +120,22 @@ function attachmentMeta(message: MessageDoc): string {
   return [type, size || null, "відкрити"].filter(Boolean).join(" · ");
 }
 
+function messagePreview(message: MessageDoc): string {
+  if (message.text.trim()) return message.text.trim();
+  if (message.mediaType === "image") return "Фото";
+  if (message.mediaType === "video") return "Відео";
+  if (message.mediaUrl) return attachmentTitle(message);
+  return "Повідомлення";
+}
+
 const QUICK_REACTIONS = ["👍", "❤️", "🔥", "😂", "👀"] as const;
+
+const CHAT_QUICK_REPLIES: Record<ConversationType, string[]> = {
+  manager: ["Хочу записатися", "Підкажіть по оплаті", "Які документи потрібні?", "Коли можна почати?"],
+  instructor: ["Коли є вільний час?", "Хочу перенести заняття", "Де зустрічаємось?", "Що повторити перед виїздом?"],
+  support: ["Потрібна допомога", "Не працює оплата", "Питання по акаунту"],
+  system: ["Зрозуміло", "Потрібна допомога"],
+};
 
 function reactionSummary(reactions?: Record<string, string>): Array<{ emoji: string; count: number }> {
   const counts = new Map<string, number>();
@@ -124,6 +155,12 @@ type ChatDef = {
   emoji: string;
   subtitle: string;
   systemMessage: string;
+};
+
+type ReplyDraft = {
+  id: string;
+  senderName: string;
+  text: string;
 };
 
 const CHATS: ChatDef[] = [
@@ -176,17 +213,18 @@ function ChatList({ onOpen }: { onOpen: (id: string) => void }) {
           const conv = convMap[chat.type];
           const lastMsg = conv?.lastMessage;
           const lastAt = conv?.lastMessageAt;
+          const unread = Boolean(user?.id && conv?.unreadBy?.includes(user.id));
           const timeStr = lastAt
             ? lastAt.toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })
             : null;
           return (
-            <Pressable key={chat.id} style={s.chatRow} onPress={() => onOpen(chat.id)}>
+            <Pressable key={chat.id} style={[s.chatRow, unread && s.chatRowUnread]} onPress={() => onOpen(chat.id)}>
               <View style={s.chatAvatar}>
                 <Text style={{ fontSize: 22 }}>{chat.emoji}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.chatName}>{chat.title}</Text>
-                <Text style={s.chatSub} numberOfLines={1}>
+                <Text style={[s.chatName, unread && { color: colors.red }]}>{chat.title}</Text>
+                <Text style={[s.chatSub, unread && { color: colors.textPrimary, fontWeight: "800" }]} numberOfLines={1}>
                   {lastMsg ?? chat.subtitle}
                 </Text>
               </View>
@@ -196,7 +234,7 @@ function ChatList({ onOpen }: { onOpen: (id: string) => void }) {
                     {timeStr}
                   </Text>
                 ) : null}
-                <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
+                {unread ? <View style={s.unreadDot} /> : <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>}
               </View>
             </Pressable>
           );
@@ -233,6 +271,9 @@ function Conversation({
   const [uploadingFile, setUploadingFile] = useState(false);
   const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null);
   const [reactionPickerFor, setReactionPickerFor] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState<MessageDoc | null>(null);
+  const [replyTo, setReplyTo] = useState<ReplyDraft | null>(null);
+  const [attachMenuVisible, setAttachMenuVisible] = useState(false);
   const [fullscreenPhoto, setFullscreenPhoto] = useState<string | null>(null);
   const [fullscreenPhotoState, setFullscreenPhotoState] = useState<"loading" | "ready" | "error">("loading");
   const [photoErrors, setPhotoErrors] = useState<Record<string, boolean>>({});
@@ -299,7 +340,17 @@ function Conversation({
     setInput("");
     setSending(true);
     try {
-      const messageId = await sendMessage(conversationId, { senderId: user.id, senderName: user.name, senderRole: user.role, senderPhone: user.phone, text });
+      const messageId = await sendMessage(conversationId, {
+        senderId: user.id,
+        senderName: user.name,
+        senderRole: user.role,
+        senderPhone: user.phone,
+        text,
+        replyToId: replyTo?.id,
+        replyToSenderName: replyTo?.senderName,
+        replyToText: replyTo?.text,
+      });
+      setReplyTo(null);
       crashLog(`chat:message_sent type=${chat.type}`);
       void notifyChat({
         conversationId, messageId, userId: user.id, userName: user.name, text,
@@ -422,11 +473,7 @@ function Conversation({
   }
 
   function handleAttach() {
-    Alert.alert("Додати вкладення", "Що надіслати в чат?", [
-      { text: "Фото", onPress: handlePickImage },
-      { text: "Файл", onPress: handlePickFile },
-      { text: "Скасувати", style: "cancel" },
-    ]);
+    setAttachMenuVisible(true);
   }
 
   async function handleOpenFile(message: MessageDoc) {
@@ -465,6 +512,26 @@ function Conversation({
       Alert.alert("Не вдалося поставити реакцію", "Перевір інтернет і спробуй ще раз.");
     }
   }
+
+  function startReply(message: MessageDoc) {
+    setReplyTo({ id: message.id, senderName: message.senderName || chat.title, text: messagePreview(message).slice(0, 120) });
+    setReactionPickerFor(null);
+    setActionMessage(null);
+  }
+
+  async function handleShareMessage(message: MessageDoc) {
+    const body = message.text.trim() || message.mediaUrl || attachmentTitle(message);
+    setActionMessage(null);
+    try {
+      await Share.share({ message: body });
+    } catch { /* native share dismissed */ }
+  }
+
+  function insertQuickReply(text: string) {
+    setInput((prev) => (prev.trim() ? `${prev.trim()} ${text}` : text));
+  }
+
+  const quickReplies = CHAT_QUICK_REPLIES[chat.type] ?? CHAT_QUICK_REPLIES.support;
 
   return (
     <SafeAreaView style={s.safe} edges={["top"]}>
@@ -510,6 +577,73 @@ function Conversation({
           >
             <Text style={{ color: "#fff", fontSize: 22, fontWeight: "700" }}>✕</Text>
           </TouchableOpacity>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={attachMenuVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setAttachMenuVisible(false)}
+      >
+        <Pressable style={s.sheetBackdrop} onPress={() => setAttachMenuVisible(false)}>
+          <Pressable style={s.attachSheet} onPress={(event) => event.stopPropagation()}>
+            <View style={s.sheetHandle} />
+            <Text style={s.sheetTitle}>Додати в чат</Text>
+            <View style={s.attachGrid}>
+              <Pressable
+                style={s.attachTile}
+                onPress={() => { setAttachMenuVisible(false); void handlePickImage(); }}
+                disabled={uploadingImage || uploadingFile || sending}
+              >
+                <Text style={s.attachTileIcon}>🖼</Text>
+                <Text style={s.attachTileText}>Фото</Text>
+              </Pressable>
+              <Pressable
+                style={s.attachTile}
+                onPress={() => { setAttachMenuVisible(false); void handlePickFile(); }}
+                disabled={uploadingImage || uploadingFile || sending}
+              >
+                <Text style={s.attachTileIcon}>📎</Text>
+                <Text style={s.attachTileText}>Файл</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={actionMessage !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setActionMessage(null)}
+      >
+        <Pressable style={s.actionBackdrop} onPress={() => setActionMessage(null)}>
+          <Pressable style={s.actionMenu} onPress={(event) => event.stopPropagation()}>
+            {actionMessage ? (
+              <>
+                <Text style={s.actionTitle} numberOfLines={2}>{messagePreview(actionMessage)}</Text>
+                <View style={s.actionReactionRow}>
+                  {QUICK_REACTIONS.map((emoji) => (
+                    <Pressable key={emoji} style={s.actionReactionBtn} onPress={() => handleReact(actionMessage, emoji)}>
+                      <Text style={{ fontSize: 22 }}>{emoji}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <Pressable style={s.actionRow} onPress={() => startReply(actionMessage)}>
+                  <Text style={s.actionIcon}>↩</Text><Text style={s.actionText}>Відповісти</Text>
+                </Pressable>
+                <Pressable style={s.actionRow} onPress={() => handleShareMessage(actionMessage)}>
+                  <Text style={s.actionIcon}>↗</Text><Text style={s.actionText}>Поділитися</Text>
+                </Pressable>
+                {actionMessage.mediaUrl ? (
+                  <Pressable style={s.actionRow} onPress={() => { const msg = actionMessage; setActionMessage(null); void handleOpenFile(msg); }}>
+                    <Text style={s.actionIcon}>⤓</Text><Text style={s.actionText}>Відкрити вкладення</Text>
+                  </Pressable>
+                ) : null}
+              </>
+            ) : null}
+          </Pressable>
         </Pressable>
       </Modal>
 
@@ -563,21 +697,34 @@ function Conversation({
             </View>
           ) : null}
 
-          {messages.map((m) => {
+          {messages.map((m, index) => {
             const mine = m.senderId === user?.id;
             const receipt = messageReceipt(m, user?.id);
             const reactions = reactionSummary(m.reactions);
             const myReaction = user?.id ? m.reactions?.[user.id] : undefined;
             const showAsImage = Boolean(m.mediaUrl && (m.mediaType === "image" || (!m.mediaType && !m.fileName)));
             const showAsFile = Boolean(m.mediaUrl && !showAsImage);
+            const showDate = !sameCalendarDay(m.createdAt, messages[index - 1]?.createdAt ?? null);
             return (
-              <View key={m.id} style={[s.bubbleWrap, mine ? s.bubbleWrapMine : s.bubbleWrapTheirs]}>
+              <Fragment key={m.id}>
+              {showDate ? (
+                <View style={s.dateSeparator}>
+                  <Text style={s.dateSeparatorText}>{formatDateLabel(m.createdAt)}</Text>
+                </View>
+              ) : null}
+              <View style={[s.bubbleWrap, mine ? s.bubbleWrapMine : s.bubbleWrapTheirs]}>
                 <Pressable
                   style={[s.bubble, mine ? s.bubbleMine : s.bubbleTheirs]}
-                  onLongPress={() => setReactionPickerFor(reactionPickerFor === m.id ? null : m.id)}
+                  onLongPress={() => { setActionMessage(m); setReactionPickerFor(null); }}
                   onPress={() => reactionPickerFor === m.id ? setReactionPickerFor(null) : undefined}
                 >
                   {!mine ? <Text style={s.senderName}>{chat.title}</Text> : null}
+                  {m.replyToId ? (
+                    <View style={[s.replyBubble, mine && s.replyBubbleMine]}>
+                      <Text style={[s.replyAuthor, mine && s.replyAuthorMine]} numberOfLines={1}>{m.replyToSenderName ?? "Повідомлення"}</Text>
+                      <Text style={[s.replyText, mine && s.replyTextMine]} numberOfLines={2}>{m.replyToText ?? "Відповідь"}</Text>
+                    </View>
+                  ) : null}
                   {showAsImage ? (
                     <Pressable
                       onPress={() => {
@@ -678,6 +825,7 @@ function Conversation({
                   </View>
                 ) : null}
               </View>
+              </Fragment>
             );
           })}
 
@@ -692,6 +840,25 @@ function Conversation({
           ) : null}
         </ScrollView>
 
+        <View style={s.composerWrap}>
+          {replyTo ? (
+            <View style={s.replyComposer}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.replyComposerTitle}>Відповідь · {replyTo.senderName}</Text>
+                <Text style={s.replyComposerText} numberOfLines={1}>{replyTo.text}</Text>
+              </View>
+              <Pressable hitSlop={10} onPress={() => setReplyTo(null)}>
+                <Text style={s.replyComposerClose}>✕</Text>
+              </Pressable>
+            </View>
+          ) : null}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.quickReplies} style={s.quickRepliesStrip}>
+            {quickReplies.map((quick) => (
+              <Pressable key={quick} style={s.quickReply} onPress={() => insertQuickReply(quick)} disabled={sending || uploadingImage || uploadingFile}>
+                <Text style={s.quickReplyText}>{quick}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
         <View style={s.inputRow}>
           <Pressable
             style={[s.attachBtn, (uploadingImage || uploadingFile) && { opacity: 0.4 }]}
@@ -716,6 +883,7 @@ function Conversation({
           >
             {sending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.sendText}>↑</Text>}
           </Pressable>
+        </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -895,6 +1063,9 @@ function makeStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       borderBottomColor: colors.border,
       backgroundColor: colors.bg,
     },
+    chatRowUnread: {
+      backgroundColor: colors.redSoft,
+    },
     chatAvatar: {
       width: 48,
       height: 48,
@@ -905,6 +1076,12 @@ function makeStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
     chatName: { color: colors.textPrimary, fontSize: 16, fontWeight: "800" },
     chatSub: { color: colors.textSecondary, fontSize: 13, lineHeight: 18, marginTop: 2 },
+    unreadDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: colors.red,
+    },
 
     offlineBar: {
       backgroundColor: colors.warningSoft,
@@ -915,6 +1092,16 @@ function makeStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     },
 
     messagesContent: { padding: spacing.md, gap: 10, paddingBottom: 16 },
+    dateSeparator: {
+      alignSelf: "center",
+      borderRadius: 999,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      backgroundColor: colors.bgElevated,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    dateSeparatorText: { color: colors.textSecondary, fontSize: 11, fontWeight: "800" },
 
     systemRow: {
       backgroundColor: colors.bgElevated,
@@ -932,6 +1119,23 @@ function makeStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     bubbleMine: { backgroundColor: colors.red, borderBottomRightRadius: 4 },
     bubbleTheirs: { backgroundColor: colors.bgCard, borderWidth: 1, borderColor: colors.border, borderBottomLeftRadius: 4 },
     senderName: { color: colors.red, fontSize: 11, fontWeight: "800", marginBottom: 1 },
+    replyBubble: {
+      borderLeftWidth: 3,
+      borderLeftColor: colors.red,
+      backgroundColor: colors.bgElevated,
+      borderRadius: radii.sm,
+      paddingHorizontal: 9,
+      paddingVertical: 7,
+      marginBottom: 5,
+    },
+    replyBubbleMine: {
+      borderLeftColor: "#fff",
+      backgroundColor: "rgba(255,255,255,0.16)",
+    },
+    replyAuthor: { color: colors.red, fontSize: 11, fontWeight: "900" },
+    replyAuthorMine: { color: "#fff" },
+    replyText: { color: colors.textSecondary, fontSize: 12, lineHeight: 16, marginTop: 1 },
+    replyTextMine: { color: "rgba(255,255,255,0.82)" },
     bubbleText: { color: colors.textPrimary, fontSize: 15, lineHeight: 21, fontWeight: "500" },
     bubbleTextMine: { color: "#fff" },
     metaRow: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 5, marginTop: 2 },
@@ -987,13 +1191,120 @@ function makeStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     gateBtn: { marginTop: 24, backgroundColor: colors.red, borderRadius: radii.md, paddingVertical: 14, paddingHorizontal: 40 },
     gateBtnText: { color: "#fff", fontWeight: "800", fontSize: 16 },
 
+    sheetBackdrop: {
+      flex: 1,
+      justifyContent: "flex-end",
+      backgroundColor: "rgba(0,0,0,0.42)",
+    },
+    attachSheet: {
+      backgroundColor: colors.bgCard,
+      borderTopLeftRadius: 22,
+      borderTopRightRadius: 22,
+      paddingHorizontal: spacing.md,
+      paddingTop: 10,
+      paddingBottom: 28,
+      borderTopWidth: 1,
+      borderColor: colors.border,
+    },
+    sheetHandle: {
+      alignSelf: "center",
+      width: 44,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: colors.border,
+      marginBottom: 14,
+    },
+    sheetTitle: { color: colors.textPrimary, fontSize: 17, fontWeight: "900", marginBottom: 12 },
+    attachGrid: { flexDirection: "row", gap: 10 },
+    attachTile: {
+      flex: 1,
+      minHeight: 92,
+      borderRadius: radii.md,
+      backgroundColor: colors.bgElevated,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 7,
+    },
+    attachTileIcon: { fontSize: 25 },
+    attachTileText: { color: colors.textPrimary, fontSize: 14, fontWeight: "900" },
+
+    actionBackdrop: {
+      flex: 1,
+      justifyContent: "center",
+      paddingHorizontal: 28,
+      backgroundColor: "rgba(0,0,0,0.38)",
+    },
+    actionMenu: {
+      borderRadius: radii.lg,
+      backgroundColor: colors.bgCard,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 14,
+      gap: 8,
+    },
+    actionTitle: { color: colors.textPrimary, fontSize: 14, lineHeight: 20, fontWeight: "800" },
+    actionReactionRow: { flexDirection: "row", gap: 8, paddingVertical: 4 },
+    actionReactionBtn: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.bgElevated,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    actionRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      paddingVertical: 12,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: colors.border,
+    },
+    actionIcon: { color: colors.textSecondary, fontSize: 18, width: 24, textAlign: "center" },
+    actionText: { color: colors.textPrimary, fontSize: 15, fontWeight: "800" },
+
+    composerWrap: {
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      backgroundColor: colors.bgCard,
+    },
+    replyComposer: {
+      marginHorizontal: spacing.md,
+      marginTop: 10,
+      borderLeftWidth: 3,
+      borderLeftColor: colors.red,
+      borderRadius: radii.sm,
+      backgroundColor: colors.bgElevated,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    replyComposerTitle: { color: colors.red, fontSize: 11, fontWeight: "900" },
+    replyComposerText: { color: colors.textSecondary, fontSize: 12, lineHeight: 16, marginTop: 1 },
+    replyComposerClose: { color: colors.textSecondary, fontSize: 16, fontWeight: "900" },
+    quickRepliesStrip: { maxHeight: 48 },
+    quickReplies: { paddingHorizontal: spacing.md, paddingTop: 10, paddingBottom: 2, gap: 8 },
+    quickReply: {
+      borderRadius: 999,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      backgroundColor: colors.bgElevated,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    quickReplyText: { color: colors.textPrimary, fontSize: 12, fontWeight: "800" },
+
     inputRow: {
       flexDirection: "row",
       gap: 8,
       alignItems: "flex-end",
       padding: spacing.md,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
       backgroundColor: colors.bgCard,
     },
     attachBtn: {

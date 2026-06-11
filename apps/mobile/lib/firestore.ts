@@ -1110,6 +1110,9 @@ export type MessageDoc = {
   senderRole?: string;
   senderPhone?: string;
   reactions?: Record<string, string>;
+  replyToId?: string;
+  replyToSenderName?: string;
+  replyToText?: string;
 };
 
 export function subscribeToConversations(
@@ -1185,6 +1188,9 @@ export function subscribeToMessages(
           senderRole: data.senderRole,
           senderPhone: data.senderPhone,
           reactions: data.reactions ?? {},
+          replyToId: data.replyToId,
+          replyToSenderName: data.replyToSenderName,
+          replyToText: data.replyToText,
         };
       })
     );
@@ -1207,6 +1213,9 @@ export async function sendMessage(
     width?: number;
     height?: number;
     senderPhone?: string;
+    replyToId?: string;
+    replyToSenderName?: string;
+    replyToText?: string;
   }
 ): Promise<string> {
   const convRef = doc(db, "conversations", conversationId);
@@ -1231,6 +1240,9 @@ export async function sendMessage(
     width: params.width,
     height: params.height,
     senderPhone: params.senderPhone,
+    replyToId: params.replyToId,
+    replyToSenderName: params.replyToSenderName,
+    replyToText: params.replyToText,
     reactions: {},
   });
   const messageRef = await addDoc(collection(db, "conversations", conversationId, "messages"), payload);
