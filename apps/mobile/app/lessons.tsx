@@ -2,25 +2,46 @@
 // Читает коллекцию lessons (type video|text). Видео открывает YouTube через Linking,
 // ПДР-разделы — раскрываемый текст. Контент наполняет школа через Admin.
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Linking, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import { getLessons, type Lesson } from "../lib/firestore";
 import { useTheme, radii, spacing } from "../lib/theme";
+
+const PDR_TRAINING_ROUTE = { pathname: "/(tabs)/tests", params: { mode: "training" } } as Href;
+const LEARNING_ROUTE = "/(tabs)/learning" as Href;
+const CHAT_ROUTE = "/(tabs)/chat" as Href;
 
 export default function LessonsScreen() {
   const { colors } = useTheme();
 
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
 
   useEffect(() => {
-    getLessons().then(setLessons).catch(() => {}).finally(() => setLoading(false));
+    getLessons()
+      .then((items) => {
+        setLessons(items);
+        setLoadError(false);
+      })
+      .catch(() => setLoadError(true))
+      .finally(() => setLoading(false));
   }, []);
 
   const videos = lessons.filter((l) => l.type === "video");
   const texts = lessons.filter((l) => l.type === "text");
+
+  function openVideo(url?: string) {
+    if (!url) {
+      Alert.alert("Відео недоступне", "Для цього уроку ще не додано посилання.");
+      return;
+    }
+    Linking.openURL(url).catch(() => {
+      Alert.alert("Не вдалося відкрити відео", "Спробуйте ще раз або перевірте підключення до інтернету.");
+    });
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top"]}>
@@ -38,12 +59,27 @@ export default function LessonsScreen() {
       {loading ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color={colors.red} /></View>
       ) : lessons.length === 0 ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl }}>
+        <View style={{ flex: 1, justifyContent: "center", padding: spacing.xl }}>
           <Text style={{ fontSize: 48, marginBottom: 12 }}>📚</Text>
-          <Text style={{ color: colors.textPrimary, fontSize: 17, fontWeight: "800", textAlign: "center" }}>Матеріали готуються</Text>
-          <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: "center", marginTop: 8, lineHeight: 20 }}>
-            Автошкола незабаром додасть відео-уроки та розділи ПДР. Поки що тренуйся в ПДР Тренажері.
+          <Text style={{ color: colors.textPrimary, fontSize: 17, fontWeight: "800", textAlign: "center" }}>
+            {loadError ? "Не вдалося завантажити матеріали" : "Навчальні матеріали ще не додані"}
           </Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: "center", marginTop: 8, lineHeight: 20 }}>
+            {loadError
+              ? "Перевір підключення або продовжуй навчання через ПДР тренажер та план."
+              : "Поки школа наповнює бібліотеку, продовжуй тренування ПДР або напиши менеджеру, якщо потрібен конкретний конспект."}
+          </Text>
+          <View style={{ gap: 10, marginTop: 20 }}>
+            <Pressable onPress={() => router.push(PDR_TRAINING_ROUTE)} style={{ backgroundColor: colors.red, borderRadius: radii.md, paddingVertical: 14, alignItems: "center" }}>
+              <Text style={{ color: "#fff", fontSize: 15, fontWeight: "900" }}>Тренувати ПДР</Text>
+            </Pressable>
+            <Pressable onPress={() => router.replace(LEARNING_ROUTE)} style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, paddingVertical: 14, alignItems: "center" }}>
+              <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "900" }}>Повернутись до плану</Text>
+            </Pressable>
+            <Pressable onPress={() => router.push(CHAT_ROUTE)} style={{ backgroundColor: colors.bgElevated, borderRadius: radii.md, paddingVertical: 14, alignItems: "center" }}>
+              <Text style={{ color: colors.textPrimary, fontSize: 15, fontWeight: "900" }}>Написати менеджеру</Text>
+            </Pressable>
+          </View>
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: 48 }}>
@@ -54,7 +90,7 @@ export default function LessonsScreen() {
               {videos.map((l) => (
                 <Pressable
                   key={l.id}
-                  onPress={() => l.videoUrl && Linking.openURL(l.videoUrl).catch(() => {})}
+                  onPress={() => openVideo(l.videoUrl)}
                   style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, padding: 14, flexDirection: "row", alignItems: "center", gap: 12 }}
                 >
                   <View style={{ width: 48, height: 48, borderRadius: radii.sm, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center" }}>
@@ -92,7 +128,7 @@ export default function LessonsScreen() {
                       <Text style={{ fontSize: 16, color: colors.textTertiary }}>{open ? "▾" : "▸"}</Text>
                     </View>
                     {open ? (
-                      <Text style={{ color: colors.textPrimary, fontSize: 14, lineHeight: 22 }}>{l.body || l.description || "Текст готується."}</Text>
+                      <Text style={{ color: colors.textPrimary, fontSize: 14, lineHeight: 22 }}>{l.body || l.description || "Попросіть адміністратора додати текст уроку."}</Text>
                     ) : null}
                   </Pressable>
                 );

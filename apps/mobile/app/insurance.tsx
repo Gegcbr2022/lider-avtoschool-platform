@@ -272,7 +272,7 @@ export default function InsuranceScreen() {
             <Text style={s.noticeTitle}>💳 Оплата</Text>
             <Text style={s.noticeText}>
               Безготівкова оплата (Visa / MasterCard, Apple Pay, Google Pay) або готівка в офісі автошколи.
-              Підключення онлайн-оплати — в розробці.
+              Менеджер запропонує доступні варіанти після підбору тарифу.
             </Text>
           </View>
 

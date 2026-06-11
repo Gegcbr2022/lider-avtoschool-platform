@@ -3,7 +3,9 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -217,6 +219,11 @@ function EmailRegisterScreen({ onBack, onSuccess }: { onBack: () => void; onSucc
 
 function VerificationPendingScreen({ email, onDone }: { email: string; onDone: () => void }) {
   const { colors } = useTheme();
+  function openMailApp() {
+    Linking.openURL("mailto:").catch(() => {
+      Alert.alert("Перевірте пошту", `Відкрийте поштовий застосунок і знайдіть лист для ${email}.`);
+    });
+  }
   return (
     <View style={{ gap: spacing.lg, alignItems: "center", paddingTop: 24 }}>
       <View style={{ width: 88, height: 88, borderRadius: 44, backgroundColor: colors.successSoft, alignItems: "center", justifyContent: "center" }}>
@@ -238,7 +245,7 @@ function VerificationPendingScreen({ email, onDone }: { email: string; onDone: (
         </Text>
       </View>
       <Btn label="Увійти в акаунт →" onPress={onDone} />
-      <Btn label="Я ще не отримав листа" onPress={() => {}} variant="ghost" />
+      <Btn label="Відкрити пошту" onPress={openMailApp} variant="ghost" />
     </View>
   );
 }

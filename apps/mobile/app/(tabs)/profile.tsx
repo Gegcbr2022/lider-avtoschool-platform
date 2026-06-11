@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { updateProfile } from "firebase/auth";
 import {
   Alert, Image, Linking, Modal, Pressable, ScrollView, Switch, Text, TextInput, View,
@@ -20,6 +20,9 @@ import {
 } from "../../lib/notifications";
 import { DEFAULT_APP_SETTINGS, loadAppSettings, saveAppSettings, type AppSettings } from "../../lib/app-settings";
 import { firebaseAuth } from "../../lib/firebase";
+import { siteBrand, socialLinks } from "@lider/shared";
+import { LidikGuide } from "../../components/lidik-guide";
+import { getContextualLidikTip } from "../../lib/lidik-context";
 
 const APP_VERSION = (Constants.expoConfig?.version as string | undefined) ?? "1.0.0";
 
@@ -448,24 +451,6 @@ function SecuritySheet({ visible, userEmail, onForgotPassword, onSignOut, onClos
   onForgotPassword: () => void; onSignOut: () => void; onClose: () => void;
 }) {
   const { colors } = useTheme();
-  const [twoFaEnabled] = useState(false);
-
-  function handle2FAPress() {
-    Alert.alert(
-      "Двофакторна автентифікація",
-      "Для підключення 2FA вам буде надіслано SMS-код на прив'язаний номер телефону.\n\nЦя функція знаходиться в розробці. Очікуйте оновлення.",
-      [
-        { text: "Зрозуміло", style: "default" },
-        {
-          text: "Написати підтримці",
-          onPress: () => {
-            Linking.openURL("mailto:support@lider-avtoschool.ua?subject=Запит%202FA").catch(() => {});
-            onClose();
-          }
-        },
-      ]
-    );
-  }
 
   return (
     <BottomSheet visible={visible} title="Безпека та вхід" onClose={onClose}>
@@ -483,32 +468,6 @@ function SecuritySheet({ visible, userEmail, onForgotPassword, onSignOut, onClos
             <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
           </Pressable>
         ) : null}
-
-        {/* 2FA block */}
-        <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, overflow: "hidden" }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 16 }}>
-            <Text style={{ fontSize: 24 }}>🛡️</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: "800", color: colors.textPrimary }}>Двофакторна автентифікація</Text>
-              <Text style={{ fontSize: 13, color: twoFaEnabled ? colors.success : colors.textSecondary, marginTop: 2, fontWeight: "700" }}>
-                {twoFaEnabled ? "✓ Увімкнено" : "Вимкнено"}
-              </Text>
-            </View>
-          </View>
-          <View style={{ borderTopWidth: 1, borderTopColor: colors.border, paddingHorizontal: 16, paddingVertical: 12, backgroundColor: colors.bgElevated }}>
-            <Text style={{ fontSize: 12, color: colors.textSecondary, lineHeight: 18, marginBottom: 12 }}>
-              Захистіть акаунт додатковим кодом при вході. SMS-підтвердження на ваш номер телефону.
-            </Text>
-            <Pressable
-              onPress={handle2FAPress}
-              style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: colors.red, borderRadius: radii.sm, paddingVertical: 12 }}
-            >
-              <Text style={{ color: "#fff", fontWeight: "800", fontSize: 14 }}>
-                {twoFaEnabled ? "Вимкнути 2FA" : "Підключити 2FA"}
-              </Text>
-            </Pressable>
-          </View>
-        </View>
 
         <Pressable
           onPress={() => { onSignOut(); onClose(); }}
@@ -530,10 +489,18 @@ function SecuritySheet({ visible, userEmail, onForgotPassword, onSignOut, onClos
 
 function SupportSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { colors } = useTheme();
+  const supportEmail = siteBrand.email;
+  const siteUrl = "https://lider.bdslab.net";
 
   function openEmail() {
-    Linking.openURL("mailto:support@lider-avtoschool.ua?subject=Підтримка%20з%20додатку").catch(() => {
-      Alert.alert("Підтримка", "Email: support@lider-avtoschool.ua");
+    Linking.openURL(`mailto:${supportEmail}?subject=Підтримка%20з%20додатку`).catch(() => {
+      Alert.alert("Підтримка", `Email: ${supportEmail}`);
+    });
+  }
+
+  function openWebPage(path: "terms" | "privacy") {
+    Linking.openURL(`${siteUrl}/${path}`).catch(() => {
+      Alert.alert("Посилання", `${siteUrl}/${path}`);
     });
   }
 
@@ -545,11 +512,11 @@ function SupportSheet({ visible, onClose }: { visible: boolean; onClose: () => v
           <Text style={{ fontSize: 24 }}>💬</Text>
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 15, fontWeight: "800", color: colors.textPrimary }}>Написати в підтримку</Text>
-            <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>support@lider-avtoschool.ua</Text>
+            <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>{supportEmail}</Text>
           </View>
           <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
         </Pressable>
-        <Pressable onPress={() => Linking.openURL("https://lider-avtoschool.ua/terms").catch(() => {})}
+        <Pressable onPress={() => openWebPage("terms")}
           style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.border }}>
           <Text style={{ fontSize: 24 }}>📄</Text>
           <View style={{ flex: 1 }}>
@@ -558,7 +525,7 @@ function SupportSheet({ visible, onClose }: { visible: boolean; onClose: () => v
           </View>
           <Text style={{ color: colors.textTertiary, fontSize: 18 }}>›</Text>
         </Pressable>
-        <Pressable onPress={() => Linking.openURL("https://lider-avtoschool.ua/privacy").catch(() => {})}
+        <Pressable onPress={() => openWebPage("privacy")}
           style={{ flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 16, borderWidth: 1, borderColor: colors.border }}>
           <Text style={{ fontSize: 24 }}>🔒</Text>
           <View style={{ flex: 1 }}>
@@ -598,6 +565,47 @@ function NavItem({ icon, title, subtitle, onPress, accent }: {
   );
 }
 
+// ─── Social links section ────────────────────────────────────────────────────
+
+const SOCIAL_ICONS: Record<(typeof socialLinks)[number]["id"], string> = {
+  facebook: "f",
+  instagram: "◎",
+  youtube: "▶",
+  telegram: "✈",
+  whatsapp: "☎",
+  tiktok: "♪",
+};
+
+function SocialLinksSection() {
+  const { colors } = useTheme();
+
+  function openSocialLink(label: string, href: string) {
+    Linking.openURL(href).catch(() => {
+      Alert.alert(label, `Не вдалося відкрити посилання автоматично.\n${href}`);
+    });
+  }
+
+  return (
+    <View style={{ gap: 6 }}>
+      <Text style={{ color: colors.textTertiary, fontSize: 11, fontWeight: "800", letterSpacing: 0.8, textTransform: "uppercase", paddingLeft: 4 }}>Лідер у соцмережах</Text>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+        {socialLinks.map((link) => (
+          <Pressable
+            key={link.id}
+            onPress={() => openSocialLink(link.label, link.href)}
+            style={{ flexBasis: "31%", flexGrow: 1, minWidth: 104, backgroundColor: colors.bgCard, borderRadius: radii.md, borderWidth: 1, borderColor: colors.border, paddingVertical: 12, paddingHorizontal: 10, alignItems: "center", gap: 6 }}
+          >
+            <View style={{ width: 34, height: 34, borderRadius: 12, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center" }}>
+              <Text style={{ color: colors.red, fontSize: 17, fontWeight: "900" }}>{SOCIAL_ICONS[link.id]}</Text>
+            </View>
+            <Text style={{ color: colors.textPrimary, fontSize: 12, fontWeight: "800", textAlign: "center" }} numberOfLines={1}>{link.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 type Sheet = "personal" | "settings" | "security" | "notifications" | "support" | "avatar" | null;
@@ -624,6 +632,12 @@ export default function ProfileTab() {
   const displayEmoji = localAvatar || user?.avatarEmoji || "🚗";
   const displayPhotoURL = localAvatar || user?.avatarEmoji ? undefined : user?.photoURL;
   const isEmailVerified = user?.emailVerified ?? false;
+  const profileLidikTip = useMemo(() => getContextualLidikTip("profile", {
+    isGuest,
+    role: user?.role,
+    stats,
+    profile: { hasEmail: Boolean(user?.email), emailVerified: isEmailVerified },
+  }), [isGuest, user?.role, user?.email, isEmailVerified, stats]);
 
   // Load profile from Firestore on mount
   useEffect(() => {
@@ -801,6 +815,8 @@ export default function ProfileTab() {
         </View>
       ) : null}
 
+      <LidikGuide variant="inline" text={profileLidikTip} />
+
       {/* Main navigation menu — grouped sections */}
 
       {/* Акаунт */}
@@ -830,6 +846,8 @@ export default function ProfileTab() {
           ) : null}
         </View>
       </View>
+
+      <SocialLinksSection />
 
       {/* Підтримка */}
       <View style={{ gap: 6 }}>

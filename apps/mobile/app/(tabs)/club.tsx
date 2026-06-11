@@ -28,7 +28,9 @@ import {
   mascotQuickPrompts, mascotStates,
   storyToneBg,
 } from "../../lib/mobile-data";
+import { siteBrand } from "@lider/shared";
 import { radii, shadows, spacing, useTheme } from "../../lib/theme";
+import { getContextualLidikTip } from "../../lib/lidik-context";
 
 const MASCOT = require("../../assets/mascot.png") as number;
 
@@ -541,7 +543,7 @@ function LidykView({ onBack }: { onBack: () => void }) {
             ) : (
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingTop: 4, borderTopWidth: 1, borderTopColor: colors.border }}>
                 <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textTertiary }}>
-                  {responseModel ? `${responseModel}` : "Лідик AI"}
+                  {"Лідик AI"}
                 </Text>
                 <Text style={{ fontSize: 11, color: colors.textTertiary, fontWeight: "600" }}>Не замінює інструктора</Text>
               </View>
@@ -1052,18 +1054,18 @@ function getLeaderboardDelta(row: RankedLeaderboardEntry | undefined, rows: Rank
 }
 
 function getLidykLeaderboardMessage(row: RankedLeaderboardEntry | undefined, rows: RankedLeaderboardEntry[]): string {
-  if (!row) return "Пройди перший ПДР-тест, і я покажу твоє місце серед учнів.";
-  if (row.isNovice) {
-    const left = Math.max(0, LEADERBOARD_MIN_ACCURACY_ANSWERS - row.entry.totalAnswered);
-    return `Ще ${left} відповідей, і твоя точність піде у чесний залік. Без випадкових чемпіонів.`;
-  }
-  if (row.rank <= 10) return "Ти вже в топ-10. Один короткий тест сьогодні допоможе втримати позицію.";
-
   const topTen = rows.find((candidate) => candidate.rank === 10 && !candidate.isNovice);
-  if (!topTen) return "Роби рівний темп: серія маленьких тестів сильніша за один марафон.";
-
-  const delta = Math.max(1, estimateCorrectAnswers(topTen.entry) - estimateCorrectAnswers(row.entry) + 1);
-  return `До топ-10 лишилось ${delta} правильних відповідей. Поїхали!`;
+  return getContextualLidikTip("club", {
+    leaderboard: {
+      rank: row?.rank ?? null,
+      totalEntries: rows.length,
+      totalAnswered: row?.entry.totalAnswered ?? 0,
+      accuracyPct: row?.entry.accuracyPct ?? 0,
+      isNovice: row?.isNovice ?? false,
+      topTenCorrectAnswers: topTen ? estimateCorrectAnswers(topTen.entry) : null,
+      userCorrectAnswers: row ? estimateCorrectAnswers(row.entry) : null,
+    },
+  });
 }
 
 function LeaderboardView({
@@ -1566,12 +1568,12 @@ export default function ClubTab() {
   }
 
   async function handleReferral() {
-    const baseUrl = "https://lider-avtoschool.ua";
+    const baseUrl = "https://lider.bdslab.net";
     const refSuffix = user?.id ? `?ref=${user.id.slice(0, 8)}` : "";
     try {
       await Share.share({
-        message: `Я навчаюсь в автошколі Лідер 🚗 Приєднуйся: ${baseUrl}${refSuffix}`,
-        title: "Автошкола Лідер",
+        message: `Я навчаюсь в ${siteBrand.name} 🚗 Приєднуйся: ${baseUrl}${refSuffix}`,
+        title: siteBrand.name,
       });
     } catch { /* share cancelled */ }
   }

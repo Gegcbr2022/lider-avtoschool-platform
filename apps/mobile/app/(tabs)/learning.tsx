@@ -11,6 +11,7 @@ import {
   loadPdrProgress,
   type PdrProgressState,
 } from "../../lib/pdr-progress";
+import { getContextualLidikTip } from "../../lib/lidik-context";
 import type { DrivingLicenseCategory } from "../../lib/pdr-questions";
 
 const EMPTY_PROGRESS: PdrProgressState = { mistakes: {}, topicProgress: {} };
@@ -21,6 +22,7 @@ const ROADMAP_STEPS = ["Вивчення теорії", "Тренування П
 const PDR_TRAINING_ROUTE = { pathname: "/(tabs)/tests", params: { mode: "training" } } as Href;
 const PDR_EXAM_ROUTE = { pathname: "/(tabs)/tests", params: { mode: "exam" } } as Href;
 const PDR_MISTAKES_ROUTE = { pathname: "/(tabs)/tests", params: { mode: "mistakes" } } as Href;
+const LESSONS_ROUTE = "/lessons" as Href;
 
 export default function LearningTab() {
   const { colors } = useTheme();
@@ -66,8 +68,7 @@ export default function LearningTab() {
         }
       : { cta: "Пройти пробний іспит", route: PDR_EXAM_ROUTE, hint: "Ти готовий! Спробуй повний екзамен МВС і переходь до практики." };
 
-  // Лідик говорить контекстно — текст бере з coach-плану (реальні дані).
-  const lidikLine = plan.summary;
+  const lidikLine = getContextualLidikTip("learning", { stats, coachPlan: plan });
   const weakTopicCount = plan.weakTopics.length;
   const statTiles = [
     { label: "Тести", value: String(stats.testsCompleted), tone: colors.redSoft, text: colors.red },
@@ -158,6 +159,20 @@ export default function LearningTab() {
       <Text style={{ color: colors.textSecondary, fontSize: 14, fontWeight: "800", marginLeft: 4, marginBottom: 8 }}>Швидкі дії</Text>
 
       <View style={{ gap: 10 }}>
+        <Pressable
+          onPress={() => router.push(LESSONS_ROUTE)}
+          style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg, padding: 16, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", gap: 14, ...shadows.card }}
+        >
+          <View style={{ width: 44, height: 44, borderRadius: radii.md, backgroundColor: colors.infoSoft, alignItems: "center", justifyContent: "center" }}>
+            <Text style={{ fontSize: 22 }}>📚</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "800" }}>Відео та конспекти</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>Матеріали автошколи безпосередньо в додатку</Text>
+          </View>
+          <Text style={{ color: colors.textTertiary, fontSize: 20 }}>›</Text>
+        </Pressable>
+
         <Pressable
           onPress={() => router.push(PDR_TRAINING_ROUTE)}
           style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg, padding: 16, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", gap: 14, ...shadows.card }}

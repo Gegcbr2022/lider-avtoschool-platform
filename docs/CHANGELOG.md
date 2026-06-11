@@ -2,6 +2,23 @@
 
 Формат: дата · ветка · что вошло. Источник истины mobile — APK+ADB.
 
+## 2026-06-12 — `opus/sprint-2-game-loop` (S4.1–S4.7 release readiness)
+
+### Готово к PR/merge
+- **S4.1 Dead buttons cleanup:** mobile TSX sweep по `Pressable/onPress`, старым placeholder-контактам и видимым заглушкам; неактуальные домен/email/Telegram ссылки убраны из mobile UI.
+- **S4.2 Lessons entry:** `lessons.tsx` больше не orphaned; вход добавлен из «Навчання», fallback actions ведут в полезные маршруты без демонстрационных production-данных.
+- **S4.3 Social links:** Profile использует реальные `socialLinks` из `@lider/shared` и открывает внешние URL через `Linking.openURL` с `Alert` fallback.
+- **S4.4 Contextual Лідік:** добавлен `apps/mobile/lib/lidik-context.ts`; Home, Навчання, Club и Profile получают контекстные подсказки из реальных stats/context.
+- **S4.5 Chat reliability:** добавлены skeleton states, retry для отправки, честные empty-states и upload fallback; Telegram bridge сохранён downstream после успешного Firestore `sendMessage`.
+- **S4.6/S4.7 Release readiness:** offline-copy чата сделан честным; PR diff просканирован на чувствительные строки, debug-код, временные строки и placeholder markers; `npm run typecheck`, `npm run lint`, `npm test` зелёные; ADB quick launch и strict logcat зелёные.
+
+### Owner blockers
+- App Check debug/prod attestation и enforce decision.
+- Production keystore / release signing.
+- Monobank acquiring keys/provider/webhook.
+- Ротация ранее утёкших ключей и проверка GitHub cache/support.
+- Контентное наполнение уроков/ПДР library в Firestore.
+
 ## 2026-06-10 — `codex/sprint-2-booking` (приёмка Opus: ⛔ не в main, есть блокеры)
 
 ### Закоммичено и верифицировано

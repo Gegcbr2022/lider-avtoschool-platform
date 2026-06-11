@@ -2,7 +2,7 @@
 // Список СЦ по містах + маршрут/перегляд через Google Maps (deep link, без API-ключів).
 // Контент у Firestore serviceCenters (редагує школа через Admin).
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Linking, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { getServiceCenters, type ServiceCenter } from "../lib/firestore";
@@ -18,6 +18,12 @@ function openDirections(c: ServiceCenter) {
 function openOnMap(c: ServiceCenter) {
   const q = encodeURIComponent(mapsQueryFor(c));
   Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${q}`).catch(() => {});
+}
+function openNearestServiceCenter() {
+  const q = encodeURIComponent("сервісний центр МВС поруч");
+  Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${q}`).catch(() => {
+    Alert.alert("Сервісні центри МВС", "Відкрийте Google Maps і знайдіть: сервісний центр МВС поруч");
+  });
 }
 
 export default function ServiceCentersScreen() {
@@ -50,10 +56,13 @@ export default function ServiceCentersScreen() {
       ) : centers.length === 0 ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.xl }}>
           <Text style={{ fontSize: 48, marginBottom: 12 }}>🗺️</Text>
-          <Text style={{ color: colors.textPrimary, fontSize: 17, fontWeight: "800", textAlign: "center" }}>Список готується</Text>
+          <Text style={{ color: colors.textPrimary, fontSize: 17, fontWeight: "800", textAlign: "center" }}>Знайдіть найближчий сервісний центр</Text>
           <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: "center", marginTop: 8, lineHeight: 20 }}>
-            Автошкола додасть сервісні центри найближчим часом.
+            Поки каталог автошколи порожній, відкрийте актуальні результати в Google Maps.
           </Text>
+          <Pressable onPress={openNearestServiceCenter} style={{ marginTop: 18, backgroundColor: colors.red, borderRadius: radii.md, paddingVertical: 13, paddingHorizontal: 18 }}>
+            <Text style={{ color: "#fff", fontSize: 14, fontWeight: "800" }}>Відкрити Google Maps</Text>
+          </Pressable>
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: 48 }}>

@@ -163,6 +163,16 @@ type ReplyDraft = {
   text: string;
 };
 
+type PendingRetry = {
+  text: string;
+  replyTo: ReplyDraft | null;
+};
+
+type UploadFailure = {
+  kind: "image" | "file";
+  message: string;
+};
+
 const CHATS: ChatDef[] = [
   {
     id: "manager",
@@ -178,7 +188,7 @@ const CHATS: ChatDef[] = [
     title: "Інструктор",
     emoji: "🚗",
     subtitle: "Практичні заняття, розклад, питання по водінню",
-    systemMessage: "Напиши питання своєму інструктору. Відповідь прийде сюди та в Telegram.",
+    systemMessage: "Напиши питання своєму інструктору.",
   },
 ];
 
@@ -189,18 +199,34 @@ function ChatList({ onOpen }: { onOpen: (id: string) => void }) {
   const { user } = useAuth();
   const s = makeStyles(colors);
   const [convMap, setConvMap] = useState<Record<string, ConversationDoc>>({});
+  const [loading, setLoading] = useState(true);
+  const [listError, setListError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!user?.id) return;
+    setLoading(true);
+    setListError(null);
+    let fallback: ReturnType<typeof setTimeout> | undefined;
     const unsub = subscribeToConversations(user.id, (convs) => {
+      if (fallback) clearTimeout(fallback);
       const m: Record<string, ConversationDoc> = {};
       for (const c of convs) {
         if (c.type === "manager" || c.type === "instructor") m[c.type] = c;
       }
       setConvMap(m);
+      setLoading(false);
+      setListError(null);
     });
-    return unsub;
-  }, [user?.id]);
+    fallback = setTimeout(() => {
+      setLoading(false);
+      setListError("Не вдалось швидко оновити список чатів. Можеш відкрити потрібний чат або спробувати ще раз.");
+    }, 8000);
+    return () => {
+      clearTimeout(fallback);
+      unsub();
+    };
+  }, [user?.id, reloadKey]);
 
   return (
     <SafeAreaView style={s.safe} edges={["top"]}>
@@ -209,6 +235,14 @@ function ChatList({ onOpen }: { onOpen: (id: string) => void }) {
         <Text style={s.headerSub}>Зв'язок з автошколою</Text>
       </View>
       <ScrollView style={{ flex: 1 }}>
+        {loading ? <ChatListSkeleton /> : null}
+        {listError ? (
+          <RetryBanner
+            message={listError}
+            action="Оновити"
+            onPress={() => setReloadKey((value) => value + 1)}
+          />
+        ) : null}
         {CHATS.map((chat) => {
           const conv = convMap[chat.type];
           const lastMsg = conv?.lastMessage;
@@ -267,6 +301,8 @@ function Conversation({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [pendingRetry, setPendingRetry] = useState<PendingRetry | null>(null);
+  const [uploadFailure, setUploadFailure] = useState<UploadFailure | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [downloadingFileId, setDownloadingFileId] = useState<string | null>(null);
@@ -277,11 +313,14 @@ function Conversation({
   const [fullscreenPhoto, setFullscreenPhoto] = useState<string | null>(null);
   const [fullscreenPhotoState, setFullscreenPhotoState] = useState<"loading" | "ready" | "error">("loading");
   const [photoErrors, setPhotoErrors] = useState<Record<string, boolean>>({});
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!user) return;
     let unsub: (() => void) | undefined;
     let active = true;
+    setLoading(true);
+    setError(null);
 
     (async () => {
       try {
@@ -332,13 +371,12 @@ function Conversation({
       active = false;
       unsub?.();
     };
-  }, [user, chat.type, conversationIdOverride]);
+  }, [user, chat.type, conversationIdOverride, reloadKey]);
 
-  async function handleSend() {
-    const text = input.trim();
-    if (!text || !conversationId || !user || sending) return;
-    setInput("");
+  async function sendTextMessage(text: string, replyDraft: ReplyDraft | null) {
+    if (!conversationId || !user) return;
     setSending(true);
+    setError(null);
     try {
       const messageId = await sendMessage(conversationId, {
         senderId: user.id,
@@ -346,11 +384,12 @@ function Conversation({
         senderRole: user.role,
         senderPhone: user.phone,
         text,
-        replyToId: replyTo?.id,
-        replyToSenderName: replyTo?.senderName,
-        replyToText: replyTo?.text,
+        replyToId: replyDraft?.id,
+        replyToSenderName: replyDraft?.senderName,
+        replyToText: replyDraft?.text,
       });
       setReplyTo(null);
+      setPendingRetry(null);
       crashLog(`chat:message_sent type=${chat.type}`);
       void notifyChat({
         conversationId, messageId, userId: user.id, userName: user.name, text,
@@ -359,11 +398,26 @@ function Conversation({
       });
     } catch (e) {
       crashError(e, "chat:send_message");
-      setError("Повідомлення не надіслано. Спробуй ще раз.");
+      setPendingRetry({ text, replyTo: replyDraft });
       setInput(text);
+      setError("Повідомлення не надіслано. Текст збережено — спробуй повторити.");
     } finally {
       setSending(false);
     }
+  }
+
+  async function handleSend() {
+    const text = input.trim();
+    if (!text || !conversationId || !user || sending) return;
+    setInput("");
+    await sendTextMessage(text, replyTo);
+  }
+
+  async function retryPendingMessage() {
+    if (!pendingRetry || sending) return;
+    const draft = pendingRetry;
+    setInput("");
+    await sendTextMessage(draft.text, draft.replyTo);
   }
 
   async function handlePickImage() {
@@ -382,6 +436,7 @@ function Conversation({
     const asset = result.assets[0];
     const uri = asset.uri;
     setUploadingImage(true);
+    setUploadFailure(null);
     try {
       const { downloadURL, storagePath, fileSize } = await uploadChatImage(conversationId, uri);
       const messageId = await sendMessage(conversationId, {
@@ -403,7 +458,10 @@ function Conversation({
     } catch (err) {
       console.error("[Chat] photo upload failed:", err);
       const msg = err instanceof Error ? err.message : String(err);
-      Alert.alert("Помилка", `Не вдалось надіслати фото.\n${__DEV__ ? msg : "Перевір з'єднання і спробуй ще раз."}`);
+      setUploadFailure({
+        kind: "image",
+        message: __DEV__ ? `Не вдалось надіслати фото. ${msg}` : "Не вдалось надіслати фото. Перевір з'єднання і спробуй ще раз.",
+      });
     } finally {
       setUploadingImage(false);
     }
@@ -412,6 +470,7 @@ function Conversation({
   async function handlePickFile() {
     if (!conversationId || !user || uploadingFile) return;
     setUploadingFile(true);
+    setUploadFailure(null);
     try {
       const result = await DocumentPicker.getDocumentAsync({
         copyToCacheDirectory: true,
@@ -466,7 +525,10 @@ function Conversation({
     } catch (err) {
       console.error("[Chat] file upload failed:", err);
       const msg = err instanceof Error ? err.message : String(err);
-      Alert.alert("Помилка", `Не вдалося надіслати файл.\n${__DEV__ ? msg : "Перевір з'єднання і спробуй ще раз."}`);
+      setUploadFailure({
+        kind: "file",
+        message: __DEV__ ? `Не вдалося надіслати файл. ${msg}` : "Не вдалося надіслати файл. Перевір з'єднання і спробуй ще раз.",
+      });
     } finally {
       setUploadingFile(false);
     }
@@ -669,7 +731,7 @@ function Conversation({
         {isOffline ? (
           <View style={s.offlineBar}>
             <Text style={{ color: colors.warning, fontWeight: "700", fontSize: 13 }}>
-              📡 Немає інтернету — повідомлення надішлеться після відновлення
+              📡 Немає інтернету — текст можна підготувати зараз, а відправити після відновлення
             </Text>
           </View>
         ) : null}
@@ -686,15 +748,31 @@ function Conversation({
           </View>
 
           {loading ? (
-            <View style={{ paddingVertical: 40, alignItems: "center" }}>
-              <ActivityIndicator color={colors.red} />
-            </View>
+            <MessageSkeleton />
           ) : null}
 
           {error ? (
-            <View style={[s.systemRow, { backgroundColor: colors.redSoft }]}>
-              <Text style={[s.systemText, { color: colors.red }]}>{error}</Text>
-            </View>
+            <RetryBanner
+              message={error}
+              action={pendingRetry ? "Повторити" : "Підключити ще раз"}
+              onPress={pendingRetry ? retryPendingMessage : () => setReloadKey((value) => value + 1)}
+              tone="danger"
+            />
+          ) : null}
+
+          {uploadFailure ? (
+            <RetryBanner
+              message={uploadFailure.message}
+              action={uploadFailure.kind === "image" ? "Обрати фото" : "Обрати файл"}
+              onPress={() => {
+                const kind = uploadFailure.kind;
+                setUploadFailure(null);
+                if (kind === "image") void handlePickImage();
+                else void handlePickFile();
+              }}
+              onDismiss={() => setUploadFailure(null)}
+              tone="warning"
+            />
           ) : null}
 
           {messages.map((m, index) => {
@@ -833,8 +911,10 @@ function Conversation({
             <View style={{ paddingTop: 30 }}>
               <EmptyState
                 emoji={chat.emoji}
-                title="Немає повідомлень"
-                detail="Постав перше питання нижче. Відповідь прийде сюди та push-сповіщенням."
+                title={chat.type === "instructor" ? "Чат з інструктором готовий" : "Чат з менеджером готовий"}
+                detail={chat.type === "instructor"
+                  ? "Напиши питання про заняття або розклад. Якщо інструктор ще не відповідав, історія буде порожньою чесно."
+                  : "Постав перше питання нижче. Відповідь прийде сюди та push-сповіщенням."}
               />
             </View>
           ) : null}
@@ -899,16 +979,30 @@ function InstructorChatTab() {
   const s = makeStyles(colors);
   const [convs, setConvs] = useState<ConversationDoc[]>([]);
   const [loading, setLoading] = useState(true);
+  const [listError, setListError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
+    setLoading(true);
+    setListError(null);
+    let fallback: ReturnType<typeof setTimeout> | undefined;
     const unsub = subscribeToConversations(user.id, (list) => {
+      if (fallback) clearTimeout(fallback);
       setConvs(list);
       setLoading(false);
+      setListError(null);
     });
-    return unsub;
-  }, [user?.id]);
+    fallback = setTimeout(() => {
+      setLoading(false);
+      setListError("Не вдалось швидко оновити чати учнів. Перевір з'єднання або спробуй ще раз.");
+    }, 8000);
+    return () => {
+      clearTimeout(fallback);
+      unsub();
+    };
+  }, [user?.id, reloadKey]);
 
   if (activeChatId) {
     // Reuse the student Conversation component with a synthesized ChatDef
@@ -931,8 +1025,10 @@ function InstructorChatTab() {
         <Text style={s.headerSub}>Відповідайте учням та менеджерам</Text>
       </View>
       {loading ? (
-        <View style={s.center}>
-          <ActivityIndicator color={colors.red} />
+        <ScrollView style={{ flex: 1 }}><ChatListSkeleton /></ScrollView>
+      ) : listError ? (
+        <View style={{ paddingTop: 24 }}>
+          <RetryBanner message={listError} action="Оновити" onPress={() => setReloadKey((value) => value + 1)} />
         </View>
       ) : convs.length === 0 ? (
         <View style={{ paddingTop: 60, paddingHorizontal: spacing.md }}>
@@ -1017,6 +1113,70 @@ export default function ChatTab() {
   return <ChatList onOpen={(id) => setActiveChat(id)} />;
 }
 
+function ChatListSkeleton() {
+  const { colors } = useTheme();
+  const s = makeStyles(colors);
+  return (
+    <View>
+      {[0, 1].map((item) => (
+        <View key={item} style={s.skeletonRow}>
+          <View style={s.skeletonAvatar} />
+          <View style={{ flex: 1, gap: 8 }}>
+            <View style={[s.skeletonLine, { width: "48%" }]} />
+            <View style={[s.skeletonLine, { width: "78%", height: 10, opacity: 0.72 }]} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function MessageSkeleton() {
+  const { colors } = useTheme();
+  const s = makeStyles(colors);
+  return (
+    <View style={{ gap: 10, paddingVertical: 8 }}>
+      <View style={[s.messageSkeleton, { alignSelf: "flex-start", width: "72%" }]} />
+      <View style={[s.messageSkeleton, { alignSelf: "flex-end", width: "56%" }]} />
+      <View style={[s.messageSkeleton, { alignSelf: "flex-start", width: "64%" }]} />
+    </View>
+  );
+}
+
+function RetryBanner({
+  message,
+  action,
+  onPress,
+  onDismiss,
+  tone = "default",
+}: {
+  message: string;
+  action: string;
+  onPress: () => void;
+  onDismiss?: () => void;
+  tone?: "default" | "danger" | "warning";
+}) {
+  const { colors } = useTheme();
+  const s = makeStyles(colors);
+  const bg = tone === "danger" ? colors.redSoft : tone === "warning" ? colors.warningSoft : colors.bgElevated;
+  const fg = tone === "danger" ? colors.red : tone === "warning" ? colors.warning : colors.textPrimary;
+  return (
+    <View style={[s.retryBanner, { backgroundColor: bg, borderColor: fg + "55" }]}>
+      <Text style={[s.retryText, { color: fg }]}>{message}</Text>
+      <View style={s.retryActions}>
+        {onDismiss ? (
+          <Pressable hitSlop={10} onPress={onDismiss} style={s.retryGhostBtn}>
+            <Text style={[s.retryGhostText, { color: fg }]}>Закрити</Text>
+          </Pressable>
+        ) : null}
+        <Pressable onPress={onPress} style={[s.retryBtn, { backgroundColor: fg }]}>
+          <Text style={s.retryBtnText}>{action}</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 function makeStyles(colors: ReturnType<typeof useTheme>["colors"]) {
@@ -1082,6 +1242,28 @@ function makeStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       borderRadius: 5,
       backgroundColor: colors.red,
     },
+    skeletonRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 14,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 16,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    skeletonAvatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: colors.bgElevated,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    skeletonLine: {
+      height: 12,
+      borderRadius: 999,
+      backgroundColor: colors.bgElevated,
+    },
 
     offlineBar: {
       backgroundColor: colors.warningSoft,
@@ -1111,6 +1293,25 @@ function makeStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       borderColor: colors.border,
     },
     systemText: { color: colors.textSecondary, fontSize: 12, lineHeight: 18, textAlign: "center" },
+    retryBanner: {
+      borderRadius: radii.md,
+      padding: 12,
+      borderWidth: 1,
+      gap: 10,
+    },
+    retryText: { fontSize: 13, lineHeight: 18, fontWeight: "800" },
+    retryActions: { flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: 8 },
+    retryBtn: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
+    retryBtnText: { color: "#fff", fontSize: 12, fontWeight: "900" },
+    retryGhostBtn: { paddingHorizontal: 8, paddingVertical: 8 },
+    retryGhostText: { fontSize: 12, fontWeight: "900" },
+    messageSkeleton: {
+      height: 52,
+      borderRadius: radii.md,
+      backgroundColor: colors.bgElevated,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
 
     bubbleWrap: { maxWidth: "85%" },
     bubbleWrapMine: { alignSelf: "flex-end" },

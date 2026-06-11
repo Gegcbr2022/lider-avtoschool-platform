@@ -18,9 +18,9 @@
   и (ранее) «Слабкі теми» все делают `router.push("/(tabs)/tests")` без параметра, а `tests.tsx` не
   читает params → всегда открывается общее меню. Нужно: `tests.tsx` принимает `?mode=exam|mistakes|topic`
   и авто-стартует соответствующий режим. Отдано Sonnet (см. `SONNET_NEXT_SESSION_PROMPT.md`).
-- 🔧 **B-17 (P2): LidikGuide рендерит только статичный текст.** Концепт «Лідік-проводник» наполовину:
-  компонент есть, но реплики хардкодятся в каждом экране. Стоит вынести `getContextualLidikTip(screen, stats)`
-  в `lib/` для единых контекстных подсказок. Отдано Sonnet.
+- ✅ **B-17 (P2): LidikGuide стал контекстным.** Добавлен `apps/mobile/lib/lidik-context.ts` с чистым
+  `getContextualLidikTip(screen, context)` без сети и мок-данных; Home, Навчання, Club и Profile используют
+  единые контекстные подсказки. Проверено в S4.4 и повторно в S4.6/S4.7 release-readiness smoke.
 - ✅ **История `.env_vercel` очищена локально через `git-filter-repo`.** Точный путь `.env_vercel`
   больше не находится в `git log --all -- .env_vercel` и `git rev-list --objects --all`.
   После force-push remote-ветки также должны указывать только на очищенную историю.
@@ -42,7 +42,9 @@
 4. **Секретный файл очищен из истории.** `.env_vercel` удалён из всех локальных refs через
    `git-filter-repo --path .env_vercel --invert-paths`; перед релизом владелец всё равно ротирует ключи.
 
-Осталось для финальной release-приёмки: пересборка APK + ADB-smoke/logcat на установленном APK после merge.
+S4.1–S4.7 release-readiness пройден: `typecheck` / `lint` / `test` зелёные, release APK был собран и установлен,
+ADB quick launch на `emulator-5554` проходит, strict logcat без `FATAL EXCEPTION`, `AndroidRuntime` и ReactNative errors.
+После merge остаётся owner-проверка на реальном устройстве и прод-блокеры B-02/B-03/B-04.
 
 ## S2 / S3 Спринти (Game Loop & Lidyk)
 

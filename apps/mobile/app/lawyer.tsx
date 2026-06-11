@@ -16,6 +16,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useTheme, radii, spacing } from "../lib/theme";
+import { socialLinks } from "@lider/shared";
+
+const telegramLink = socialLinks.find((link) => link.id === "telegram")?.href ?? "https://t.me/LiderDriveBot?start=AYYUTE";
 
 // ─── Legal topics data ─────────────────────────────────────────────────────
 
@@ -193,7 +196,7 @@ export default function LawyerScreen() {
   }
 
   function openTelegram() {
-    Linking.openURL("https://t.me/lider_avtoschool").catch(() => {
+    Linking.openURL(telegramLink).catch(() => {
       Alert.alert("Не вдалося відкрити Telegram");
     });
   }
@@ -232,11 +235,11 @@ export default function LawyerScreen() {
         </View>
 
         {/* ─── Subscription note ──────────────────────────────────────── */}
+        {/* ─── Legal support note ─────────────────────────────────────── */}
         <View style={s.noticeCard}>
-          <Text style={s.noticeTitle}>📋 Підписка на автоюриста</Text>
+          <Text style={s.noticeTitle}>📋 Як отримати відповідь</Text>
           <Text style={s.noticeText}>
-            Щомісячна підписка з необмеженими консультаціями та викликом юриста на місце ДТП — у розробці.
-            Слідкуйте за оновленнями.
+            Опишіть ситуацію в чаті або Telegram. Менеджер уточнить деталі та передасть запит профільному спеціалісту.
           </Text>
         </View>
 

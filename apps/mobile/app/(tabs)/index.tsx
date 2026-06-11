@@ -27,6 +27,7 @@ import {
   EMPTY_BONUS,
   EMPTY_STATS,
 } from "../../lib/firestore";
+import { getContextualLidikTip } from "../../lib/lidik-context";
 
 // ─── ScalePressable — spring micro-interaction + haptic ───────────────────────
 function ScalePressable({
@@ -167,6 +168,7 @@ function DailyTip({ onPress }: { onPress: () => void }) {
 // ─────────────────────────────────────────────────────────────────────────────
 function GuestHome() {
   const { colors } = useTheme();
+  const lidikTip = getContextualLidikTip("home", { isGuest: true });
   return (
     <Screen title="Вітаємо." subtitle="Автошкола Лідер.">
       <Card tone="red" style={{ padding: 24, borderRadius: radii.lg }}>
@@ -190,7 +192,7 @@ function GuestHome() {
             fontSize: 15,
           }}
         >
-          200 реальних питань. Без реєстрації.
+          {lidikTip}
         </Text>
         <ScalePressable
           onPress={() => router.push("/(tabs)/tests")}
@@ -378,9 +380,7 @@ function StudentHome() {
   ];
 
   const heroProgress = stats.testsCompleted > 0 ? Math.min(100, stats.bestScorePct) : 0;
-  const heroHint = stats.testsCompleted === 0
-    ? "Я Лідик! Давай пройдемо перший тест, щоб скласти твій план."
-    : `Твій прогрес ${heroProgress}%. ${stageInfo.hint}`;
+  const heroHint = getContextualLidikTip("home", { stats, role: user?.role, name, daysToExam });
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={["top"]}>
@@ -625,6 +625,7 @@ function InstructorHome({ name }: { name: string }) {
     .sort((a, b) => (a.startsAt > b.startsAt ? 1 : -1));
 
   const firstName = name.split(" ")[0];
+  const instructorTip = getContextualLidikTip("home", { role: "instructor", name });
 
   return (
     <SafeAreaView style={s.safe} edges={["top"]}>
@@ -645,6 +646,7 @@ function InstructorHome({ name }: { name: string }) {
             <Text style={s.greeting}>Вітаємо,</Text>
             <Text style={s.name}>{firstName} 🚗</Text>
             <Text style={s.role}>Інструктор · Автошкола Лідер</Text>
+            <Text style={s.instructorTip}>{instructorTip}</Text>
           </View>
           <ScalePressable
             onPress={() => router.push("/instructor-students" as Href)}
@@ -817,6 +819,13 @@ function makeInstructorStyles(colors: ReturnType<typeof useTheme>["colors"]) {
       fontSize: 12,
       fontWeight: "600",
       marginTop: 2,
+    },
+    instructorTip: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      fontWeight: "600",
+      lineHeight: 18,
+      marginTop: 8,
     },
     studentsBtn: {
       backgroundColor: colors.red,
