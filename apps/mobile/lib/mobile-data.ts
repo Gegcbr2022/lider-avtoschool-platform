@@ -169,14 +169,68 @@ export const driverClubStreak: DriverClubStreak = {
   lastActiveDate: "2026-06-03"
 };
 
-export const todayChallenge: DailyChallenge = {
-  id: "ch-2026-06-03",
-  question: "На якій відстані від пішохідного переходу забороняється зупинка транспортного засобу?",
-  options: ["5 м", "10 м", "15 м", "20 м"],
-  correctIndex: 1,
-  explanation: "Відповідно до ПДР, зупинка забороняється ближче ніж за 10 м до пішохідного переходу.",
-  category: "Зупинка та стоянка"
-};
+export const dailyChallenges: DailyChallenge[] = [
+  {
+    id: "ch-stop-crosswalk",
+    question: "На якій відстані від пішохідного переходу забороняється зупинка транспортного засобу?",
+    options: ["5 м", "10 м", "15 м", "20 м"],
+    correctIndex: 1,
+    explanation: "Зупинка забороняється ближче ніж за 10 м до пішохідного переходу.",
+    category: "Зупинка та стоянка"
+  },
+  {
+    id: "ch-city-speed",
+    question: "Яка максимальна швидкість руху в населеному пункті, якщо знаками не встановлено інше?",
+    options: ["40 км/год", "50 км/год", "60 км/год", "70 км/год"],
+    correctIndex: 1,
+    explanation: "У населених пунктах дозволено рухатися не швидше 50 км/год, якщо знаки не кажуть інакше.",
+    category: "Швидкість"
+  },
+  {
+    id: "ch-priority-right",
+    question: "На нерегульованому перехресті рівнозначних доріг кого потрібно пропустити?",
+    options: ["Тільки автобус", "Транспорт праворуч", "Транспорт ліворуч", "Усіх пішоходів на узбіччі"],
+    correctIndex: 1,
+    explanation: "На рівнозначному перехресті діє правило перешкоди праворуч.",
+    category: "Проїзд перехресть"
+  },
+  {
+    id: "ch-seatbelt",
+    question: "Хто з пасажирів має бути пристебнутий ременем безпеки?",
+    options: ["Тільки водій", "Тільки передній пасажир", "Усі, де є ремені", "Тільки діти"],
+    correctIndex: 2,
+    explanation: "Ремені безпеки використовують усі пасажири на місцях, обладнаних ременями.",
+    category: "Безпека"
+  },
+  {
+    id: "ch-fog-lights",
+    question: "Коли дозволено користуватися задніми протитуманними ліхтарями?",
+    options: ["Завжди вночі", "Лише в умовах недостатньої видимості", "Під час дощу вдень завжди", "На будь-якій трасі"],
+    correctIndex: 1,
+    explanation: "Задні протитуманні ліхтарі вмикають тільки за недостатньої видимості, щоб не засліплювати інших.",
+    category: "Світлові прилади"
+  },
+  {
+    id: "ch-overtaking-crosswalk",
+    question: "Чи дозволено обгін безпосередньо перед пішохідним переходом?",
+    options: ["Так, якщо немає пішоходів", "Так, тільки вдень", "Ні", "Так, якщо швидкість до 30 км/год"],
+    correctIndex: 2,
+    explanation: "Обгін перед пішохідним переходом і на самому переході заборонений.",
+    category: "Обгін"
+  },
+];
+
+function dayOfYear(date: Date): number {
+  const start = new Date(date.getFullYear(), 0, 0);
+  return Math.floor((date.getTime() - start.getTime()) / 86_400_000);
+}
+
+export function getTodayChallenge(date = new Date()): DailyChallenge {
+  const index = Math.abs(date.getFullYear() * 31 + dayOfYear(date)) % dailyChallenges.length;
+  return dailyChallenges[index];
+}
+
+export const todayChallenge: DailyChallenge = getTodayChallenge();
 
 export const clubBadges: DriverClubBadge[] = [
   { id: "first-test",   title: "Перший тест",     description: "Пройдено перший щоденний тест",       earned: true,  icon: "🏁" },

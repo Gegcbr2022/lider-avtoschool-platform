@@ -18,6 +18,9 @@ const EMPTY_PROGRESS: PdrProgressState = { mistakes: {}, topicProgress: {} };
 // Чотири фази дороги до посвідчення. Етап обчислюється з реальних даних учня,
 // а не задається жорстко — ніяких мок-значень на проді.
 const ROADMAP_STEPS = ["Вивчення теорії", "Тренування ПДР", "Готовність до іспиту", "Практика та іспит"] as const;
+const PDR_TRAINING_ROUTE = { pathname: "/(tabs)/tests", params: { mode: "training" } } as Href;
+const PDR_EXAM_ROUTE = { pathname: "/(tabs)/tests", params: { mode: "exam" } } as Href;
+const PDR_MISTAKES_ROUTE = { pathname: "/(tabs)/tests", params: { mode: "mistakes" } } as Href;
 
 export default function LearningTab() {
   const { colors } = useTheme();
@@ -52,19 +55,25 @@ export default function LearningTab() {
 
   // Один зрозумілий наступний крок + текст CTA — залежить від етапу.
   const nextStep = !started
-    ? { cta: "Почати перший тест", route: "/(tabs)/tests" as Href, hint: "Пройди свій перший тест — і Лідик складе твій маршрут." }
+    ? { cta: "Почати перше тренування", route: PDR_TRAINING_ROUTE, hint: "Пройди свій перший тест — і Лідик складе твій маршрут." }
     : !examReady
       ? {
           cta: "Продовжити тренування",
-          route: "/(tabs)/tests" as Href,
+          route: PDR_TRAINING_ROUTE,
           hint: plan.recommendedCategory
             ? `Підтягни тему «${plan.recommendedCategory}» — там зараз найбільший приріст.`
             : "Потрібно ≥75% на екзамені МВС. Тренуйся короткими сесіями.",
         }
-      : { cta: "Пройти пробний іспит", route: "/(tabs)/tests" as Href, hint: "Ти готовий! Спробуй повний екзамен МВС і переходь до практики." };
+      : { cta: "Пройти пробний іспит", route: PDR_EXAM_ROUTE, hint: "Ти готовий! Спробуй повний екзамен МВС і переходь до практики." };
 
   // Лідик говорить контекстно — текст бере з coach-плану (реальні дані).
   const lidikLine = plan.summary;
+  const weakTopicCount = plan.weakTopics.length;
+  const statTiles = [
+    { label: "Тести", value: String(stats.testsCompleted), tone: colors.redSoft, text: colors.red },
+    { label: "Рекорд", value: `${stats.bestScorePct}%`, tone: colors.successSoft, text: colors.success },
+    { label: "Слабкі", value: String(weakTopicCount), tone: colors.warningSoft, text: colors.warning },
+  ];
 
   return (
     <Screen title="Навчання" subtitle="Твоя дорожня карта до посвідчення водія.">
@@ -86,11 +95,25 @@ export default function LearningTab() {
           {started ? `Найкращий результат: ${stats.bestScorePct}%` : "Ще немає результатів — почни перший тест"}
         </Text>
 
+        <View style={{ flexDirection: "row", gap: 8, marginBottom: 14 }}>
+          {statTiles.map((item) => (
+            <View key={item.label} style={{ flex: 1, backgroundColor: item.tone, borderRadius: radii.md, padding: 10 }}>
+              <Text style={{ color: item.text, fontSize: 18, fontWeight: "900", lineHeight: 22 }}>{item.value}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: "800", marginTop: 2 }}>{item.label}</Text>
+            </View>
+          ))}
+        </View>
+
         <LidikGuide
           variant="inline"
           text={lidikLine}
-          style={{ marginBottom: 16 }}
+          style={{ marginBottom: 12 }}
         />
+
+        <View style={{ backgroundColor: colors.bgElevated, borderRadius: radii.md, padding: 12, marginBottom: 12 }}>
+          <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "900", marginBottom: 4 }}>Наступний крок</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 18 }}>{nextStep.hint}</Text>
+        </View>
 
         <Pressable
           onPress={() => router.push(nextStep.route)}
@@ -108,7 +131,7 @@ export default function LearningTab() {
             {plan.weakTopics.map((topic, i) => (
               <Pressable
                 key={topic.category}
-                onPress={() => router.push("/(tabs)/tests")}
+                onPress={() => router.push(PDR_MISTAKES_ROUTE)}
                 style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: colors.border }}
               >
                 <View style={{ width: 40, height: 40, borderRadius: radii.md, backgroundColor: colors.warningSoft, alignItems: "center", justifyContent: "center" }}>
@@ -132,11 +155,11 @@ export default function LearningTab() {
         </View>
       )}
 
-      <Text style={{ color: colors.textSecondary, fontSize: 14, fontWeight: "800", marginLeft: 4, marginBottom: 8 }}>Твій план</Text>
+      <Text style={{ color: colors.textSecondary, fontSize: 14, fontWeight: "800", marginLeft: 4, marginBottom: 8 }}>Швидкі дії</Text>
 
       <View style={{ gap: 10 }}>
         <Pressable
-          onPress={() => router.push("/(tabs)/tests")}
+          onPress={() => router.push(PDR_TRAINING_ROUTE)}
           style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg, padding: 16, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", gap: 14, ...shadows.card }}
         >
           <View style={{ width: 44, height: 44, borderRadius: radii.md, backgroundColor: colors.redSoft, alignItems: "center", justifyContent: "center" }}>
@@ -145,14 +168,14 @@ export default function LearningTab() {
           <View style={{ flex: 1 }}>
             <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "800" }}>Тренування ПДР</Text>
             <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
-              {started ? `Пройдено ${stats.testsCompleted} тестів` : "Тести по темам та марафон"}
+              {started ? `Пройдено ${stats.testsCompleted} тестів` : "Теми, міні-ігри та марафон"}
             </Text>
           </View>
           <Text style={{ color: colors.textTertiary, fontSize: 20 }}>›</Text>
         </Pressable>
 
         <Pressable
-          onPress={() => router.push("/(tabs)/tests")}
+          onPress={() => router.push(PDR_EXAM_ROUTE)}
           style={{ backgroundColor: colors.bgCard, borderRadius: radii.lg, padding: 16, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", gap: 14, ...shadows.card }}
         >
           <View style={{ width: 44, height: 44, borderRadius: radii.md, backgroundColor: colors.successSoft, alignItems: "center", justifyContent: "center" }}>

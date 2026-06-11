@@ -1,5 +1,5 @@
 // Лідик AI — full-screen chat with theme support and mascot states
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -39,14 +39,19 @@ const MASCOT_LABEL: Record<MascotState, string> = {
 };
 
 const QUICK_PROMPTS = [
-  "Яка категорія B?",
-  "Скільки коштує?",
-  "Де знаходиться філія?",
-  "Перешкода справа",
-  "Які документи?",
-  "Швидкість у місті",
-  "Обгін заборонено де?",
+  "Поясни помилку в ПДР",
+  "Дай план на 10 хвилин",
+  "Що повторити перед іспитом?",
+  "Які документи потрібні?",
+  "Скільки коштує навчання?",
+  "Як записатись на практику?",
 ];
+
+const SMART_ACTIONS = [
+  { label: "ПДР", prompt: "Поясни правило перешкоди праворуч простими словами" },
+  { label: "Іспит", prompt: "Склади короткий план підготовки до іспиту МВС на сьогодні" },
+  { label: "Практика", prompt: "Як підготуватися до першого практичного заняття з інструктором?" },
+] as const;
 
 export default function AssistantTab() {
   const { colors } = useTheme();
@@ -65,6 +70,12 @@ export default function AssistantTab() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [mascotState, setMascotState] = useState<MascotState>("idle");
+  const hasConversation = messages.length > 1;
+  const composerHint = useMemo(() => {
+    if (isOffline) return "Офлайн: перевір інтернет";
+    if (loading) return "Лідик готує відповідь";
+    return hasConversation ? "Можеш уточнити питання" : "Обери швидку тему або напиши своє";
+  }, [hasConversation, isOffline, loading]);
 
   async function send(question: string) {
     const q = question.trim();
@@ -135,8 +146,8 @@ export default function AssistantTab() {
     <SafeAreaView style={s.safe} edges={["top"]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={0}
       >
         {/* Header with back arrow + mascot state */}
         <View style={s.header}>
@@ -160,6 +171,11 @@ export default function AssistantTab() {
           {loading ? (
             <ActivityIndicator color={colors.red} size="small" style={{ marginRight: 4 }} />
           ) : null}
+          {hasConversation && !loading ? (
+            <Pressable hitSlop={10} onPress={() => setMessages((prev) => prev.slice(0, 1))} style={s.clearBtn}>
+              <Text style={s.clearBtnText}>Очистити</Text>
+            </Pressable>
+          ) : null}
         </View>
 
         {/* Offline banner */}
@@ -180,6 +196,16 @@ export default function AssistantTab() {
           keyboardShouldPersistTaps="handled"
           onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
         >
+          {!hasConversation ? (
+            <View style={s.actionGrid}>
+              {SMART_ACTIONS.map((action) => (
+                <Pressable key={action.label} style={s.actionCard} onPress={() => send(action.prompt)} disabled={loading || isOffline}>
+                  <Text style={s.actionTitle}>{action.label}</Text>
+                  <Text style={s.actionSub} numberOfLines={2}>{action.prompt}</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
           {messages.map((msg, i) => (
             <View
               key={i}
@@ -225,22 +251,23 @@ export default function AssistantTab() {
           ) : null}
         </ScrollView>
 
-        {/* Quick prompts — ближче до поля вводу */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={s.prompts}
-          style={s.promptsStrip}
-        >
-          {QUICK_PROMPTS.map((p) => (
-            <Pressable key={p} style={s.prompt} onPress={() => send(p)} disabled={loading}>
-              <Text style={s.promptText}>{p}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+        <View style={s.composer}>
+          <Text style={s.composerHint}>{composerHint}</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={s.prompts}
+            style={s.promptsStrip}
+          >
+            {QUICK_PROMPTS.map((p) => (
+              <Pressable key={p} style={s.prompt} onPress={() => send(p)} disabled={loading || isOffline}>
+                <Text style={s.promptText}>{p}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
 
-        {/* Input */}
-        <View style={s.inputRow}>
+          {/* Input */}
+          <View style={s.inputRow}>
           <TextInput
             style={[s.input, isOffline && { opacity: 0.5 }]}
             value={input}
@@ -260,6 +287,7 @@ export default function AssistantTab() {
           >
             <Text style={s.sendText}>↑</Text>
           </Pressable>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -309,9 +337,31 @@ function makeStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     mascotEmoji: { fontSize: 20 },
     headerTitle: { color: colors.textPrimary, fontSize: 16, fontWeight: "800" },
     headerSub: { color: colors.textSecondary, fontSize: 11, marginTop: 1 },
+    clearBtn: {
+      borderRadius: radii.full,
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      backgroundColor: colors.bgElevated,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    clearBtnText: { color: colors.textSecondary, fontSize: 11, fontWeight: "800" },
 
     messages: { flex: 1 },
-    messagesContent: { padding: spacing.md, gap: 12, paddingBottom: 16 },
+    messagesContent: { padding: spacing.md, gap: 12, paddingBottom: 12, flexGrow: 1 },
+
+    actionGrid: { flexDirection: "row", gap: 8, marginBottom: 2 },
+    actionCard: {
+      flex: 1,
+      minHeight: 82,
+      borderRadius: radii.md,
+      padding: 10,
+      backgroundColor: colors.bgCard,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    actionTitle: { color: colors.red, fontSize: 12, fontWeight: "900", marginBottom: 5 },
+    actionSub: { color: colors.textSecondary, fontSize: 11, lineHeight: 15, fontWeight: "700" },
 
     bubbleWrap: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
     bubbleWrapBot: { alignSelf: "flex-start", maxWidth: "90%" },
@@ -358,21 +408,24 @@ function makeStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     fallbackNote: { color: colors.warning, fontSize: 11, fontWeight: "700" },
     typingText: { color: colors.textSecondary, fontSize: 13, fontWeight: "600" },
 
-    promptsStrip: {
+    composer: {
       borderTopWidth: 1,
       borderTopColor: colors.border,
       backgroundColor: colors.bgCard,
+      paddingTop: 8,
     },
+    composerHint: { color: colors.textTertiary, fontSize: 11, fontWeight: "800", paddingHorizontal: spacing.md, marginBottom: 6 },
+    promptsStrip: { maxHeight: 42, flexGrow: 0 },
     prompts: {
       paddingHorizontal: spacing.md,
-      paddingVertical: 8,
+      paddingBottom: 6,
       gap: 8,
       alignItems: "center",
     },
     prompt: {
       borderRadius: radii.full,
       paddingHorizontal: 12,
-      paddingVertical: 8,
+      paddingVertical: 7,
       backgroundColor: colors.bgElevated,
       borderWidth: 1.5,
       borderColor: colors.border,
@@ -388,10 +441,9 @@ function makeStyles(colors: ReturnType<typeof useTheme>["colors"]) {
     inputRow: {
       flexDirection: "row",
       gap: 8,
-      padding: spacing.md,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
-      backgroundColor: colors.bgCard,
+      paddingHorizontal: spacing.md,
+      paddingTop: 4,
+      paddingBottom: Platform.OS === "ios" ? spacing.md : 10,
     },
     input: {
       flex: 1,

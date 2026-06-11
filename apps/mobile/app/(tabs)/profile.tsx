@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { updateProfile } from "firebase/auth";
 import {
   Alert, Image, Linking, Modal, Pressable, ScrollView, Switch, Text, TextInput, View,
 } from "react-native";
@@ -18,6 +19,7 @@ import {
   type NotificationInboxItem,
 } from "../../lib/notifications";
 import { DEFAULT_APP_SETTINGS, loadAppSettings, saveAppSettings, type AppSettings } from "../../lib/app-settings";
+import { firebaseAuth } from "../../lib/firebase";
 
 const APP_VERSION = (Constants.expoConfig?.version as string | undefined) ?? "1.0.0";
 
@@ -647,7 +649,11 @@ export default function ProfileTab() {
   async function saveField(field: string, value: string) {
     if (!user?.id || !value.trim()) return;
     try {
-      await upsertUserProfile(user.id, { [field]: value.trim() });
+      const nextValue = value.trim();
+      await upsertUserProfile(user.id, { [field]: nextValue });
+      if (field === "name" && firebaseAuth.currentUser && firebaseAuth.currentUser.displayName !== nextValue) {
+        await updateProfile(firebaseAuth.currentUser, { displayName: nextValue }).catch(() => {});
+      }
     } catch { /* non-critical */ }
   }
 

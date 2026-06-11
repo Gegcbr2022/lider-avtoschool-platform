@@ -5,6 +5,7 @@ import {
   TextInput, TouchableOpacity, View,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import {
@@ -19,13 +20,13 @@ import {
   subscribeToClubPosts, createClubPost, togglePostLike, deletePost,
   subscribeToComments, createComment, toggleCommentLike,
   subscribeToStories, createStory, viewStory, reactToStory, deleteStory,
-  getUserStats, computeAwards, EMPTY_STATS, getLeaderboard,
+  getUserStats, computeAwards, EMPTY_STATS, getLeaderboard, recordTestCompletion,
 } from "../../lib/firestore";
 import { uploadClubImage, uploadStoryMedia } from "../../lib/storage";
 import {
-  getMascotState,
+  getMascotState, getTodayChallenge,
   mascotQuickPrompts, mascotStates,
-  storyToneBg, todayChallenge,
+  storyToneBg,
 } from "../../lib/mobile-data";
 import { radii, shadows, spacing, useTheme } from "../../lib/theme";
 
@@ -42,6 +43,15 @@ const AWARD_FILTER_LABELS: Record<string, string> = {
 const TONE_COLORS: Record<string, string> = {
   red: "#ff1e1e", green: "#22c55e", yellow: "#f59e0b", dark: "#374151",
 };
+
+const DAILY_ANSWER_STORAGE_PREFIX = "club.dailyAnswer";
+
+function localDayKey(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1491,12 +1501,14 @@ export default function ClubTab() {
   const [showCreateStory, setShowCreateStory] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [stats, setStats] = useState<UserStats>(EMPTY_STATS);
+  const [todayKey, setTodayKey] = useState(() => localDayKey());
 
   // Only fully authenticated (non-anonymous) users can post stories / see awards
   const isAuth = mode === "authenticated";
   const streak = { current: stats.streakDays, best: stats.bestStreak, lastActiveDate: stats.lastActiveDate ?? "" };
   const awards = computeAwards(stats);
   const mascot = getMascotState(isAuth ? streak : { current: 0, best: 0, lastActiveDate: "" });
+  const todayChallenge = useMemo(() => getTodayChallenge(new Date(`${todayKey}T12:00:00`)), [todayKey]);
   const isAnswered = selectedAnswer !== null;
   const isCorrect = selectedAnswer === todayChallenge.correctIndex;
   const earnedCount = awards.filter(a => a.earned).length;
@@ -1521,14 +1533,37 @@ export default function ClubTab() {
     return unsub;
   }, []);
 
+  useEffect(() => {
+    const key = `${DAILY_ANSWER_STORAGE_PREFIX}.${user?.id ?? "guest"}`;
+    AsyncStorage.getItem(key).then((raw) => {
+      const saved = raw ? JSON.parse(raw) as { day?: string; challengeId?: string; answer?: number } : null;
+      if (saved?.day === todayKey && saved.challengeId === todayChallenge.id && typeof saved.answer === "number") {
+        setSelectedAnswer(saved.answer);
+      } else {
+        setSelectedAnswer(null);
+      }
+    }).catch(() => setSelectedAnswer(null));
+  }, [todayChallenge.id, todayKey, user?.id]);
+
   // Load real gamification stats when the Club tab gains focus (reflects tests
   // just completed). Guests have no stats.
   useFocusEffect(
     useCallback(() => {
+      setTodayKey(localDayKey());
       if (!user?.id || !isAuth) { setStats(EMPTY_STATS); return; }
       getUserStats(user.id).then(setStats).catch(() => {});
     }, [user?.id, isAuth])
   );
+
+  async function handleDailyAnswer(index: number) {
+    if (selectedAnswer !== null) return;
+    setSelectedAnswer(index);
+    const answerKey = `${DAILY_ANSWER_STORAGE_PREFIX}.${user?.id ?? "guest"}`;
+    await AsyncStorage.setItem(answerKey, JSON.stringify({ day: todayKey, challengeId: todayChallenge.id, answer: index })).catch(() => {});
+    if (!user?.id || !isAuth) return;
+    const correct = index === todayChallenge.correctIndex ? 1 : 0;
+    recordTestCompletion(user.id, { correct, total: 1 }).then(setStats).catch(() => {});
+  }
 
   async function handleReferral() {
     const baseUrl = "https://lider-avtoschool.ua";
@@ -1687,7 +1722,7 @@ export default function ClubTab() {
                 return (
                   <TouchableOpacity
                     key={option} disabled={isAnswered}
-                    onPress={() => !isAnswered && setSelectedAnswer(index)}
+                    onPress={() => handleDailyAnswer(index)}
                     style={{ flexDirection: "row", alignItems: "center", gap: 12, borderRadius: radii.sm, padding: 12, borderWidth: 1, borderColor: border, backgroundColor: bg }}
                   >
                     <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: isAnswered && isRight ? colors.success : isAnswered && isSelected ? colors.red : colors.border, backgroundColor: isAnswered && isRight ? colors.success : isAnswered && isSelected && !isRight ? colors.red : colors.bgCard }}>
@@ -1704,6 +1739,9 @@ export default function ClubTab() {
               <View style={{ marginTop: 12, backgroundColor: isCorrect ? colors.successSoft : colors.warningSoft, borderRadius: radii.sm, padding: 12 }}>
                 <Text style={{ fontSize: 13, fontWeight: "700", color: isCorrect ? colors.success : colors.warning, lineHeight: 20 }}>
                   {isCorrect ? "✓ " : "✗ "}{mascotStates[isCorrect ? "test-passed" : "test-failed"].message}
+                </Text>
+                <Text style={{ fontSize: 12, fontWeight: "600", color: colors.textSecondary, lineHeight: 18, marginTop: 6 }}>
+                  {todayChallenge.explanation}
                 </Text>
               </View>
             ) : null}

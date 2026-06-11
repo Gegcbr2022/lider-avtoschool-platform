@@ -17,6 +17,11 @@ firebase-debug.log
 firestore-debug.log
 *.local
 *.tsbuildinfo
+*.keystore
+*.jks
+*.p12
+google-services.json
+GoogleService-Info.plist
 
 .vercel
 

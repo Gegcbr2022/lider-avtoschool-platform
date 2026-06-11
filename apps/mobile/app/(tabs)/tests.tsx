@@ -16,7 +16,7 @@ import {
   View,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Card, Label, ProgressBar } from "../../components/mobile-ui";
 import { askLidyk, recognizeSign } from "../../lib/api";
@@ -1599,9 +1599,19 @@ function ProgressOverview({
 // ─── Main Tab ─────────────────────────────────────────────────────────────────
 
 type SubView = "menu" | "categories" | "minigames";
+type PdrEntryMode = "exam" | "training" | "mistakes" | "marathon" | "minigames" | "scanner" | "plan";
+
+function normalizeEntryMode(value: string | string[] | undefined): PdrEntryMode | null {
+  const mode = Array.isArray(value) ? value[0] : value;
+  if (mode === "exam" || mode === "training" || mode === "mistakes" || mode === "marathon" || mode === "minigames" || mode === "scanner" || mode === "plan") {
+    return mode;
+  }
+  return null;
+}
 
 export default function TestsTab() {
   const { colors } = useTheme();
+  const params = useLocalSearchParams<{ mode?: string }>();
   const { user, mode } = useAuth();
   const [quizState, setQuizState] = useState<QuizState>("idle");
   const [questions, setQuestions] = useState<PDRQuestion[]>([]);
@@ -1621,6 +1631,8 @@ export default function TestsTab() {
   const coachPlan = useMemo(() => buildPdrCoachPlan(progressState, licenseCategory), [progressState, licenseCategory]);
   const networkStatus = useNetworkStatus();
   const prevNetworkRef = useRef<"online" | "offline" | "unknown">("online");
+  const handledEntryModeRef = useRef<string | null>(null);
+  const entryMode = normalizeEntryMode(params.mode);
 
   useEffect(() => {
     let alive = true;
@@ -1749,6 +1761,27 @@ export default function TestsTab() {
     void saveMarathonState(scopeId, snapshot).catch(() => {});
     launchQuiz(all, { mode: "marathon", title: "Марафон ПДР", licenseCategory, initialAnswers: answers });
   }, [licenseCategory, launchQuiz, marathonState, scopeId]);
+
+  useEffect(() => {
+    if (!entryMode || handledEntryModeRef.current === entryMode || quizState !== "idle") return;
+    handledEntryModeRef.current = entryMode;
+
+    if (entryMode === "exam") {
+      startExam();
+    } else if (entryMode === "training") {
+      setSubView("categories");
+    } else if (entryMode === "mistakes") {
+      startMistakes();
+    } else if (entryMode === "marathon") {
+      startMarathon(Boolean(marathonState?.questionIds.length));
+    } else if (entryMode === "minigames") {
+      setSubView("minigames");
+    } else if (entryMode === "scanner") {
+      setShowSignScanner(true);
+    } else if (entryMode === "plan") {
+      setShowCoachPlan(true);
+    }
+  }, [entryMode, marathonState?.questionIds.length, quizState, startExam, startMarathon, startMistakes]);
 
   const handleSnapshot = useCallback((snapshot: { currentIndex: number; answers: Array<number | null> }) => {
     if (quizMeta.mode !== "marathon") return;
@@ -2017,6 +2050,32 @@ export default function TestsTab() {
             <Text style={{ color: "#fff", fontWeight: "900", fontSize: 16 }}>🚀 Почати іспит</Text>
           </View>
         </Pressable>
+
+        <View style={{ backgroundColor: colors.bgCard, borderRadius: radii.md, padding: 14, borderWidth: 1, borderColor: colors.border, flexDirection: "row", alignItems: "center", gap: 12, ...shadows.card }}>
+          <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: colors.infoSoft, alignItems: "center", justifyContent: "center" }}>
+            <Image source={MASCOT} style={{ width: 36, height: 36 }} resizeMode="contain" />
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={{ color: colors.textPrimary, fontSize: 14, fontWeight: "900" }}>
+              {coachPlan.recommendedCategory ? `Лідик радить: ${coachPlan.recommendedCategory}` : marathonState?.questionIds.length ? "Лідик тримає марафон" : "Лідик готовий вести"}
+            </Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 3 }} numberOfLines={2}>
+              {coachPlan.recommendedCategory
+                ? `Почни з теми, де точність нижча: ${coachPlan.overallPercent || 0}% загалом.`
+                : marathonState?.questionIds.length
+                  ? `Продовж з ${marathonState.currentIndex + 1} питання — прогрес не загубиться.`
+                  : "Обери іспит для перевірки або тренування по темах для спокійного старту."}
+            </Text>
+          </View>
+          <Pressable
+            onPress={coachPlan.recommendedCategory ? () => startCategoryTest(coachPlan.recommendedCategory!) : marathonState?.questionIds.length ? () => startMarathon(true) : startExam}
+            style={{ borderRadius: 999, backgroundColor: colors.redSoft, paddingHorizontal: 12, paddingVertical: 8 }}
+          >
+            <Text style={{ color: colors.red, fontSize: 12, fontWeight: "900" }}>
+              {coachPlan.recommendedCategory ? "Тема" : marathonState?.questionIds.length ? "Далі" : "Іспит"}
+            </Text>
+          </Pressable>
+        </View>
 
         <View style={{ gap: 10 }}>
           <Text style={{ color: colors.textPrimary, fontSize: 16, fontWeight: "900" }}>Категорії прав</Text>
